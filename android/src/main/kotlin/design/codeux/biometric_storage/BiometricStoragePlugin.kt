@@ -1,4 +1,4 @@
-package com.example.biometric_storage
+package design.codeux.biometric_storage
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

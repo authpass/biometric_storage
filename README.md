@@ -2,7 +2,10 @@
 
 Encrypted Shared Preferences store secured by biometric lock.
 
-https://developer.android.com/topic/security/best-practices
+## Resources
+
+* https://developer.android.com/topic/security/data
+* https://developer.android.com/topic/security/best-practices
 
 ## Getting Started
 

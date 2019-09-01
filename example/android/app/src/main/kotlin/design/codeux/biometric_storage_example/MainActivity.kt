@@ -1,4 +1,4 @@
-package com.example.biometric_storage_example
+package design.codeux.biometric_storage_example
 
 import android.os.Bundle
 
