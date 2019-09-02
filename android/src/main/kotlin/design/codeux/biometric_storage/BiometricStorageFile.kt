@@ -9,7 +9,7 @@ import java.io.*
 private val logger = KotlinLogging.logger {}
 
 data class InitOptions(
-    val authenticationValidityDurationSeconds: Int = -1
+    val authenticationValidityDurationSeconds: Int = 30
 )
 
 class BiometricStorageFile(
@@ -69,7 +69,7 @@ class BiometricStorageFile(
         // Write to a file.
         try {
             if (file.exists()) {
-                val backupFile = File(file.parent, "${file.name}{BACKUP_SUFFIX")
+                val backupFile = File(file.parent, "${file.name}$BACKUP_SUFFIX")
                 if (backupFile.exists()) {
                     backupFile.delete()
                 }
