@@ -63,7 +63,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<CanAuthenticateResponse> _checkAuthenticate() async {
-    final response = await BiometricStorage().androidCanAuthenticate();
+    final response = await BiometricStorage().canAuthenticate();
     _logger.info('checked if authentication was possible: $response');
     return response;
   }
