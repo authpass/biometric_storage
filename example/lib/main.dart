@@ -1,10 +1,41 @@
-import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'package:flutter/services.dart';
 import 'package:biometric_storage/biometric_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
+import 'package:logging_appenders/logging_appenders.dart';
 
-void main() => runApp(MyApp());
+final MemoryAppender logMessages = MemoryAppender();
+
+final _logger = Logger('main');
+
+void main() {
+  Logger.root.level = Level.ALL;
+  logMessages.attachToLogger(Logger.root);
+  _logger.fine('Application launched.');
+  runApp(MyApp());
+}
+
+class StringBufferWrapper with ChangeNotifier {
+  final StringBuffer _buffer = StringBuffer();
+
+  void writeln(String line) {
+    _buffer.writeln(line);
+    notifyListeners();
+  }
+
+  @override
+  String toString() => _buffer.toString();
+}
+
+class MemoryAppender extends BaseLogAppender {
+  MemoryAppender() : super(null);
+
+  final StringBufferWrapper log = StringBufferWrapper();
+
+  @override
+  void handle(LogRecord record) {
+    log.writeln(formatter.format(record));
+  }
+}
 
 class MyApp extends StatefulWidget {
   @override
@@ -12,33 +43,32 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  final String name = 'default3';
+  BiometricStorageFile _storage;
+
+  final TextEditingController _writeController =
+      TextEditingController(text: 'Lorem Ipsum');
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
+    logMessages.log.addListener(_logChanged);
+    _checkAuthenticate();
   }
 
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    try {
-      platformVersion = await BiometricStorage.platformVersion;
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+  @override
+  void dispose() {
+    logMessages.log.removeListener(_logChanged);
+    super.dispose();
   }
+
+  Future<CanAuthenticateResponse> _checkAuthenticate() async {
+    final response = await BiometricStorage().androidCanAuthenticate();
+    _logger.info('checked if authentication was possible: $response');
+    return response;
+  }
+
+  void _logChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +77,71 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text('Plugin example app'),
         ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+        body: Column(
+          children: [
+            const Text('Methods:'),
+            RaisedButton(
+              child: const Text('init'),
+              onPressed: () async {
+                _logger.finer('Initializing $name');
+                if ((await _checkAuthenticate()) !=
+                    CanAuthenticateResponse.success) {
+                  _logger.severe(
+                      'Unable to use authenticate. Unable to getting storage.');
+                  return;
+                }
+                _storage = await BiometricStorage().getStorage(
+                    name,
+                    AndroidInitOptions(
+                        authenticationValidityDurationSeconds: 30));
+                setState(() {});
+                _logger.info('initiailzed $name');
+              },
+            ),
+            ..._storage == null
+                ? []
+                : [
+                    RaisedButton(
+                      child: const Text('read'),
+                      onPressed: () async {
+                        _logger.fine('reading from ${_storage.name}');
+                        final result = await _storage.read();
+                        _logger.fine('read: {$result}');
+                      },
+                    ),
+                    const Divider(),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: 'Example text to write',
+                      ),
+                      controller: _writeController,
+                    ),
+                    RaisedButton(
+                      child: const Text('write'),
+                      onPressed: () async {
+                        _logger.fine('Going to write...');
+                        await _storage.write(
+                            ' [${DateTime.now()}] ${_writeController.text}');
+                        _logger.info('Written content.');
+                      },
+                    ),
+                  ],
+            Expanded(
+              child: Container(
+                color: Colors.white,
+                constraints: BoxConstraints.expand(),
+                child: SingleChildScrollView(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      logMessages.log.toString(),
+                    ),
+                  ),
+                  reverse: true,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
