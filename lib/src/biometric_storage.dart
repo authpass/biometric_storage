@@ -36,7 +36,9 @@ class AndroidInitOptions {
 
 class BiometricStorage {
   factory BiometricStorage() => _instance;
+
   BiometricStorage._();
+
   static final _instance = BiometricStorage._();
 
   static const MethodChannel _channel = MethodChannel('biometric_storage');
@@ -53,13 +55,27 @@ class BiometricStorage {
         await _channel.invokeMethod<String>('canAuthenticate')];
   }
 
-  Future<BiometricStorageFile> getStorage(String name,
-      [AndroidInitOptions options]) async {
+  /// Retrieves the given biometric storage file.
+  /// Each store is completely separated, and has it's own encryption and
+  /// biometric lock.
+  /// if [forceInit] is true, will throw an exception if the store was already
+  /// created in this runtime.
+  Future<BiometricStorageFile> getStorage(
+    String name, {
+    AndroidInitOptions options,
+    bool forceInit = false,
+  }) async {
     assert(name != null);
     try {
-      final result = await _channel.invokeMethod<String>(
-          'init', {'name': name, 'options': options?.toJson()});
-      assert(result == name);
+      final result = await _channel.invokeMethod<bool>(
+        'init',
+        {
+          'name': name,
+          'options': options?.toJson(),
+          'forceInit': forceInit,
+        },
+      );
+      _logger.finest('getting storage. was created: $result');
       return BiometricStorageFile(this, name);
     } catch (e, stackTrace) {
       _logger.warning(

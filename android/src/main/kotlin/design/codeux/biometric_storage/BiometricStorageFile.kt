@@ -59,6 +59,8 @@ class BiometricStorageFile(
             masterKeyAlias,
             EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
         ).build()
+    
+    fun exists() = file.exists()
 
     @Synchronized
     fun writeFile(context: Context, content: String) {
@@ -80,6 +82,7 @@ class BiometricStorageFile(
                 out.write(bytes)
                 out.flush()
             }
+            logger.debug { "Successfully written ${bytes.size} bytes." }
         } catch (ex: IOException) {
             // Error occurred opening file for writing.
             logger.error(ex) { "Error while writing encrypted file $file" }
@@ -116,6 +119,10 @@ class BiometricStorageFile(
 
     override fun toString(): String {
         return "BiometricStorageFile(masterKeyName='$masterKeyName', fileName='$fileName', file=$file, masterKeyAlias='$masterKeyAlias')"
+    }
+
+    fun dispose() {
+        logger.trace { "dispose" }
     }
 
 }

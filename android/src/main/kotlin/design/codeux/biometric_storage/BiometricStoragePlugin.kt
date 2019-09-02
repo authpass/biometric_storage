@@ -49,6 +49,8 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
         private val handler: Handler = Handler(Looper.getMainLooper())
     }
 
+    private var messages = BiometricPromptMessages()
+
     private val storageFiles = mutableMapOf<String, BiometricStorageFile>()
 
     private val biometricManager by lazy { BiometricManager.from(context) }
@@ -72,33 +74,48 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
                     result.error("Storage $name was not initialized.", null, null)
                 }()
             }
+            fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
+                val msg = call.argument<Map<String, Any>>("promptMessages")?.let { data ->
+                    moshi.adapter(BiometricPromptMessages::class.java).fromJsonValue(data)
+                } ?: messages
+                authenticate(msg, {
+                    cb()
+                }) {
+                    throw MethodCallException("AuthError", null, null)
+                }
+            }
 
             when (call.method) {
                 "canAuthenticate" -> result.success(canAuthenticate().toString())
                 "init" -> {
                     val name = getName()
                     if (storageFiles.containsKey(name)) {
-                        throw MethodCallException(
-                            "AlreadyInitialized",
-                            "A storage file with the name '$name' was already initialized."
-                        )
+                        if (call.argument<Boolean>("forceInit") == true) {
+                            throw MethodCallException(
+                                "AlreadyInitialized",
+                                "A storage file with the name '$name' was already initialized."
+                            )
+                        } else {
+                            result.success(false)
+                            return
+                        }
                     }
 
                     val options = moshi.adapter<InitOptions>(InitOptions::class.java)
                         .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
                         ?: InitOptions()
                     storageFiles[name] = BiometricStorageFile(context, name, options)
-                    result.success(name)
+                    result.success(true)
                 }
-                "read" -> withStorage { result.success(readFile(context)) }
-                "write" -> withStorage {
-                    authenticate({
-                        writeFile(context, requiredArgument(PARAM_WRITE_CONTENT))
-                        result.success(true)
-                    }) {
-                        result.error("AuthError", null, null)
-                    }
-                }
+                "dispose" -> storageFiles.remove(getName())?.apply {
+                    dispose()
+                    result.success(true)
+                } ?: throw MethodCallException("NoSuchStorage", "Tried to dispose non existing storage.", null)
+                "read" -> withStorage { if (exists()) { withAuth { result.success(readFile(context)) } } else { result.success(null) } }
+                "write" -> withStorage { withAuth {
+                    writeFile(context, requiredArgument(PARAM_WRITE_CONTENT))
+                    result.success(true)
+                } }
                 else -> result.notImplemented()
             }
         } catch (e: MethodCallException) {
@@ -118,7 +135,7 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
             ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
     }
 
-    private fun authenticate(onSuccess: () -> Unit, onError: () -> Unit) {
+    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: () -> Unit) {
         logger.trace("authenticate()")
         val activity = registrar.activity() as FragmentActivity
         val prompt = BiometricPrompt(activity, executor, object: BiometricPrompt.AuthenticationCallback() {
@@ -138,10 +155,17 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
             }
         })
         prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Set the title to display.")
-//            .setSubtitle("Set the subtitle to display.")
-//            .setDescription("Set the description to display")
-            .setNegativeButtonText("Cancel")
+            .setTitle(messages.title)
+            .setSubtitle(messages.subtitle)
+            .setDescription(messages.description)
+            .setNegativeButtonText(messages.negativeButton)
             .build())
     }
 }
+
+data class BiometricPromptMessages(
+    val title: String = "Authenticate to unlock data",
+    val subtitle: String? = null,
+    val description: String? = null,
+    val negativeButton: String = "Cancel"
+)
