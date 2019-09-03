@@ -95,12 +95,18 @@ class BiometricStorageFile(
             logger.debug { "File $file does not exist. returning null." }
             return null
         }
-        val encryptedFile = buildEncryptedFile(context)
+        try {
+            val encryptedFile = buildEncryptedFile(context)
 
-        val bytes = encryptedFile.openFileInput().use { input ->
-            input.readBytes()
+            val bytes = encryptedFile.openFileInput().use { input ->
+                input.readBytes()
+            }
+            return String(bytes)
+        } catch (ex: IOException) {
+            // Error occurred opening file for writing.
+            logger.error(ex) { "Error while writing encrypted file $file" }
+            return null
         }
-        return String(bytes)
     }
 
     // Copied from androidx.security.crypto.MasterKeys (1.0.0-alpha02)
@@ -118,7 +124,7 @@ class BiometricStorageFile(
     }
 
     override fun toString(): String {
-        return "BiometricStorageFile(masterKeyName='$masterKeyName', fileName='$fileName', file=$file, masterKeyAlias='$masterKeyAlias')"
+        return "BiometricStorageFile(masterKeyName='$masterKeyName', fileName='$fileName', file=$file)"
     }
 
     fun dispose() {

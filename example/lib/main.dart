@@ -90,9 +90,8 @@ class _MyAppState extends State<MyApp> {
                       'Unable to use authenticate. Unable to getting storage.');
                   return;
                 }
-                _storage = await BiometricStorage().getStorage(
-                    name,
-                    AndroidInitOptions(
+                _storage = await BiometricStorage().getStorage(name,
+                    options: AndroidInitOptions(
                         authenticationValidityDurationSeconds: 30));
                 setState(() {});
                 _logger.info('initiailzed $name');
