@@ -29,6 +29,22 @@ enum class CanAuthenticateResponse(val code: Int) {
     ErrorNoHardware(BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE),
 }
 
+enum class AuthenticationError(val code: Int) {
+    Canceled(BiometricPrompt.ERROR_CANCELED),
+    Timeout(BiometricPrompt.ERROR_TIMEOUT),
+    Unknown(-1),
+    /** Authentication valid, but unknown */
+    Failed(-2),
+    ;
+
+    companion object {
+        fun forCode(code: Int) =
+            values().firstOrNull { it.code == code } ?: AuthenticationError.Unknown
+    }
+}
+
+data class AuthenticationErrorInfo(val error: AuthenticationError, val message: CharSequence)
+
 class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : MethodCallHandler {
     companion object {
         @JvmStatic
@@ -80,8 +96,9 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
                 } ?: messages
                 authenticate(msg, {
                     cb()
-                }) {
-                    throw MethodCallException("AuthError", null, null)
+                }) { info ->
+                    result.error("AuthError:${info.error}", info.message.toString(), null)
+                    logger.error("AuthError: $info")
                 }
             }
 
@@ -127,7 +144,15 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
         }
     }
 
-    private inline fun ui(crossinline cb: () -> Unit) = handler.post { cb() }
+    private inline fun ui(crossinline cb: () -> Unit) = handler.post {
+        try {
+            cb()
+        } catch (e: Throwable) {
+            logger.error(e) { "Error while calling UI callback. This must not happen." }
+            // TODO: this will crash the app, but for now it's better than doing nothing.
+            throw e
+        }
+    }
 
     private fun canAuthenticate(): CanAuthenticateResponse {
         val response = biometricManager.canAuthenticate()
@@ -135,13 +160,13 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
             ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
     }
 
-    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: () -> Unit) {
+    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: (errorInfo: AuthenticationErrorInfo) -> Unit) {
         logger.trace("authenticate()")
         val activity = registrar.activity() as FragmentActivity
         val prompt = BiometricPrompt(activity, executor, object: BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 logger.trace("onAuthenticationError($errorCode, $errString)")
-                ui { onError() }
+                ui { onError(AuthenticationErrorInfo(AuthenticationError.forCode(errorCode), errString)) }
             }
 
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -151,7 +176,7 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
 
             override fun onAuthenticationFailed() {
                 logger.trace("onAuthenticationFailed()")
-                ui { onError() }
+                ui { onError(AuthenticationErrorInfo(AuthenticationError.Failed, "biometric is valid but not recognized")) }
             }
         })
         prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
