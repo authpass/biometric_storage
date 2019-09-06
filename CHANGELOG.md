@@ -1,3 +1,7 @@
+## 0.2.0
+
+* MacOS Support
+
 ## 0.1.0
 
 * iOS Support
