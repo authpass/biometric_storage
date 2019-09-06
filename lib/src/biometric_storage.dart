@@ -16,7 +16,7 @@ enum CanAuthenticateResponse {
   unsupported,
 }
 
-const androidCanAuthenticateMapping = {
+const canAuthenticateMapping = {
   'Success': CanAuthenticateResponse.success,
   'ErrorHwUnavailable': CanAuthenticateResponse.errorHwUnavailable,
   'ErrorNoBiometricEnrolled': CanAuthenticateResponse.errorNoBiometricEnrolled,
@@ -55,14 +55,10 @@ class BiometricStorage {
 
   Future<CanAuthenticateResponse> canAuthenticate() async {
     if (Platform.isAndroid || Platform.isIOS) {
-      return await _androidCanAuthenticate();
+      return canAuthenticateMapping[
+          await _channel.invokeMethod<String>('canAuthenticate')];
     }
     return CanAuthenticateResponse.unsupported;
-  }
-
-  Future<CanAuthenticateResponse> _androidCanAuthenticate() async {
-    return androidCanAuthenticateMapping[
-        await _channel.invokeMethod<String>('canAuthenticate')];
   }
 
   /// Retrieves the given biometric storage file.

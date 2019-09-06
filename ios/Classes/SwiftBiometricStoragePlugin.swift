@@ -106,7 +106,7 @@ public class SwiftBiometricStoragePlugin: NSObject, FlutterPlugin {
   }
   
   private func delete(_ name: String, _ result: @escaping FlutterResult) {
-    var query = baseQuery(name: name)
+    let query = baseQuery(name: name)
 //    query[kSecMatchLimit as String] = kSecMatchLimitOne
 //    query[kSecReturnData as String] = true
     let status = SecItemDelete(query as CFDictionary)
