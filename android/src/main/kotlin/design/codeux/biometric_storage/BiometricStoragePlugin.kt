@@ -129,6 +129,7 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
                     result.success(true)
                 } ?: throw MethodCallException("NoSuchStorage", "Tried to dispose non existing storage.", null)
                 "read" -> withStorage { if (exists()) { withAuth { result.success(readFile(context)) } } else { result.success(null) } }
+                "delete" -> withStorage { if (exists()) { withAuth { result.success(deleteFile()) } } else { result.success(false) } }
                 "write" -> withStorage { withAuth {
                     writeFile(context, requiredArgument(PARAM_WRITE_CONTENT))
                     result.success(true)

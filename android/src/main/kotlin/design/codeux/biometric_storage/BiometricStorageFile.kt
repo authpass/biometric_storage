@@ -9,7 +9,8 @@ import java.io.*
 private val logger = KotlinLogging.logger {}
 
 data class InitOptions(
-    val authenticationValidityDurationSeconds: Int = 30
+    val authenticationValidityDurationSeconds: Int = 30,
+    val authenticationRequired: Boolean = true
 )
 
 class BiometricStorageFile(
@@ -36,7 +37,7 @@ class BiometricStorageFile(
 
     init {
         val paramSpec = createAES256GCMKeyGenParameterSpec(masterKeyName)
-            .setUserAuthenticationRequired(true)
+            .setUserAuthenticationRequired(options.authenticationRequired)
 //            .setUserAuthenticationValidityDurationSeconds(3600)
             .setUserAuthenticationValidityDurationSeconds(options.authenticationValidityDurationSeconds)
             .build()
@@ -107,6 +108,14 @@ class BiometricStorageFile(
             logger.error(ex) { "Error while writing encrypted file $file" }
             return null
         }
+    }
+
+    @Synchronized
+    fun deleteFile(): Boolean {
+        if (!file.exists()) {
+            return false;
+        }
+        return file.delete();
     }
 
     // Copied from androidx.security.crypto.MasterKeys (1.0.0-alpha02)

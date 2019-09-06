@@ -21,16 +21,26 @@ const androidCanAuthenticateMapping = {
   'ErrorHwUnavailable': CanAuthenticateResponse.errorHwUnavailable,
   'ErrorNoBiometricEnrolled': CanAuthenticateResponse.errorNoBiometricEnrolled,
   'ErrorNoHardware': CanAuthenticateResponse.errorNoHardware,
+  'ErrorUnknown': CanAuthenticateResponse.unsupported,
 };
 
-class AndroidInitOptions {
-  AndroidInitOptions({this.authenticationValidityDurationSeconds});
+class StorageFileInitOptions {
+  StorageFileInitOptions({
+    this.authenticationValidityDurationSeconds,
+    this.authenticationRequired = true,
+  });
 
   final int authenticationValidityDurationSeconds;
+
+  /// Whether an authentication is required. if this is
+  /// false NO BIOMETRIC CHECK WILL BE PERFORMED! and the value
+  /// will simply be save encrypted. (default: true)
+  final bool authenticationRequired;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'authenticationValidityDurationSeconds':
             authenticationValidityDurationSeconds,
+        'authenticationRequired': authenticationRequired,
       };
 }
 
@@ -44,7 +54,7 @@ class BiometricStorage {
   static const MethodChannel _channel = MethodChannel('biometric_storage');
 
   Future<CanAuthenticateResponse> canAuthenticate() async {
-    if (Platform.isAndroid) {
+    if (Platform.isAndroid || Platform.isIOS) {
       return await _androidCanAuthenticate();
     }
     return CanAuthenticateResponse.unsupported;
@@ -62,7 +72,7 @@ class BiometricStorage {
   /// created in this runtime.
   Future<BiometricStorageFile> getStorage(
     String name, {
-    AndroidInitOptions options,
+    StorageFileInitOptions options,
     bool forceInit = false,
   }) async {
     assert(name != null);
@@ -84,14 +94,22 @@ class BiometricStorage {
     }
   }
 
-  Future<String> _read(String name) async {
-    return await _channel.invokeMethod<String>('read', {'name': name});
-  }
+  Future<String> _read(String name) =>
+      _warnError(_channel.invokeMethod<String>('read', {'name': name}));
+
+  Future<bool> _delete(String name) =>
+      _warnError(_channel.invokeMethod<bool>('delete', {'name': name}));
 
   Future<void> _write(String name, String content) =>
-      _channel.invokeMethod('write', {
+      _warnError(_channel.invokeMethod('write', {
         'name': name,
         'content': content,
+      }));
+
+  Future<T> _warnError<T>(Future<T> future) =>
+      future.catchError((dynamic error, StackTrace stackTrace) {
+        _logger.warning('Error during plugin operation', error, stackTrace);
+        return Future<T>.error(error, stackTrace);
       });
 }
 
@@ -107,4 +125,7 @@ class BiometricStorageFile {
 
   /// Write content of this file. Previous value will be overwritten.
   Future<void> write(String content) => _plugin._write(name, content);
+
+  /// Delete the content of this storage.
+  Future<void> delete() => _plugin._delete(name);
 }

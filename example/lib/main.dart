@@ -26,8 +26,28 @@ class StringBufferWrapper with ChangeNotifier {
   String toString() => _buffer.toString();
 }
 
+class ShortFormatter extends LogRecordFormatter {
+  @override
+  StringBuffer formatToStringBuffer(LogRecord rec, StringBuffer sb) {
+    sb.write(
+        '${rec.time.hour}:${rec.time.minute}:${rec.time.second} ${rec.level.name} '
+        '${rec.message}');
+
+    if (rec.error != null) {
+      sb.write(rec.error);
+    }
+    // ignore: avoid_as
+    final stackTrace = rec.stackTrace ??
+        (rec.error is Error ? (rec.error as Error).stackTrace : null);
+    if (stackTrace != null) {
+      sb.write(stackTrace);
+    }
+    return sb;
+  }
+}
+
 class MemoryAppender extends BaseLogAppender {
-  MemoryAppender() : super(null);
+  MemoryAppender() : super(ShortFormatter());
 
   final StringBufferWrapper log = StringBufferWrapper();
 
@@ -43,7 +63,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final String name = 'default3';
+  final String baseName = 'default';
+  BiometricStorageFile _authStorage;
   BiometricStorageFile _storage;
 
   final TextEditingController _writeController =
@@ -83,48 +104,48 @@ class _MyAppState extends State<MyApp> {
             RaisedButton(
               child: const Text('init'),
               onPressed: () async {
-                _logger.finer('Initializing $name');
+                _logger.finer('Initializing $baseName');
                 if ((await _checkAuthenticate()) !=
                     CanAuthenticateResponse.success) {
                   _logger.severe(
                       'Unable to use authenticate. Unable to getting storage.');
                   return;
                 }
-                _storage = await BiometricStorage().getStorage(name,
-                    options: AndroidInitOptions(
+                _authStorage = await BiometricStorage().getStorage(
+                    '${baseName}_authenticated',
+                    options: StorageFileInitOptions(
                         authenticationValidityDurationSeconds: 30));
+                _storage = await BiometricStorage()
+                    .getStorage('${baseName}_unauthenticated',
+                        options: StorageFileInitOptions(
+                          authenticationRequired: false,
+                        ));
                 setState(() {});
-                _logger.info('initiailzed $name');
+                _logger.info('initiailzed $baseName');
               },
             ),
-            ..._storage == null
+            ...(_authStorage == null
                 ? []
                 : [
-                    RaisedButton(
-                      child: const Text('read'),
-                      onPressed: () async {
-                        _logger.fine('reading from ${_storage.name}');
-                        final result = await _storage.read();
-                        _logger.fine('read: {$result}');
-                      },
-                    ),
+                    const Text('Biometric Authentication',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    StorageActions(
+                        storageFile: _authStorage,
+                        writeController: _writeController),
                     const Divider(),
-                    TextField(
-                      decoration: InputDecoration(
-                        labelText: 'Example text to write',
-                      ),
-                      controller: _writeController,
-                    ),
-                    RaisedButton(
-                      child: const Text('write'),
-                      onPressed: () async {
-                        _logger.fine('Going to write...');
-                        await _storage.write(
-                            ' [${DateTime.now()}] ${_writeController.text}');
-                        _logger.info('Written content.');
-                      },
-                    ),
-                  ],
+                    const Text('Unauthenticated',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    StorageActions(
+                        storageFile: _storage,
+                        writeController: _writeController),
+                  ]),
+            const Divider(),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Example text to write',
+              ),
+              controller: _writeController,
+            ),
             Expanded(
               child: Container(
                 color: Colors.white,
@@ -143,6 +164,48 @@ class _MyAppState extends State<MyApp> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class StorageActions extends StatelessWidget {
+  const StorageActions(
+      {Key key, @required this.storageFile, @required this.writeController})
+      : super(key: key);
+
+  final BiometricStorageFile storageFile;
+  final TextEditingController writeController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: <Widget>[
+        RaisedButton(
+          child: const Text('read'),
+          onPressed: () async {
+            _logger.fine('reading from ${storageFile.name}');
+            final result = await storageFile.read();
+            _logger.fine('read: {$result}');
+          },
+        ),
+        RaisedButton(
+          child: const Text('write'),
+          onPressed: () async {
+            _logger.fine('Going to write...');
+            await storageFile
+                .write(' [${DateTime.now()}] ${writeController.text}');
+            _logger.info('Written content.');
+          },
+        ),
+        RaisedButton(
+            child: const Text('delete'),
+            onPressed: () async {
+              _logger.fine('deleting...');
+              await storageFile.delete();
+              _logger.info('Deleted.');
+            })
+      ],
     );
   }
 }

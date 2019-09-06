@@ -1,6 +1,7 @@
 name: biometric_storage_example
 description: Demonstrates how to use the biometric_storage plugin.
 publish_to: 'none'
+version: 1.0.0+1
 
 environment:
   sdk: ">=2.2.2 <3.0.0"
