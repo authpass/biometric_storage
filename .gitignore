@@ -34,3 +34,5 @@
 .pub/
 
 build/
+android/.idea
+

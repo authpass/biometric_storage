@@ -2,7 +2,7 @@
 
 [![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/versions/0.1.0)
 
-Encrypted file store secured by biometric lock. Meant as a way to store small data in a
+Encrypted file store secured by biometric lock for Android, iOS and MacOS. Meant as a way to store small data in a
 hardware encrypted fashion. E.g. to store passwords, secret keys, etc. but not massive amounts
 of data.
 
@@ -21,6 +21,14 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
 * Requires at least iOS 9
+
+### Mac OS
+
+* include the NSFaceIDUsageDescription key in your app’s Info.plist file
+* enable keychain sharing and signing. (not sure why this is required. but without it
+    You will probably see an error like: 
+    > SecurityError, Error while writing data: -34018: A required entitlement isn't present.
+* Requires at least Mac OS 10.12
 
 ## Resources
 

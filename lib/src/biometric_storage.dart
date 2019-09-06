@@ -54,7 +54,7 @@ class BiometricStorage {
   static const MethodChannel _channel = MethodChannel('biometric_storage');
 
   Future<CanAuthenticateResponse> canAuthenticate() async {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return canAuthenticateMapping[
           await _channel.invokeMethod<String>('canAuthenticate')];
     }
