@@ -1,5 +1,7 @@
 # biometric_storage
 
+[![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/versions/0.1.0)
+
 Encrypted file store secured by biometric lock. Meant as a way to store small data in a
 hardware encrypted fashion. E.g. to store passwords, secret keys, etc. but not massive amounts
 of data.
