@@ -15,8 +15,8 @@ data class InitOptions(
 
 class BiometricStorageFile(
     context: Context,
-    baseName: String,
-    options: InitOptions
+    private val baseName: String,
+    val options: InitOptions
 ) {
 
     companion object {
@@ -59,7 +59,10 @@ class BiometricStorageFile(
             context,
             masterKeyAlias,
             EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-        ).build()
+        )
+            .setKeysetAlias("__biometric_storage__${baseName}_encrypted_file_keyset__")
+            .setKeysetPrefName("__biometric_storage__${baseName}_encrypted_file_pref__")
+            .build()
     
     fun exists() = file.exists()
 

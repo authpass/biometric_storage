@@ -94,6 +94,9 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
                 }()
             }
             fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
+                if (!options.authenticationRequired) {
+                    return cb()
+                }
                 val msg = call.argument<Map<String, Any>>("promptMessages")?.let { data ->
                     moshi.adapter(BiometricPromptMessages::class.java).fromJsonValue(data)
                 } ?: messages
