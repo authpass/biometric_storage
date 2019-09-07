@@ -8,6 +8,9 @@ of data.
 
 On android uses androidx uses KeyStore and on iOS LocalAuthentication with KeyChain.
 
+Check out [AuthPass Password Manager](https://authpass.app/) for a app which makes heavy use of
+this plugin.
+
 ## Getting Started
 
 ### Android

@@ -26,7 +26,7 @@ const canAuthenticateMapping = {
 
 class StorageFileInitOptions {
   StorageFileInitOptions({
-    this.authenticationValidityDurationSeconds,
+    this.authenticationValidityDurationSeconds = 10,
     this.authenticationRequired = true,
   });
 
