@@ -34,6 +34,7 @@ enum class CanAuthenticateResponse(val code: Int) {
 enum class AuthenticationError(val code: Int) {
     Canceled(BiometricPrompt.ERROR_CANCELED),
     Timeout(BiometricPrompt.ERROR_TIMEOUT),
+    UserCanceled(BiometricPrompt.ERROR_USER_CANCELED),
     Unknown(-1),
     /** Authentication valid, but unknown */
     Failed(-2),

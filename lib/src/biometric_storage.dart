@@ -16,13 +16,33 @@ enum CanAuthenticateResponse {
   unsupported,
 }
 
-const canAuthenticateMapping = {
+const _canAuthenticateMapping = {
   'Success': CanAuthenticateResponse.success,
   'ErrorHwUnavailable': CanAuthenticateResponse.errorHwUnavailable,
   'ErrorNoBiometricEnrolled': CanAuthenticateResponse.errorNoBiometricEnrolled,
   'ErrorNoHardware': CanAuthenticateResponse.errorNoHardware,
   'ErrorUnknown': CanAuthenticateResponse.unsupported,
 };
+
+enum AuthExceptionCode {
+  userCanceled,
+  unknown,
+  timeout,
+}
+
+const _authErrorCodeMapping = {
+  'AuthError:UserCanceled': AuthExceptionCode.userCanceled,
+  'AuthError:Timeout': AuthExceptionCode.timeout,
+};
+
+/// Exceptions during authentication operations.
+/// See [AuthExceptionCode] for details.
+class AuthException implements Exception {
+  AuthException(this.code, this.message);
+
+  final AuthExceptionCode code;
+  final String message;
+}
 
 class StorageFileInitOptions {
   StorageFileInitOptions({
@@ -55,7 +75,7 @@ class BiometricStorage {
 
   Future<CanAuthenticateResponse> canAuthenticate() async {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      return canAuthenticateMapping[
+      return _canAuthenticateMapping[
           await _channel.invokeMethod<String>('canAuthenticate')];
     }
     return CanAuthenticateResponse.unsupported;
@@ -91,20 +111,31 @@ class BiometricStorage {
   }
 
   Future<String> _read(String name) =>
-      _warnError(_channel.invokeMethod<String>('read', {'name': name}));
+      _transformErrors(_channel.invokeMethod<String>('read', {'name': name}));
 
   Future<bool> _delete(String name) =>
-      _warnError(_channel.invokeMethod<bool>('delete', {'name': name}));
+      _transformErrors(_channel.invokeMethod<bool>('delete', {'name': name}));
 
   Future<void> _write(String name, String content) =>
-      _warnError(_channel.invokeMethod('write', {
+      _transformErrors(_channel.invokeMethod('write', {
         'name': name,
         'content': content,
       }));
 
-  Future<T> _warnError<T>(Future<T> future) =>
+  Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((dynamic error, StackTrace stackTrace) {
         _logger.warning('Error during plugin operation', error, stackTrace);
+        if (error is PlatformException) {
+          if (error.code.startsWith('AuthError:')) {
+            return Future<T>.error(
+              AuthException(
+                _authErrorCodeMapping[error.code] ?? AuthExceptionCode.unknown,
+                error.message,
+              ),
+              stackTrace,
+            );
+          }
+        }
         return Future<T>.error(error, stackTrace);
       });
 }
