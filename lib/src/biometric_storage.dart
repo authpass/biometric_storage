@@ -77,7 +77,7 @@ class BiometricStorage {
         'init',
         {
           'name': name,
-          'options': options?.toJson(),
+          'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
           'forceInit': forceInit,
         },
       );

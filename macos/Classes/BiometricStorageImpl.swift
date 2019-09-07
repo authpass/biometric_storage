@@ -57,7 +57,11 @@ class BiometricStorageImpl {
         result(storageError(code: "InvalidArguments", message: "Missing argument \(name)", details: nil))
         return
       }
-      cb(value as! T)
+      guard let valueTyped = value as? T else {
+        result(storageError(code: "InvalidArguments", message: "Invalid argument for \(name): expected \(T.self) got \(value)", details: nil))
+        return
+      }
+      cb(valueTyped)
       return
     }
     
