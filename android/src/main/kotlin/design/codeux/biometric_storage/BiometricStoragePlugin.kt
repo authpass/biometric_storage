@@ -15,6 +15,8 @@ import java.util.concurrent.Executors
 
 private val logger = KotlinLogging.logger {}
 
+typealias ErrorCalblack = (errorInfo: AuthenticationErrorInfo) -> Unit
+
 class MethodCallException(
     val errorCode: String,
     val errorMessage: String?,
@@ -145,13 +147,12 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
         }
     }
 
-    private inline fun ui(crossinline cb: () -> Unit) = handler.post {
+    private inline fun ui(crossinline onError: ErrorCalblack, crossinline cb: () -> Unit) = handler.post {
         try {
             cb()
         } catch (e: Throwable) {
             logger.error(e) { "Error while calling UI callback. This must not happen." }
-            // TODO: this will crash the app, but for now it's better than doing nothing.
-            throw e
+            onError(AuthenticationErrorInfo(AuthenticationError.Unknown, "Unexpected authentication error. ${e.localizedMessage}"))
         }
     }
 
@@ -161,23 +162,23 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
             ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
     }
 
-    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: (errorInfo: AuthenticationErrorInfo) -> Unit) {
+    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: ErrorCalblack) {
         logger.trace("authenticate()")
         val activity = registrar.activity() as FragmentActivity
         val prompt = BiometricPrompt(activity, executor, object: BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 logger.trace("onAuthenticationError($errorCode, $errString)")
-                ui { onError(AuthenticationErrorInfo(AuthenticationError.forCode(errorCode), errString)) }
+                ui(onError) { onError(AuthenticationErrorInfo(AuthenticationError.forCode(errorCode), errString)) }
             }
 
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 logger.trace("onAuthenticationSucceeded($result)")
-                ui { onSuccess() }
+                ui(onError) { onSuccess() }
             }
 
             override fun onAuthenticationFailed() {
                 logger.trace("onAuthenticationFailed()")
-                ui { onError(AuthenticationErrorInfo(AuthenticationError.Failed, "biometric is valid but not recognized")) }
+                ui(onError) { onError(AuthenticationErrorInfo(AuthenticationError.Failed, "biometric is valid but not recognized")) }
             }
         })
         prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
