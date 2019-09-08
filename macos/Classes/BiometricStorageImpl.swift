@@ -112,7 +112,7 @@ class BiometricStorageImpl {
       return
     }
     guard status == errSecSuccess else {
-      result(storageError(code: "RetrieveError", message: "Error retrieving item. \(status)", details: nil))
+      handleOSStatusError(status, result, "Error retrieving item. \(status)")
       return
     }
     guard let existingItem = item as? [String : Any],
@@ -183,8 +183,15 @@ class BiometricStorageImpl {
     if #available(iOS 11.3, OSX 10.12, *) {
       errorMessage = SecCopyErrorMessageString(status, nil) as String?
     }
+    let code: String
+    switch status {
+    case errSecUserCanceled:
+      code = "AuthError:UserCanceled"
+    default:
+      code = "SecurityError"
+    }
     
-    result(storageError(code: "SecurityError", message: "Error while \(message): \(status): \(errorMessage ?? "Unknown")", details: nil))
+    result(storageError(code: code, message: "Error while \(message): \(status): \(errorMessage ?? "Unknown")", details: nil))
   }
   
   private func canAuthenticate(result: @escaping StorageCallback) {
