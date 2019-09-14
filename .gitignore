@@ -26,6 +26,7 @@
 
 #### project specific ignores below
 
+/pubspec.lock
 
 .DS_Store
 .dart_tool/
