@@ -8,8 +8,7 @@ of data.
 
 On android uses androidx uses KeyStore and on iOS LocalAuthentication with KeyChain.
 
-Check out [AuthPass Password Manager](https://authpass.app/) for a app which makes heavy use of
-this plugin.
+Check out [AuthPass Password Manager](https://authpass.app/) for a app which makes heavy use of this plugin.
 
 ## Getting Started
 
@@ -17,6 +16,31 @@ this plugin.
 * Requirements:
   * Android: API Level >= 23
   * MainActivity must extend FlutterFragmentActivity
+  * Theme for the main activity must use `Theme.AppCompat` thme.
+    (Otherwise there will be crases on Android < 29)
+    For example: 
+    
+    **AndroidManifest.xml**:
+    ```xml
+    <activity
+    android:name=".MainActivity"
+    android:launchMode="singleTop"
+    android:theme="@style/LaunchTheme"
+    ```
+
+    **xml/styles.xml**:
+    ```xml
+        <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
+        <!-- Show a splash screen on the activity. Automatically removed when
+             Flutter draws its first frame -->
+        <item name="android:windowBackground">@drawable/launch_background</item>
+
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+    ```
 
 ### iOS
 
