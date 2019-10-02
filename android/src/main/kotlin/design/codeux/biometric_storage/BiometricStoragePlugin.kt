@@ -5,7 +5,6 @@ import android.os.*
 import androidx.biometric.*
 import androidx.fragment.app.FragmentActivity
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
@@ -61,7 +60,6 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
 
         val moshi = Moshi.Builder()
             // ... add your own JsonAdapters and factories ...
-            .add(KotlinJsonAdapterFactory())
             .build() as Moshi
 
         val executor = Executors.newSingleThreadExecutor()

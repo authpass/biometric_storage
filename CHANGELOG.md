@@ -1,3 +1,8 @@
+## 0.2.2
+
+* Android: Use codegen instead of reflection for json serialization.
+  (Fixes bug that options aren't assed in correctly due to minification)
+
 ## 0.2.1
 
 * Android: Fix for having multiple files with different configurations.

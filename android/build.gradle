@@ -23,6 +23,7 @@ rootProject.allprojects {
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 28
@@ -41,15 +42,15 @@ android {
 
 dependencies {
     def security_version = "1.0.0-alpha02"
-    def biometric_version = "1.0.0-beta01"
+    def biometric_version = "1.0.0-beta02"
 
-    api "androidx.core:core:1.2.0-alpha03"
-    api "androidx.fragment:fragment:1.2.0-alpha02"
+    api "androidx.core:core:1.2.0-alpha04"
+    api "androidx.fragment:fragment:1.2.0-alpha04"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "androidx.security:security-crypto:$security_version"
     implementation "androidx.biometric:biometric:$biometric_version"
     implementation "io.github.microutils:kotlin-logging:1.7.6"
     implementation "com.squareup.moshi:moshi:1.8.0"
-    implementation "com.squareup.moshi:moshi-kotlin:1.8.0"
+    kapt("com.squareup.moshi:moshi-kotlin-codegen:1.8.0")
 }
