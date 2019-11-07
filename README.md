@@ -14,6 +14,11 @@ On android uses androidx uses KeyStore and on iOS LocalAuthentication with KeyCh
 Check out [AuthPass Password Manager](https://authpass.app/) for a app which 
 makes heavy use of this plugin.
 
+## Versions
+
+* Use 0.2.x for legacy plugin format for iOS and android support.
+* Use 0.3.x-beta for the new platforms pubspec format which also supports mac OS.
+
 ## Getting Started
 
 ### Android

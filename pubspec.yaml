@@ -1,11 +1,12 @@
 name: biometric_storage
 description: Encrypted data store optionally secured by biometric lock with support for iOS, Android and MacOS.
-version: 0.2.2+1
+version: 0.3.0-beta.1
 author: Herbert Poul <herbert@poul.at>
 homepage: https://github.com/authpass/biometric_storage/
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
+  flutter: ">=1.10.0"
 
 dependencies:
   flutter:

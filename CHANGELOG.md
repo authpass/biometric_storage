@@ -1,3 +1,11 @@
+## 0.3.0-beta.2
+
+* Use new plugin format for Mac OS format. Not compatible with flutter 1.9.x
+
+## 0.2.2+2
+
+* Use legacy plugin platforms structure to be compatible with flutter stable.
+
 ## 0.2.2+1
 
 * fixed home page link, updated example README. 
