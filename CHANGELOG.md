@@ -1,3 +1,7 @@
+## 0.2.2+1
+
+* fixed home page link, updated example README. 
+
 ## 0.2.2
 
 * Android: Use codegen instead of reflection for json serialization.
