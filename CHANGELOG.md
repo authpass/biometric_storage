@@ -1,3 +1,7 @@
+## 0.3.1
+
+* Use android v2 plugin API.
+
 ## 0.3.0-beta.2
 
 * Use new plugin format for Mac OS format. Not compatible with flutter 1.9.x
