@@ -2,6 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/example/ios/.symlinks/plugins/biometric_storage" vcs="Git" />
   </component>
 </project>

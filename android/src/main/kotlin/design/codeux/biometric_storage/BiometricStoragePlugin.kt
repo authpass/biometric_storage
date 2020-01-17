@@ -1,10 +1,13 @@
 package design.codeux.biometric_storage
 
+import android.app.Activity
 import android.content.Context
 import android.os.*
 import androidx.biometric.*
 import androidx.fragment.app.FragmentActivity
 import com.squareup.moshi.Moshi
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.*
 import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
@@ -14,7 +17,7 @@ import java.util.concurrent.Executors
 
 private val logger = KotlinLogging.logger {}
 
-typealias ErrorCalblack = (errorInfo: AuthenticationErrorInfo) -> Unit
+typealias ErrorCallback = (errorInfo: AuthenticationErrorInfo) -> Unit
 
 class MethodCallException(
     val errorCode: String,
@@ -47,12 +50,20 @@ enum class AuthenticationError(val code: Int) {
 
 data class AuthenticationErrorInfo(val error: AuthenticationError, val message: CharSequence)
 
-class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : MethodCallHandler {
+class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
+
     companion object {
+
+        // deprecated, used for v1 plugin api.
         @JvmStatic
         fun registerWith(registrar: Registrar) {
-            val channel = MethodChannel(registrar.messenger(), "biometric_storage")
-            channel.setMethodCallHandler(BiometricStoragePlugin(registrar, registrar.context()))
+            BiometricStoragePlugin().apply {
+                initialize(
+                    registrar.messenger(),
+                    registrar.context()
+                )
+                updateAttachedActivity(registrar.activity())
+            }
         }
 
         const val PARAM_NAME = "name"
@@ -66,11 +77,27 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
         private val handler: Handler = Handler(Looper.getMainLooper())
     }
 
+    private var attachedActivity: FragmentActivity? = null
     private var messages = BiometricPromptMessages()
 
     private val storageFiles = mutableMapOf<String, BiometricStorageFile>()
 
-    private val biometricManager by lazy { BiometricManager.from(context) }
+    private val biometricManager by lazy { BiometricManager.from(applicationContext) }
+
+    lateinit var applicationContext: Context
+
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        initialize(binding.binaryMessenger, binding.applicationContext)
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    }
+
+    fun initialize(messenger: BinaryMessenger, context: Context) {
+        this.applicationContext = context
+        val channel = MethodChannel(messenger, "biometric_storage")
+        channel.setMethodCallHandler(this)
+    }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         logger.trace { "onMethodCall(${call.method})" }
@@ -125,17 +152,17 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
                     val options = moshi.adapter<InitOptions>(InitOptions::class.java)
                         .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
                         ?: InitOptions()
-                    storageFiles[name] = BiometricStorageFile(context, name, options)
+                    storageFiles[name] = BiometricStorageFile(applicationContext, name, options)
                     result.success(true)
                 }
                 "dispose" -> storageFiles.remove(getName())?.apply {
                     dispose()
                     result.success(true)
                 } ?: throw MethodCallException("NoSuchStorage", "Tried to dispose non existing storage.", null)
-                "read" -> withStorage { if (exists()) { withAuth { result.success(readFile(context)) } } else { result.success(null) } }
+                "read" -> withStorage { if (exists()) { withAuth { result.success(readFile(applicationContext)) } } else { result.success(null) } }
                 "delete" -> withStorage { if (exists()) { withAuth { result.success(deleteFile()) } } else { result.success(false) } }
                 "write" -> withStorage { withAuth {
-                    writeFile(context, requiredArgument(PARAM_WRITE_CONTENT))
+                    writeFile(applicationContext, requiredArgument(PARAM_WRITE_CONTENT))
                     result.success(true)
                 } }
                 else -> result.notImplemented()
@@ -149,7 +176,7 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
         }
     }
 
-    private inline fun ui(crossinline onError: ErrorCalblack, crossinline cb: () -> Unit) = handler.post {
+    private inline fun ui(crossinline onError: ErrorCallback, crossinline cb: () -> Unit) = handler.post {
         try {
             cb()
         } catch (e: Throwable) {
@@ -164,9 +191,12 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
             ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
     }
 
-    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: ErrorCalblack) {
+    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: ErrorCallback) {
         logger.trace("authenticate()")
-        val activity = registrar.activity() as FragmentActivity
+        val activity = attachedActivity ?: return run {
+            logger.error { "We are not attached to an activity." }
+            onError(AuthenticationErrorInfo(AuthenticationError.Failed, "Plugin not attached to any activity."))
+        }
         val prompt = BiometricPrompt(activity, executor, object: BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 logger.trace("onAuthenticationError($errorCode, $errString)")
@@ -189,6 +219,30 @@ class BiometricStoragePlugin(val registrar: Registrar, val context: Context) : M
             .setDescription(messages.description)
             .setNegativeButtonText(messages.negativeButton)
             .build())
+    }
+
+    override fun onDetachedFromActivity() {
+        logger.trace { "onDetachedFromActivity" }
+        attachedActivity = null
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        logger.debug { "Attached to new activity." }
+        updateAttachedActivity(binding.activity)
+    }
+
+    private fun updateAttachedActivity(activity: Activity) {
+        if (activity !is FragmentActivity) {
+            logger.error { "Got attached to activity which is not a FragmentActivity: $activity" }
+            return
+        }
+        attachedActivity = activity
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
     }
 }
 
