@@ -27,6 +27,7 @@ apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
     compileSdkVersion 28
+    ndkVersion "21.0.6113669"
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -64,6 +65,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:1.7.26'
     implementation 'com.github.tony19:logback-android:2.0.0'
     implementation "io.github.microutils:kotlin-logging:1.7.6"
+    implementation "androidx.appcompat:appcompat:1.1.0"
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.1.1'

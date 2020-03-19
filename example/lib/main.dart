@@ -24,9 +24,7 @@ void main() {
 /// Otherwise, do nothing.
 void _setTargetPlatformForDesktop() {
   TargetPlatform targetPlatform;
-  if (Platform.isMacOS) {
-    targetPlatform = TargetPlatform.iOS;
-  } else if (Platform.isLinux || Platform.isWindows) {
+  if (Platform.isLinux || Platform.isWindows) {
     targetPlatform = TargetPlatform.android;
   }
   _logger.info('targetPlatform: $targetPlatform');

@@ -1,3 +1,8 @@
+## 0.3.2
+
+* android: fingerprint failures don't cancel the dialog, so don't trigger error callback. #2
+  (fixes crash)
+
 ## 0.3.1
 
 * Use android v2 plugin API.
