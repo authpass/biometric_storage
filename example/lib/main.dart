@@ -160,7 +160,7 @@ class _MyAppState extends State<MyApp> {
                   ]),
             const Divider(),
             TextField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Example text to write',
               ),
               controller: _writeController,
@@ -168,7 +168,7 @@ class _MyAppState extends State<MyApp> {
             Expanded(
               child: Container(
                 color: Colors.white,
-                constraints: BoxConstraints.expand(),
+                constraints: const BoxConstraints.expand(),
                 child: SingleChildScrollView(
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -218,12 +218,13 @@ class StorageActions extends StatelessWidget {
           },
         ),
         RaisedButton(
-            child: const Text('delete'),
-            onPressed: () async {
-              _logger.fine('deleting...');
-              await storageFile.delete();
-              _logger.info('Deleted.');
-            })
+          child: const Text('delete'),
+          onPressed: () async {
+            _logger.fine('deleting...');
+            await storageFile.delete();
+            _logger.info('Deleted.');
+          },
+        ),
       ],
     );
   }
