@@ -37,3 +37,4 @@
 build/
 android/.idea
 
+.flutter-plugins-dependencies
