@@ -14,7 +14,7 @@ EXTERNAL SOURCES:
     :path: Flutter
 
 SPEC CHECKSUMS:
-  biometric_storage: b142d2ee2048fb67c4f6054d0308363f3258a9c0
+  biometric_storage: 1400f1382af3a4cc2bf05340e13c3d8de873ceb9
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
 
 PODFILE CHECKSUM: c34e2287a9ccaa606aeceab922830efb9a6ff69a

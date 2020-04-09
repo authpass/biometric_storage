@@ -1,6 +1,6 @@
 # biometric_storage
 
-[![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/versions/0.1.0)
+[![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/)
 
 Encrypted file store, **optionally** secured by biometric lock 
 for Android, iOS and MacOS. 
