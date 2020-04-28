@@ -125,7 +125,8 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 val msg = call.argument<Map<String, Any>>("promptMessages")?.let { data ->
                     moshi.adapter(BiometricPromptMessages::class.java).fromJsonValue(data)
                 } ?: messages
-                authenticate(msg, {
+                val confirmationRequired = call.argument<Map<String, Any>>("confirmationRequired") as? Boolean ?: true
+                authenticate(msg, confirmationRequired, {
                     cb()
                 }) { info ->
                     result.error("AuthError:${info.error}", info.message.toString(), null)
@@ -191,7 +192,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
     }
 
-    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: ErrorCallback) {
+    private fun authenticate(messages: BiometricPromptMessages, confirmationRequired: Boolean, onSuccess: () -> Unit, onError: ErrorCallback) {
         logger.trace("authenticate()")
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
@@ -219,6 +220,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             .setSubtitle(messages.subtitle)
             .setDescription(messages.description)
             .setNegativeButtonText(messages.negativeButton)
+            .setConfirmationRequired(confirmationRequired)
             .build())
     }
 

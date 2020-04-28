@@ -64,6 +64,41 @@ class StorageFileInitOptions {
       };
 }
 
+class PromptMessages {
+  PromptMessages({
+    this.title,
+    this.subtitle,
+    this.description,
+    this.negativeButton,
+  });
+
+  final String title;
+  final String subtitle;
+  final String description;
+  final String negativeButton;
+
+  Map<String, String> _toJson() {
+    final json = Map<String, String>();
+    if (title != null) {
+      json['title'] = title;
+    }
+
+    if (subtitle != null) {
+      json['subtitle'] = subtitle;
+    }
+
+    if (description != null) {
+      json['description'] = description;
+    }
+
+    if (negativeButton != null) {
+      json['negativeButton'] = negativeButton;
+    }
+
+    return json;
+  }
+}
+
 class BiometricStorage {
   factory BiometricStorage() => _instance;
 
@@ -90,6 +125,8 @@ class BiometricStorage {
     String name, {
     StorageFileInitOptions options,
     bool forceInit = false,
+    PromptMessages promptMessages,
+    bool confirmationRequired,
   }) async {
     assert(name != null);
     try {
@@ -102,7 +139,12 @@ class BiometricStorage {
         },
       );
       _logger.finest('getting storage. was created: $result');
-      return BiometricStorageFile(this, name);
+      return BiometricStorageFile(
+        this,
+        name,
+        promptMessages: promptMessages,
+        confirmationRequired: confirmationRequired,
+      );
     } catch (e, stackTrace) {
       _logger.warning(
           'Error while initializing biometric storage.', e, stackTrace);
@@ -110,16 +152,29 @@ class BiometricStorage {
     }
   }
 
-  Future<String> _read(String name) =>
-      _transformErrors(_channel.invokeMethod<String>('read', {'name': name}));
+  Future<String> _read(String name,
+          {PromptMessages promptMessages, bool confirmationRequired}) =>
+      _transformErrors(_channel.invokeMethod<String>('read', {
+        'name': name,
+        'promptMessages': promptMessages?._toJson(),
+        'confirmationRequired': confirmationRequired
+      }));
 
-  Future<bool> _delete(String name) =>
-      _transformErrors(_channel.invokeMethod<bool>('delete', {'name': name}));
+  Future<bool> _delete(String name,
+          {PromptMessages promptMessages, bool confirmationRequired}) =>
+      _transformErrors(_channel.invokeMethod<bool>('delete', {
+        'name': name,
+        'promptMessages': promptMessages?._toJson(),
+        'confirmationRequired': confirmationRequired
+      }));
 
-  Future<void> _write(String name, String content) =>
+  Future<void> _write(String name, String content,
+          {PromptMessages promptMessages, bool confirmationRequired}) =>
       _transformErrors(_channel.invokeMethod('write', {
         'name': name,
         'content': content,
+        'promptMessages': promptMessages?._toJson(),
+        'confirmationRequired': confirmationRequired
       }));
 
   Future<T> _transformErrors<T>(Future<T> future) =>
@@ -141,18 +196,38 @@ class BiometricStorage {
 }
 
 class BiometricStorageFile {
-  BiometricStorageFile(this._plugin, this.name);
+  BiometricStorageFile(
+    this._plugin,
+    this.name, {
+    this.promptMessages,
+    this.confirmationRequired,
+  });
 
   final BiometricStorage _plugin;
   final String name;
+  final PromptMessages promptMessages;
+  final bool confirmationRequired;
 
-  /// ead from the secure file and returns the content.
+  /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String> read() => _plugin._read(name);
+  Future<String> read() => _plugin._read(
+        name,
+        promptMessages: promptMessages,
+        confirmationRequired: confirmationRequired,
+      );
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content) => _plugin._write(name, content);
+  Future<void> write(String content) => _plugin._write(
+        name,
+        content,
+        promptMessages: promptMessages,
+        confirmationRequired: confirmationRequired,
+      );
 
   /// Delete the content of this storage.
-  Future<void> delete() => _plugin._delete(name);
+  Future<void> delete() => _plugin._delete(
+        name,
+        promptMessages: promptMessages,
+        confirmationRequired: confirmationRequired,
+      );
 }
