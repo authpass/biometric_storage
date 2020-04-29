@@ -64,21 +64,25 @@ class StorageFileInitOptions {
       };
 }
 
-class PromptMessages {
-  PromptMessages({
-    this.title,
+class AndroidPromptInfo {
+  const AndroidPromptInfo({
+    this.title = 'Authenticate to unlock data',
     this.subtitle,
     this.description,
-    this.negativeButton,
+    this.negativeButton = 'Cancel',
+    this.confirmationRequired = true,
   });
 
   final String title;
   final String subtitle;
   final String description;
   final String negativeButton;
+  final bool confirmationRequired;
 
-  Map<String, String> _toJson() {
-    final json = Map<String, String>();
+  static const _defaultValues = AndroidPromptInfo();
+
+  Map<String, dynamic> _toJson() {
+    final json = <String, dynamic>{};
     if (title != null) {
       json['title'] = title;
     }
@@ -93,6 +97,10 @@ class PromptMessages {
 
     if (negativeButton != null) {
       json['negativeButton'] = negativeButton;
+    }
+
+    if (confirmationRequired != null) {
+      json['confirmationRequired'] = confirmationRequired;
     }
 
     return json;
@@ -125,8 +133,7 @@ class BiometricStorage {
     String name, {
     StorageFileInitOptions options,
     bool forceInit = false,
-    PromptMessages promptMessages,
-    bool confirmationRequired,
+    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo._defaultValues,
   }) async {
     assert(name != null);
     try {
@@ -142,8 +149,7 @@ class BiometricStorage {
       return BiometricStorageFile(
         this,
         name,
-        promptMessages: promptMessages,
-        confirmationRequired: confirmationRequired,
+        androidPromptInfo,
       );
     } catch (e, stackTrace) {
       _logger.warning(
@@ -152,30 +158,42 @@ class BiometricStorage {
     }
   }
 
-  Future<String> _read(String name,
-          {PromptMessages promptMessages, bool confirmationRequired}) =>
-      _transformErrors(_channel.invokeMethod<String>('read', {
+  Future<String> _read(
+    String name,
+    AndroidPromptInfo androidPromptInfo,
+  ) =>
+      _transformErrors(_channel.invokeMethod<String>('read', <String, dynamic>{
         'name': name,
-        'promptMessages': promptMessages?._toJson(),
-        'confirmationRequired': confirmationRequired
+        ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
       }));
 
-  Future<bool> _delete(String name,
-          {PromptMessages promptMessages, bool confirmationRequired}) =>
-      _transformErrors(_channel.invokeMethod<bool>('delete', {
+  Future<bool> _delete(
+    String name,
+    AndroidPromptInfo androidPromptInfo,
+  ) =>
+      _transformErrors(_channel.invokeMethod<bool>('delete', <String, dynamic>{
         'name': name,
-        'promptMessages': promptMessages?._toJson(),
-        'confirmationRequired': confirmationRequired
+        ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
       }));
 
-  Future<void> _write(String name, String content,
-          {PromptMessages promptMessages, bool confirmationRequired}) =>
-      _transformErrors(_channel.invokeMethod('write', {
+  Future<void> _write(
+    String name,
+    String content,
+    AndroidPromptInfo androidPromptInfo,
+  ) =>
+      _transformErrors(_channel.invokeMethod('write', <String, dynamic>{
         'name': name,
         'content': content,
-        'promptMessages': promptMessages?._toJson(),
-        'confirmationRequired': confirmationRequired
+        ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
       }));
+
+  Map<String, dynamic> _androidPromptInfoOnlyOnAndroid(
+      AndroidPromptInfo promptInfo) {
+    // Don't expose Android configurations to other platforms
+    return Platform.isAndroid
+        ? <String, dynamic>{'androidPromptInfo': promptInfo._toJson()}
+        : <String, dynamic>{};
+  }
 
   Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((dynamic error, StackTrace stackTrace) {
@@ -196,38 +214,20 @@ class BiometricStorage {
 }
 
 class BiometricStorageFile {
-  BiometricStorageFile(
-    this._plugin,
-    this.name, {
-    this.promptMessages,
-    this.confirmationRequired,
-  });
+  BiometricStorageFile(this._plugin, this.name, this.androidPromptInfo);
 
   final BiometricStorage _plugin;
   final String name;
-  final PromptMessages promptMessages;
-  final bool confirmationRequired;
+  final AndroidPromptInfo androidPromptInfo;
 
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String> read() => _plugin._read(
-        name,
-        promptMessages: promptMessages,
-        confirmationRequired: confirmationRequired,
-      );
+  Future<String> read() => _plugin._read(name, androidPromptInfo);
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content) => _plugin._write(
-        name,
-        content,
-        promptMessages: promptMessages,
-        confirmationRequired: confirmationRequired,
-      );
+  Future<void> write(String content) =>
+      _plugin._write(name, content, androidPromptInfo);
 
   /// Delete the content of this storage.
-  Future<void> delete() => _plugin._delete(
-        name,
-        promptMessages: promptMessages,
-        confirmationRequired: confirmationRequired,
-      );
+  Future<void> delete() => _plugin._delete(name, androidPromptInfo);
 }

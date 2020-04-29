@@ -145,7 +145,7 @@ class _MyAppState extends State<MyApp> {
                     '${baseName}_customPrompt',
                     options: StorageFileInitOptions(
                         authenticationValidityDurationSeconds: 30),
-                    promptMessages: PromptMessages(
+                    androidPromptInfo: const AndroidPromptInfo(
                       title: 'Custom title',
                       subtitle: 'Custom subtitle',
                       description: 'Custom description',
@@ -155,7 +155,9 @@ class _MyAppState extends State<MyApp> {
                     '${baseName}_customPrompt',
                     options: StorageFileInitOptions(
                         authenticationValidityDurationSeconds: 30),
-                    confirmationRequired: false);
+                    androidPromptInfo: const AndroidPromptInfo(
+                      confirmationRequired: false,
+                    ));
                 setState(() {});
                 _logger.info('initiailzed $baseName');
               },
