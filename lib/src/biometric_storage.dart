@@ -64,6 +64,33 @@ class StorageFileInitOptions {
       };
 }
 
+class AndroidPromptInfo {
+  const AndroidPromptInfo({
+    this.title = 'Authenticate to unlock data',
+    this.subtitle,
+    this.description,
+    this.negativeButton = 'Cancel',
+    this.confirmationRequired = true,
+  })  : assert(title != null),
+        assert(negativeButton != null),
+        assert(confirmationRequired != null);
+
+  final String title;
+  final String subtitle;
+  final String description;
+  final String negativeButton;
+  final bool confirmationRequired;
+
+  static const _defaultValues = AndroidPromptInfo();
+
+  Map<String, dynamic> _toJson() => <String, dynamic>{
+        'title': title,
+        'subtitle': subtitle,
+        'description': description,
+        'negativeButton': negativeButton,
+        'confirmationRequired': confirmationRequired,
+      };
+
 class BiometricStorage {
   factory BiometricStorage() => _instance;
 
@@ -90,6 +117,7 @@ class BiometricStorage {
     String name, {
     StorageFileInitOptions options,
     bool forceInit = false,
+    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo._defaultValues,
   }) async {
     assert(name != null);
     try {
@@ -102,7 +130,11 @@ class BiometricStorage {
         },
       );
       _logger.finest('getting storage. was created: $result');
-      return BiometricStorageFile(this, name);
+      return BiometricStorageFile(
+        this,
+        name,
+        androidPromptInfo,
+      );
     } catch (e, stackTrace) {
       _logger.warning(
           'Error while initializing biometric storage.', e, stackTrace);
@@ -110,17 +142,42 @@ class BiometricStorage {
     }
   }
 
-  Future<String> _read(String name) =>
-      _transformErrors(_channel.invokeMethod<String>('read', {'name': name}));
+  Future<String> _read(
+    String name,
+    AndroidPromptInfo androidPromptInfo,
+  ) =>
+      _transformErrors(_channel.invokeMethod<String>('read', <String, dynamic>{
+        'name': name,
+        ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
+      }));
 
-  Future<bool> _delete(String name) =>
-      _transformErrors(_channel.invokeMethod<bool>('delete', {'name': name}));
+  Future<bool> _delete(
+    String name,
+    AndroidPromptInfo androidPromptInfo,
+  ) =>
+      _transformErrors(_channel.invokeMethod<bool>('delete', <String, dynamic>{
+        'name': name,
+        ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
+      }));
 
-  Future<void> _write(String name, String content) =>
-      _transformErrors(_channel.invokeMethod('write', {
+  Future<void> _write(
+    String name,
+    String content,
+    AndroidPromptInfo androidPromptInfo,
+  ) =>
+      _transformErrors(_channel.invokeMethod('write', <String, dynamic>{
         'name': name,
         'content': content,
+        ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
       }));
+
+  Map<String, dynamic> _androidPromptInfoOnlyOnAndroid(
+      AndroidPromptInfo promptInfo) {
+    // Don't expose Android configurations to other platforms
+    return Platform.isAndroid
+        ? <String, dynamic>{'androidPromptInfo': promptInfo._toJson()}
+        : <String, dynamic>{};
+  }
 
   Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((dynamic error, StackTrace stackTrace) {
@@ -141,18 +198,20 @@ class BiometricStorage {
 }
 
 class BiometricStorageFile {
-  BiometricStorageFile(this._plugin, this.name);
+  BiometricStorageFile(this._plugin, this.name, this.androidPromptInfo);
 
   final BiometricStorage _plugin;
   final String name;
+  final AndroidPromptInfo androidPromptInfo;
 
-  /// ead from the secure file and returns the content.
+  /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String> read() => _plugin._read(name);
+  Future<String> read() => _plugin._read(name, androidPromptInfo);
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content) => _plugin._write(name, content);
+  Future<void> write(String content) =>
+      _plugin._write(name, content, androidPromptInfo);
 
   /// Delete the content of this storage.
-  Future<void> delete() => _plugin._delete(name);
+  Future<void> delete() => _plugin._delete(name, androidPromptInfo);
 }

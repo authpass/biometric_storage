@@ -68,6 +68,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
         const val PARAM_NAME = "name"
         const val PARAM_WRITE_CONTENT = "content"
+        const val PARAM_ANDROID_PROMPT_INFO = "androidPromptInfo"
 
         val moshi = Moshi.Builder()
             // ... add your own JsonAdapters and factories ...
@@ -78,7 +79,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     private var attachedActivity: FragmentActivity? = null
-    private var messages = BiometricPromptMessages()
 
     private val storageFiles = mutableMapOf<String, BiometricStorageFile>()
 
@@ -110,6 +110,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             // every method call requires the name of the stored file.
             val getName = { requiredArgument<String>(PARAM_NAME) }
+            val getAndroidPromptInfo = {
+                requiredArgument<Map<String, Any>>(PARAM_ANDROID_PROMPT_INFO).let {
+                    moshi.adapter(AndroidPromptInfo::class.java).fromJsonValue(it) ?: throw MethodCallException(
+                        "BadArgument",
+                        "'$PARAM_ANDROID_PROMPT_INFO' is not well formed"
+                    )
+                }
+            }
 
             fun withStorage(cb: BiometricStorageFile.() -> Unit) {
                 val name = getName()
@@ -122,10 +130,8 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 if (!options.authenticationRequired) {
                     return cb()
                 }
-                val msg = call.argument<Map<String, Any>>("promptMessages")?.let { data ->
-                    moshi.adapter(BiometricPromptMessages::class.java).fromJsonValue(data)
-                } ?: messages
-                authenticate(msg, {
+                val promptInfo = getAndroidPromptInfo()
+                authenticate(promptInfo, {
                     cb()
                 }) { info ->
                     result.error("AuthError:${info.error}", info.message.toString(), null)
@@ -191,7 +197,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
     }
 
-    private fun authenticate(messages: BiometricPromptMessages, onSuccess: () -> Unit, onError: ErrorCallback) {
+    private fun authenticate(promptInfo: AndroidPromptInfo, onSuccess: () -> Unit, onError: ErrorCallback) {
         logger.trace("authenticate()")
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
@@ -215,10 +221,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             }
         })
         prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
-            .setTitle(messages.title)
-            .setSubtitle(messages.subtitle)
-            .setDescription(messages.description)
-            .setNegativeButtonText(messages.negativeButton)
+            .setTitle(promptInfo.title)
+            .setSubtitle(promptInfo.subtitle)
+            .setDescription(promptInfo.description)
+            .setNegativeButtonText(promptInfo.negativeButton)
+            .setConfirmationRequired(promptInfo.confirmationRequired)
             .build())
     }
 
@@ -247,9 +254,10 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 }
 
-data class BiometricPromptMessages(
-    val title: String = "Authenticate to unlock data",
-    val subtitle: String? = null,
-    val description: String? = null,
-    val negativeButton: String = "Cancel"
+data class AndroidPromptInfo(
+    val title: String,
+    val subtitle: String?,
+    val description: String?,
+    val negativeButton: String,
+    val confirmationRequired: Boolean
 )

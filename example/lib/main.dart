@@ -85,6 +85,8 @@ class _MyAppState extends State<MyApp> {
   final String baseName = 'default';
   BiometricStorageFile _authStorage;
   BiometricStorageFile _storage;
+  BiometricStorageFile _customPrompt;
+  BiometricStorageFile _noConfirmation;
 
   final TextEditingController _writeController =
       TextEditingController(text: 'Lorem Ipsum');
@@ -139,6 +141,23 @@ class _MyAppState extends State<MyApp> {
                         options: StorageFileInitOptions(
                           authenticationRequired: false,
                         ));
+                _customPrompt = await BiometricStorage().getStorage(
+                    '${baseName}_customPrompt',
+                    options: StorageFileInitOptions(
+                        authenticationValidityDurationSeconds: 30),
+                    androidPromptInfo: const AndroidPromptInfo(
+                      title: 'Custom title',
+                      subtitle: 'Custom subtitle',
+                      description: 'Custom description',
+                      negativeButton: 'Nope!',
+                    ));
+                _noConfirmation = await BiometricStorage().getStorage(
+                    '${baseName}_customPrompt',
+                    options: StorageFileInitOptions(
+                        authenticationValidityDurationSeconds: 30),
+                    androidPromptInfo: const AndroidPromptInfo(
+                      confirmationRequired: false,
+                    ));
                 setState(() {});
                 _logger.info('initiailzed $baseName');
               },
@@ -156,6 +175,18 @@ class _MyAppState extends State<MyApp> {
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
                         storageFile: _storage,
+                        writeController: _writeController),
+                    const Divider(),
+                    const Text('Custom Authentication Prompt (Android)',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    StorageActions(
+                        storageFile: _customPrompt,
+                        writeController: _writeController),
+                    const Divider(),
+                    const Text('No Confirmation Prompt (Android)',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    StorageActions(
+                        storageFile: _noConfirmation,
                         writeController: _writeController),
                   ]),
             const Divider(),
