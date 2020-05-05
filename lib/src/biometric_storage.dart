@@ -71,7 +71,9 @@ class AndroidPromptInfo {
     this.description,
     this.negativeButton = 'Cancel',
     this.confirmationRequired = true,
-  });
+  })  : assert(title != null),
+        assert(negativeButton != null),
+        assert(confirmationRequired != null);
 
   final String title;
   final String subtitle;
@@ -81,31 +83,13 @@ class AndroidPromptInfo {
 
   static const _defaultValues = AndroidPromptInfo();
 
-  Map<String, dynamic> _toJson() {
-    final json = <String, dynamic>{};
-    if (title != null) {
-      json['title'] = title;
-    }
-
-    if (subtitle != null) {
-      json['subtitle'] = subtitle;
-    }
-
-    if (description != null) {
-      json['description'] = description;
-    }
-
-    if (negativeButton != null) {
-      json['negativeButton'] = negativeButton;
-    }
-
-    if (confirmationRequired != null) {
-      json['confirmationRequired'] = confirmationRequired;
-    }
-
-    return json;
-  }
-}
+  Map<String, dynamic> _toJson() => <String, dynamic>{
+        'title': title,
+        'subtitle': subtitle,
+        'description': description,
+        'negativeButton': negativeButton,
+        'confirmationRequired': confirmationRequired,
+      };
 
 class BiometricStorage {
   factory BiometricStorage() => _instance;
