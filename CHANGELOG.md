@@ -1,6 +1,7 @@
 ## 0.3.4
 
 * Android: allow customization of the PromptInfo (labels, buttons, etc).
+  @patrickhammond
 
 ## 0.3.3
 
