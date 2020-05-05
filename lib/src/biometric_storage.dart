@@ -6,6 +6,10 @@ import 'package:logging/logging.dart';
 
 final _logger = Logger('biometric_storage');
 
+/// Reason for not supporting authentication.
+/// **As long as this is NOT [unsupported] you can still use the secure
+/// storage without biometric storage** (By setting
+/// [StorageFileInitOptions.authenticationRequired] to `false`).
 enum CanAuthenticateResponse {
   success,
   errorHwUnavailable,
@@ -64,6 +68,7 @@ class StorageFileInitOptions {
       };
 }
 
+/// Android specific configuration of the prompt displayed for biometry.
 class AndroidPromptInfo {
   const AndroidPromptInfo({
     this.title = 'Authenticate to unlock data',
@@ -90,8 +95,15 @@ class AndroidPromptInfo {
         'negativeButton': negativeButton,
         'confirmationRequired': confirmationRequired,
       };
+}
 
+/// Main plugin class to interact with. Is always a singleton right now,
+/// factory constructor will always return the same instance.
+///
+/// * call [canAuthenticate] to check support on the platform/device.
+/// * call [getStorage] to initialize a storage.
 class BiometricStorage {
+  /// Returns singleton instance.
   factory BiometricStorage() => _instance;
 
   BiometricStorage._();
@@ -100,6 +112,8 @@ class BiometricStorage {
 
   static const MethodChannel _channel = MethodChannel('biometric_storage');
 
+  /// Returns whether this device supports biometric/secure storage or
+  /// the reason [CanAuthenticateResponse] why it is not supported.
   Future<CanAuthenticateResponse> canAuthenticate() async {
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       return _canAuthenticateMapping[

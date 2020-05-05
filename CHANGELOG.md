@@ -1,3 +1,7 @@
+## 0.3.4
+
+* Android: allow customization of the PromptInfo (labels, buttons, etc).
+
 ## 0.3.3
 
 * ios: added swift 5 dependency to podspec to fix compile errors
