@@ -1,3 +1,7 @@
+## 0.3.4+2
+
+* Android: updated dependencies to androidx.security, biometric, gradle tools.
+
 ## 0.3.4+1
 
 * Android: on error send stack trace to flutter. also fixed a couple of warnings.
