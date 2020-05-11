@@ -13,6 +13,9 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import mu.KotlinLogging
+import java.io.PrintWriter
+import java.io.StringWriter
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 private val logger = KotlinLogging.logger {}
@@ -33,6 +36,7 @@ enum class CanAuthenticateResponse(val code: Int) {
     ErrorNoHardware(BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE),
 }
 
+@Suppress("unused")
 enum class AuthenticationError(val code: Int) {
     Canceled(BiometricPrompt.ERROR_CANCELED),
     Timeout(BiometricPrompt.ERROR_TIMEOUT),
@@ -44,17 +48,36 @@ enum class AuthenticationError(val code: Int) {
 
     companion object {
         fun forCode(code: Int) =
-            values().firstOrNull { it.code == code } ?: AuthenticationError.Unknown
+            values().firstOrNull { it.code == code } ?: Unknown
     }
 }
 
-data class AuthenticationErrorInfo(val error: AuthenticationError, val message: CharSequence)
+data class AuthenticationErrorInfo(
+  val error: AuthenticationError,
+  val message: CharSequence,
+  val errorDetails: String? = null
+) {
+    constructor(
+      error: AuthenticationError,
+      message: CharSequence,
+      e: Throwable
+    ) : this(error, message, e.toCompleteString())
+}
+
+private fun Throwable.toCompleteString(): String {
+    val out = StringWriter().let { out ->
+        printStackTrace(PrintWriter(out))
+        out.toString()
+    }
+    return "$this\n$out"
+}
 
 class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     companion object {
 
         // deprecated, used for v1 plugin api.
+        @Suppress("unused")
         @JvmStatic
         fun registerWith(registrar: Registrar) {
             BiometricStoragePlugin().apply {
@@ -74,7 +97,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             // ... add your own JsonAdapters and factories ...
             .build() as Moshi
 
-        val executor = Executors.newSingleThreadExecutor()
+        val executor : ExecutorService = Executors.newSingleThreadExecutor()
         private val handler: Handler = Handler(Looper.getMainLooper())
     }
 
@@ -84,7 +107,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     private val biometricManager by lazy { BiometricManager.from(applicationContext) }
 
-    lateinit var applicationContext: Context
+    private lateinit var applicationContext: Context
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         initialize(binding.binaryMessenger, binding.applicationContext)
@@ -134,7 +157,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 authenticate(promptInfo, {
                     cb()
                 }) { info ->
-                    result.error("AuthError:${info.error}", info.message.toString(), null)
+                    result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)
                     logger.error("AuthError: $info")
                 }
             }
@@ -187,7 +210,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             cb()
         } catch (e: Throwable) {
             logger.error(e) { "Error while calling UI callback. This must not happen." }
-            onError(AuthenticationErrorInfo(AuthenticationError.Unknown, "Unexpected authentication error. ${e.localizedMessage}"))
+            onError(AuthenticationErrorInfo(AuthenticationError.Unknown, "Unexpected authentication error. ${e.localizedMessage}", e))
         }
     }
 

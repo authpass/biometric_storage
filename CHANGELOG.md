@@ -1,3 +1,7 @@
+## 0.3.4+1
+
+* Android: on error send stack trace to flutter. also fixed a couple of warnings.
+
 ## 0.3.4
 
 * Android: allow customization of the PromptInfo (labels, buttons, etc).
