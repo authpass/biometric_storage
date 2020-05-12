@@ -46,6 +46,11 @@ class AuthException implements Exception {
 
   final AuthExceptionCode code;
   final String message;
+
+  @override
+  String toString() {
+    return 'AuthException{code: $code, message: $message}';
+  }
 }
 
 class StorageFileInitOptions {
