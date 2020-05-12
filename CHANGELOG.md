@@ -1,6 +1,7 @@
-## 0.3.4+3
+## 0.3.4+4
 
 * Android: fix PromptInfo deserialization with minification.
+* Android: add proguard setting to fix protobuf exceptions.
 
 ## 0.3.4+2
 

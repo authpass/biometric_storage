@@ -38,3 +38,5 @@ build/
 android/.idea
 
 .flutter-plugins-dependencies
+example/android/app/_debug-full-r8-config.txt
+
