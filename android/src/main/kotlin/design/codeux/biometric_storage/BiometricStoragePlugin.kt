@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.*
 import androidx.biometric.*
 import androidx.fragment.app.FragmentActivity
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.*
@@ -277,6 +278,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 }
 
+@JsonClass(generateAdapter = true)
 data class AndroidPromptInfo(
     val title: String,
     val subtitle: String?,

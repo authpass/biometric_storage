@@ -1,3 +1,7 @@
+## 0.3.4+3
+
+* Android: fix PromptInfo deserialization with minification.
+
 ## 0.3.4+2
 
 * Android: updated dependencies to androidx.security, biometric, gradle tools.

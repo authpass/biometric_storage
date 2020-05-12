@@ -1,6 +1,6 @@
 name: biometric_storage
 description: Encrypted data store optionally secured by biometric lock with support for iOS, Android and MacOS.
-version: 0.3.4+2
+version: 0.3.4+3
 homepage: https://github.com/authpass/biometric_storage/
 
 environment:
