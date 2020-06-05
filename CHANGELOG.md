@@ -1,3 +1,8 @@
+## 0.3.4+5
+
+* Android: Upgrade to androidx.security 1.0.0-rc02 which should fix protobuf incompatibilities
+  #6 https://developer.android.com/jetpack/androidx/releases/security#security-crypto-1.0.0-rc02
+
 ## 0.3.4+4
 
 * Android: fix PromptInfo deserialization with minification.
