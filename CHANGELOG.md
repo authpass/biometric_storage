@@ -1,3 +1,8 @@
+## 0.3.4+6
+
+* Android: androidx.security 1.0.0-rc02 needs another proguard rule.
+  https://github.com/google/tink/issues/361
+
 ## 0.3.4+5
 
 * Android: Upgrade to androidx.security 1.0.0-rc02 which should fix protobuf incompatibilities
