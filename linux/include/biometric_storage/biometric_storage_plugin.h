@@ -21,6 +21,7 @@ FLUTTER_PLUGIN_EXPORT GType biometric_storage_plugin_get_type();
 FLUTTER_PLUGIN_EXPORT void biometric_storage_plugin_register_with_registrar(
     FlPluginRegistrar* registrar);
 
+
 G_END_DECLS
 
 #endif  // FLUTTER_PLUGIN_BIOMETRIC_STORAGE_PLUGIN_H_

@@ -1,3 +1,7 @@
+## 0.4.0
+
+* Linux: Initial support for Linux - only unauthenticated storage in Keyring.
+
 ## 0.3.4+6
 
 * Android: androidx.security 1.0.0-rc02 needs another proguard rule.

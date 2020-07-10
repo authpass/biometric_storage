@@ -126,38 +126,48 @@ class _MyAppState extends State<MyApp> {
               child: const Text('init'),
               onPressed: () async {
                 _logger.finer('Initializing $baseName');
-                if ((await _checkAuthenticate()) !=
-                    CanAuthenticateResponse.success) {
+                final authenticate = await _checkAuthenticate();
+                bool supportsAuthenticated = false;
+                if (authenticate == CanAuthenticateResponse.success) {
+                  supportsAuthenticated = true;
+                } else if (authenticate !=
+                    CanAuthenticateResponse.unsupported) {
+                  supportsAuthenticated = false;
+                } else {
                   _logger.severe(
-                      'Unable to use authenticate. Unable to getting storage.');
+                      'Unable to use authenticate. Unable to get storage.');
                   return;
                 }
-                _authStorage = await BiometricStorage().getStorage(
-                    '${baseName}_authenticated',
-                    options: StorageFileInitOptions(
-                        authenticationValidityDurationSeconds: 30));
+                if (supportsAuthenticated) {
+                  _authStorage = await BiometricStorage().getStorage(
+                      '${baseName}_authenticated',
+                      options: StorageFileInitOptions(
+                          authenticationValidityDurationSeconds: 30));
+                }
                 _storage = await BiometricStorage()
                     .getStorage('${baseName}_unauthenticated',
                         options: StorageFileInitOptions(
                           authenticationRequired: false,
                         ));
-                _customPrompt = await BiometricStorage().getStorage(
-                    '${baseName}_customPrompt',
-                    options: StorageFileInitOptions(
-                        authenticationValidityDurationSeconds: 30),
-                    androidPromptInfo: const AndroidPromptInfo(
-                      title: 'Custom title',
-                      subtitle: 'Custom subtitle',
-                      description: 'Custom description',
-                      negativeButton: 'Nope!',
-                    ));
-                _noConfirmation = await BiometricStorage().getStorage(
-                    '${baseName}_customPrompt',
-                    options: StorageFileInitOptions(
-                        authenticationValidityDurationSeconds: 30),
-                    androidPromptInfo: const AndroidPromptInfo(
-                      confirmationRequired: false,
-                    ));
+                if (supportsAuthenticated) {
+                  _customPrompt = await BiometricStorage().getStorage(
+                      '${baseName}_customPrompt',
+                      options: StorageFileInitOptions(
+                          authenticationValidityDurationSeconds: 30),
+                      androidPromptInfo: const AndroidPromptInfo(
+                        title: 'Custom title',
+                        subtitle: 'Custom subtitle',
+                        description: 'Custom description',
+                        negativeButton: 'Nope!',
+                      ));
+                  _noConfirmation = await BiometricStorage().getStorage(
+                      '${baseName}_customPrompt',
+                      options: StorageFileInitOptions(
+                          authenticationValidityDurationSeconds: 30),
+                      androidPromptInfo: const AndroidPromptInfo(
+                        confirmationRequired: false,
+                      ));
+                }
                 setState(() {});
                 _logger.info('initiailzed $baseName');
               },
@@ -171,18 +181,30 @@ class _MyAppState extends State<MyApp> {
                         storageFile: _authStorage,
                         writeController: _writeController),
                     const Divider(),
+                  ]),
+            ...?(_storage == null
+                ? null
+                : [
                     const Text('Unauthenticated',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
                         storageFile: _storage,
                         writeController: _writeController),
                     const Divider(),
+                  ]),
+            ...?(_customPrompt == null
+                ? null
+                : [
                     const Text('Custom Authentication Prompt (Android)',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
                         storageFile: _customPrompt,
                         writeController: _writeController),
                     const Divider(),
+                  ]),
+            ...?(_noConfirmation == null
+                ? null
+                : [
                     const Text('No Confirmation Prompt (Android)',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(

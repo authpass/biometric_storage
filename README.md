@@ -3,13 +3,15 @@
 [![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/)
 
 Encrypted file store, **optionally** secured by biometric lock 
-for Android, iOS and MacOS. 
+for Android, iOS, MacOS and Linux (partial support). 
 
 Meant as a way to store small data in a hardware encrypted fashion. E.g. to 
 store passwords, secret keys, etc. but not massive amounts
 of data.
 
-On android uses androidx uses KeyStore and on iOS LocalAuthentication with KeyChain.
+* Android: Uses androidx with KeyStore.
+* iOS and MacOS: LocalAuthentication with KeyChain.
+* Linux: Stores values in Keyring using libsecret. (No biometric authentication support).
 
 Check out [AuthPass Password Manager](https://authpass.app/) for a app which 
 makes heavy use of this plugin.

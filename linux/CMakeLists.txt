@@ -8,6 +8,7 @@ add_library(${PLUGIN_NAME} SHARED
   "${PLUGIN_NAME}.cc"
 )
 
+find_package(PkgConfig REQUIRED)
 pkg_check_modules (LIBSECRET REQUIRED IMPORTED_TARGET libsecret-1>=0.18)
 
 apply_standard_settings(${PLUGIN_NAME})
@@ -19,6 +20,7 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
+target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::LIBSECRET)
 
 # List of absolute paths to libraries that should be bundled with the plugin
 set(biometric_storage_bundled_libraries

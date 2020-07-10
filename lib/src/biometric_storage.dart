@@ -120,7 +120,10 @@ class BiometricStorage {
   /// Returns whether this device supports biometric/secure storage or
   /// the reason [CanAuthenticateResponse] why it is not supported.
   Future<CanAuthenticateResponse> canAuthenticate() async {
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    if (Platform.isAndroid ||
+        Platform.isIOS ||
+        Platform.isMacOS ||
+        Platform.isLinux) {
       return _canAuthenticateMapping[
           await _channel.invokeMethod<String>('canAuthenticate')];
     }
