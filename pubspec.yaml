@@ -35,3 +35,6 @@ flutter:
         pluginClass: BiometricStoragePlugin
       macos:
         pluginClass: BiometricStorageMacOSPlugin
+      linux:
+        pluginClass: BiometricStoragePlugin
+
