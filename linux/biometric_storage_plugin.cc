@@ -3,6 +3,7 @@
 #include <flutter_linux/flutter_linux.h>
 #include <gtk/gtk.h>
 #include <sys/utsname.h>
+#include <libsecret/secret.h>
 
 #define BIOMETRIC_STORAGE_PLUGIN(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), biometric_storage_plugin_get_type(), \
