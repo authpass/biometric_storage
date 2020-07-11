@@ -32,6 +32,19 @@ struct _BiometricStoragePlugin {
 G_DEFINE_TYPE(BiometricStoragePlugin, biometric_storage_plugin, g_object_get_type())
 
 
+
+static FlMethodResponse* _handle_error(const gchar* message, GError *error) {
+    const gchar* domain = g_quark_to_string(error->domain);
+    g_autofree gchar *error_message = g_strdup_printf("%s: %s (%d) (%s)", message, error->message, error->code, domain);
+    g_warning("%s", error_message);
+    g_autoptr(FlValue) error_details = fl_value_new_map();
+    fl_value_set_string_take(error_details, "domain", fl_value_new_string(domain));
+    fl_value_set_string_take(error_details, "code", fl_value_new_int(error->code));
+    fl_value_set_string_take(error_details, "message", fl_value_new_string(error->message));
+    return FL_METHOD_RESPONSE(fl_method_error_response_new(
+                   kSecurityAccessError, error_message, error_details));
+}
+
 static FlMethodResponse *handleInit(FlValue *args) {
   FlValue* options = fl_value_lookup_string(args, "options");
   if (fl_value_get_type(options) != FL_VALUE_TYPE_MAP) {
@@ -96,18 +109,6 @@ static void on_password_cleared(GObject *source, GAsyncResult *result,
   }
   fl_method_call_respond(method_call, response, nullptr);
   g_object_unref(method_call);
-}
-
-static FlMethodResponse* _handle_error(const gchar* message, GError *error) {
-    const gchar* domain = g_quark_to_string(error->domain);
-    g_autofree gchar *error_message = g_strdup_printf("%s: %s (%d) (%s)", message, error->message, error->code);
-    g_warning("%s", error_message);
-    g_autoptr(FlValue) error_details = fl_value_new_map();
-    fl_value_set_string_take(error_details, "domain", fl_value_new_string(domain));
-    fl_value_set_take(error_details, "code", fl_value_new_int(error->code));
-    fl_value_set_string_take(error_details, "message", fl_value_new_string(error->message));
-    return FL_METHOD_RESPONSE(fl_method_error_response_new(
-                   kSecurityAccessError, error_message, error_details))
 }
 
 static void on_password_lookup(GObject *source, GAsyncResult *result,
