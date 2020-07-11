@@ -172,6 +172,22 @@ class _MyAppState extends State<MyApp> {
                 _logger.info('initiailzed $baseName');
               },
             ),
+            ...(!Platform.isLinux
+                ? []
+                : [
+                    RaisedButton(
+                      child: const Text('Check App Armor'),
+                      onPressed: () async {
+                        if (await BiometricStorage()
+                            .linuxCheckAppArmorError()) {
+                          _logger.info(
+                              'Got an error! User has to authorize us to use secret service.');
+                        } else {
+                          _logger.info('all good.');
+                        }
+                      },
+                    )
+                  ]),
             ...(_authStorage == null
                 ? []
                 : [
