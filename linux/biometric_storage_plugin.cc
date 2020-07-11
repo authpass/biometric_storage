@@ -68,9 +68,10 @@ static void on_password_stored(GObject *source, GAsyncResult *result,
   secret_password_store_finish(result, &error);
   if (error != NULL) {
     /* ... handle the failure here */
-    g_warning("Failed to store password. %s", error->message);
+    g_autofree gchar *error_message = g_strdup_printf("Failed to store secret. %s", error->message);
+    g_warning(error_message);
     response = FL_METHOD_RESPONSE(fl_method_error_response_new(
-        kSecurityAccessError, "Error storing secret data.", nullptr));
+        kSecurityAccessError, error_message, nullptr));
     g_error_free(error);
   } else {
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
@@ -90,7 +91,7 @@ static void on_password_cleared(GObject *source, GAsyncResult *result,
 
   if (error != NULL) {
     /* ... handle the failure here */
-    g_warning("Failed to delete password. %s", error->message);
+    g_warning("Failed to delete secret. %s", error->message);
     response = FL_METHOD_RESPONSE(fl_method_error_response_new(
         kSecurityAccessError, "Error deleting secret data.", nullptr));
     g_error_free(error);
@@ -112,9 +113,10 @@ static void on_password_lookup(GObject *source, GAsyncResult *result,
 
   if (error != NULL) {
     /* ... handle the failure here */
-    g_warning("Failed to lookup password. %s", error->message);
+    g_autofree gchar *error_message = g_strdup_printf("Failed to lookup secret. %s", error->message);
+    g_warning(error_message);
     response = FL_METHOD_RESPONSE(fl_method_error_response_new(
-        kSecurityAccessError, "Error storing secret data.", nullptr));
+        kSecurityAccessError, error_message, nullptr));
     g_error_free(error);
   } else if (password == NULL) {
     /* password will be null, if no matching password found */
