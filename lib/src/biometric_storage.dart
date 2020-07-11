@@ -239,7 +239,10 @@ class BiometricStorage {
 
   Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((dynamic error, StackTrace stackTrace) {
-        _logger.warning('Error during plugin operation', error, stackTrace);
+        _logger.warning(
+            'Error during plugin operation (details: ${error.details})',
+            error,
+            stackTrace);
         if (error is PlatformException) {
           if (error.code.startsWith('AuthError:')) {
             return Future<T>.error(
@@ -252,7 +255,8 @@ class BiometricStorage {
           }
           if (error.details is Map) {
             final message = error.details['message'] as String;
-            if (message.contains('org.freedesktop.DBus.Error.AccessDenied')) {
+            if (message.contains('org.freedesktop.DBus.Error.AccessDenied') ||
+                message.contains('AppArmor')) {
               _logger.fine('Got app armor error.');
               return Future<T>.error(
                   AuthException(

@@ -14,7 +14,7 @@ void main() {
   Logger.root.level = Level.ALL;
   PrintAppender().attachToLogger(Logger.root);
   logMessages.attachToLogger(Logger.root);
-  _logger.fine('Application launched.');
+  _logger.fine('Application launched. (v2)');
   _setTargetPlatformForDesktop();
   runApp(MyApp());
 }
