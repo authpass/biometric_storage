@@ -1,3 +1,8 @@
+## 0.4.1
+
+* Linux: Improve snap compatibility by detecting AppArmor error to prompt users to connect
+         to password-manager-service.
+
 ## 0.4.0
 
 * Linux: Initial support for Linux - only unauthenticated storage in Keyring.
