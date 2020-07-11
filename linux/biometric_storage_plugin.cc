@@ -68,10 +68,7 @@ static void on_password_stored(GObject *source, GAsyncResult *result,
   secret_password_store_finish(result, &error);
   if (error != NULL) {
     /* ... handle the failure here */
-    g_autofree gchar *error_message = g_strdup_printf("Failed to store secret. %s", error->message);
-    g_warning(error_message);
-    response = FL_METHOD_RESPONSE(fl_method_error_response_new(
-        kSecurityAccessError, error_message, nullptr));
+    response = _handle_error("Failed to store secret", error);
     g_error_free(error);
   } else {
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
@@ -91,9 +88,7 @@ static void on_password_cleared(GObject *source, GAsyncResult *result,
 
   if (error != NULL) {
     /* ... handle the failure here */
-    g_warning("Failed to delete secret. %s", error->message);
-    response = FL_METHOD_RESPONSE(fl_method_error_response_new(
-        kSecurityAccessError, "Error deleting secret data.", nullptr));
+    response = _handle_error("Failed to delete secret", error);
     g_error_free(error);
 
   } else {
@@ -101,6 +96,18 @@ static void on_password_cleared(GObject *source, GAsyncResult *result,
   }
   fl_method_call_respond(method_call, response, nullptr);
   g_object_unref(method_call);
+}
+
+static FlMethodResponse* _handle_error(const gchar* message, GError *error) {
+    const gchar* domain = g_quark_to_string(error->domain);
+    g_autofree gchar *error_message = g_strdup_printf("%s: %s (%d) (%s)", message, error->message, error->code);
+    g_warning("%s", error_message);
+    g_autoptr(FlValue) error_details = fl_value_new_map();
+    fl_value_set_string_take(error_details, "domain", fl_value_new_string(domain));
+    fl_value_set_take(error_details, "code", fl_value_new_int(error->code));
+    fl_value_set_string_take(error_details, "message", fl_value_new_string(error->message));
+    return FL_METHOD_RESPONSE(fl_method_error_response_new(
+                   kSecurityAccessError, error_message, error_details))
 }
 
 static void on_password_lookup(GObject *source, GAsyncResult *result,
@@ -113,10 +120,7 @@ static void on_password_lookup(GObject *source, GAsyncResult *result,
 
   if (error != NULL) {
     /* ... handle the failure here */
-    g_autofree gchar *error_message = g_strdup_printf("Failed to lookup secret. %s", error->message);
-    g_warning(error_message);
-    response = FL_METHOD_RESPONSE(fl_method_error_response_new(
-        kSecurityAccessError, error_message, nullptr));
+    response = _handle_error("Failed to lookup secret", error);
     g_error_free(error);
   } else if (password == NULL) {
     /* password will be null, if no matching password found */
