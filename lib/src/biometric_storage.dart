@@ -32,6 +32,7 @@ enum AuthExceptionCode {
   userCanceled,
   unknown,
   timeout,
+  linuxAppArmorDenied,
 }
 
 const _authErrorCodeMapping = {
@@ -130,6 +131,41 @@ class BiometricStorage {
     return CanAuthenticateResponse.unsupported;
   }
 
+  /// Returns true when there is an AppArmor error when trying to read a value.
+  ///
+  /// When used inside a snap, there might be app armor limitations
+  /// which lead to an error like:
+  /// org.freedesktop.DBus.Error.AccessDenied: An AppArmor policy prevents
+  /// this sender from sending this message to this recipient;
+  /// type="method_call", sender=":1.140" (uid=1000 pid=94358
+  /// comm="/snap/biometric-storage-example/x1/biometric_stora"
+  /// label="snap.biometric-storage-example.biometric (enforce)")
+  /// interface="org.freedesktop.Secret.Service" member="OpenSession"
+  /// error name="(unset)" requested_reply="0" destination=":1.30"
+  /// (uid=1000 pid=1153 comm="/usr/bin/gnome-keyring-daemon
+  /// --daemonize --login " label="unconfined")
+  Future<bool> linuxCheckAppArmorError() async {
+    if (!Platform.isLinux) {
+      return false;
+    }
+    final tmpStorage = await getStorage('appArmorCheck',
+        options: StorageFileInitOptions(authenticationRequired: false));
+    _logger.finer('Checking app armor');
+    try {
+      await tmpStorage.read();
+      _logger.finer('Everything okay.');
+      return false;
+    } on AuthException catch (e, stackTrace) {
+      if (e.code == AuthExceptionCode.linuxAppArmorDenied) {
+        return true;
+      }
+      _logger.warning(
+          'Unknown error while checking for app armor.', e, stackTrace);
+      // some other weird error?
+      rethrow;
+    }
+  }
+
   /// Retrieves the given biometric storage file.
   /// Each store is completely separated, and has it's own encryption and
   /// biometric lock.
@@ -213,6 +249,16 @@ class BiometricStorage {
               ),
               stackTrace,
             );
+          }
+          if (error.details is Map) {
+            final message = error.details['message'] as String;
+            if (message.contains('org.freedesktop.DBus.Error.AccessDenied')) {
+              _logger.fine('Got app armor error.');
+              return Future<T>.error(
+                  AuthException(
+                      AuthExceptionCode.linuxAppArmorDenied, error.message),
+                  stackTrace);
+            }
           }
         }
         return Future<T>.error(error, stackTrace);

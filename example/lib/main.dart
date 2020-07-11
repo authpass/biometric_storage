@@ -23,14 +23,7 @@ void main() {
 /// a supported platform (iOS for macOS, Android for Linux and Windows).
 /// Otherwise, do nothing.
 void _setTargetPlatformForDesktop() {
-  TargetPlatform targetPlatform;
-  if (Platform.isLinux || Platform.isWindows) {
-    targetPlatform = TargetPlatform.android;
-  }
-  _logger.info('targetPlatform: $targetPlatform');
-  if (targetPlatform != null) {
-    debugDefaultTargetPlatformOverride = targetPlatform;
-  }
+  // no longer required.
 }
 
 class StringBufferWrapper with ChangeNotifier {
@@ -172,6 +165,22 @@ class _MyAppState extends State<MyApp> {
                 _logger.info('initiailzed $baseName');
               },
             ),
+            ...(!Platform.isLinux
+                ? []
+                : [
+                    RaisedButton(
+                      child: const Text('Check App Armor'),
+                      onPressed: () async {
+                        if (await BiometricStorage()
+                            .linuxCheckAppArmorError()) {
+                          _logger.info(
+                              'Got an error! User has to authorize us to use secret service.');
+                        } else {
+                          _logger.info('all good.');
+                        }
+                      },
+                    )
+                  ]),
             ...(_authStorage == null
                 ? []
                 : [
