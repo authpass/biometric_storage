@@ -1,3 +1,7 @@
+## 1.0.0
+
+* Windows: Initial support for windows. only unauthenticated storage in Credential Manager.
+
 ## 0.4.1
 
 * Linux: Improve snap compatibility by detecting AppArmor error to prompt users to connect

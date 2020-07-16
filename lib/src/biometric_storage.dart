@@ -1,8 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:win32/win32.dart';
+
+part 'biometric_storage_win32.dart';
 
 final _logger = Logger('biometric_storage');
 
@@ -39,6 +47,16 @@ const _authErrorCodeMapping = {
   'AuthError:UserCanceled': AuthExceptionCode.userCanceled,
   'AuthError:Timeout': AuthExceptionCode.timeout,
 };
+
+class BiometricStorageException implements Exception {
+  BiometricStorageException(this.message);
+  final String message;
+
+  @override
+  String toString() {
+    return 'BiometricStorageException{message: $message}';
+  }
+}
 
 /// Exceptions during authentication operations.
 /// See [AuthExceptionCode] for details.
@@ -108,18 +126,79 @@ class AndroidPromptInfo {
 ///
 /// * call [canAuthenticate] to check support on the platform/device.
 /// * call [getStorage] to initialize a storage.
-class BiometricStorage {
-  /// Returns singleton instance.
+abstract class BiometricStorage extends PlatformInterface {
+  // Returns singleton instance.
   factory BiometricStorage() => _instance;
 
-  BiometricStorage._();
+  BiometricStorage.create() : super(token: _token);
 
-  static final _instance = BiometricStorage._();
+  static BiometricStorage _instance = Platform.isWindows
+      ? Win32BiometricStoragePlugin()
+      : MethodChannelBiometricStorage();
 
-  static const MethodChannel _channel = MethodChannel('biometric_storage');
+  /// Platform-specific plugins should set this with their own platform-specific
+  /// class that extends [UrlLauncherPlatform] when they register themselves.
+  static set instance(BiometricStorage instance) {
+    PlatformInterface.verifyToken(instance, _token);
+    _instance = instance;
+  }
+
+  static const Object _token = Object();
 
   /// Returns whether this device supports biometric/secure storage or
   /// the reason [CanAuthenticateResponse] why it is not supported.
+  Future<CanAuthenticateResponse> canAuthenticate();
+
+  /// Returns true when there is an AppArmor error when trying to read a value.
+  ///
+  /// When used inside a snap, there might be app armor limitations
+  /// which lead to an error like:
+  /// org.freedesktop.DBus.Error.AccessDenied: An AppArmor policy prevents
+  /// this sender from sending this message to this recipient;
+  /// type="method_call", sender=":1.140" (uid=1000 pid=94358
+  /// comm="/snap/biometric-storage-example/x1/biometric_stora"
+  /// label="snap.biometric-storage-example.biometric (enforce)")
+  /// interface="org.freedesktop.Secret.Service" member="OpenSession"
+  /// error name="(unset)" requested_reply="0" destination=":1.30"
+  /// (uid=1000 pid=1153 comm="/usr/bin/gnome-keyring-daemon
+  /// --daemonize --login " label="unconfined")
+  Future<bool> linuxCheckAppArmorError();
+
+  /// Retrieves the given biometric storage file.
+  /// Each store is completely separated, and has it's own encryption and
+  /// biometric lock.
+  /// if [forceInit] is true, will throw an exception if the store was already
+  /// created in this runtime.
+  Future<BiometricStorageFile> getStorage(
+    String name, {
+    StorageFileInitOptions options,
+    bool forceInit = false,
+    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo._defaultValues,
+  });
+
+  Future<String> _read(
+    String name,
+    AndroidPromptInfo androidPromptInfo,
+  );
+
+  Future<bool> _delete(
+    String name,
+    AndroidPromptInfo androidPromptInfo,
+  );
+
+  Future<void> _write(
+    String name,
+    String content,
+    AndroidPromptInfo androidPromptInfo,
+  );
+}
+
+class MethodChannelBiometricStorage extends BiometricStorage {
+  MethodChannelBiometricStorage() : super.create();
+
+  static const MethodChannel _channel = MethodChannel('biometric_storage');
+
+  @override
   Future<CanAuthenticateResponse> canAuthenticate() async {
     if (Platform.isAndroid ||
         Platform.isIOS ||
@@ -144,6 +223,7 @@ class BiometricStorage {
   /// error name="(unset)" requested_reply="0" destination=":1.30"
   /// (uid=1000 pid=1153 comm="/usr/bin/gnome-keyring-daemon
   /// --daemonize --login " label="unconfined")
+  @override
   Future<bool> linuxCheckAppArmorError() async {
     if (!Platform.isLinux) {
       return false;
@@ -171,6 +251,7 @@ class BiometricStorage {
   /// biometric lock.
   /// if [forceInit] is true, will throw an exception if the store was already
   /// created in this runtime.
+  @override
   Future<BiometricStorageFile> getStorage(
     String name, {
     StorageFileInitOptions options,
@@ -200,6 +281,7 @@ class BiometricStorage {
     }
   }
 
+  @override
   Future<String> _read(
     String name,
     AndroidPromptInfo androidPromptInfo,
@@ -209,6 +291,7 @@ class BiometricStorage {
         ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
       }));
 
+  @override
   Future<bool> _delete(
     String name,
     AndroidPromptInfo androidPromptInfo,
@@ -218,6 +301,7 @@ class BiometricStorage {
         ..._androidPromptInfoOnlyOnAndroid(androidPromptInfo),
       }));
 
+  @override
   Future<void> _write(
     String name,
     String content,
