@@ -62,7 +62,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       final blob = cred.CredentialBlob.asTypedList(cred.CredentialBlobSize);
       return utf8.decode(blob);
     } finally {
-      CredFree(credPointer);
+      CredFree(credPointer.value);
       free(credPointer);
     }
   }
