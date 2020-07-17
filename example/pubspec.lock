@@ -14,7 +14,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.4.1"
+    version: "1.0.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -222,12 +222,10 @@ packages:
   win32:
     dependency: transitive
     description:
-      path: "."
-      ref: wincred
-      resolved-ref: "2d9ee60428a4a0c30353cae9e7c3e03c17c95fe4"
-      url: "https://github.com/authpass/win32.git"
-    source: git
-    version: "1.6.8"
+      name: win32
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.6.9"
 sdks:
   dart: ">=2.9.0-14.0.dev <3.0.0"
   flutter: ">=1.10.0"
