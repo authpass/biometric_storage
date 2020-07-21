@@ -31,24 +31,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   @override
   Future<bool> _delete(String name, AndroidPromptInfo androidPromptInfo) async {
-    final result = CredDelete(TEXT(name), CRED_TYPE_GENERIC, 0);
-    if (result != TRUE) {
-      final errorCode = GetLastError();
-      if (errorCode == ERROR_NOT_FOUND) {
-        _logger.fine('Unable to find credential of name $name');
-      } else {
-        _logger.warning('Error ($result): $errorCode');
-      }
-      return false;
-    }
-    return true;
-  }
-
-  @override
-  Future<String> _read(String name, AndroidPromptInfo androidPromptInfo) async {
-    final credPointer = allocate<Pointer<CREDENTIAL>>();
+    final namePointer = TEXT(name);
     try {
-      final result = CredRead(TEXT(name), CRED_TYPE_GENERIC, 0, credPointer);
+      final result = CredDelete(namePointer, CRED_TYPE_GENERIC, 0);
       if (result != TRUE) {
         final errorCode = GetLastError();
         if (errorCode == ERROR_NOT_FOUND) {
@@ -56,14 +41,38 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         } else {
           _logger.warning('Error ($result): $errorCode');
         }
+        return false;
+      }
+    } finally {
+      free(namePointer);
+    }
+    return true;
+  }
+
+  @override
+  Future<String> _read(String name, AndroidPromptInfo androidPromptInfo) async {
+    final credPointer = allocate<Pointer<CREDENTIAL>>();
+    final namePointer = TEXT(name);
+    try {
+      if (CredRead(namePointer, CRED_TYPE_GENERIC, 0, credPointer) != TRUE) {
+        final errorCode = GetLastError();
+        if (errorCode == ERROR_NOT_FOUND) {
+          _logger.fine('Unable to find credential of name $name');
+        } else {
+          _logger.warning('Error: $errorCode ',
+              WindowsException(HRESULT_FROM_WIN32(errorCode)));
+        }
         return null;
       }
       final cred = credPointer.value.ref;
       final blob = cred.CredentialBlob.asTypedList(cred.CredentialBlobSize);
       return utf8.decode(blob);
     } finally {
-      CredFree(credPointer.value);
+      if (credPointer.value.address != 0) {
+        CredFree(credPointer.value);
+      }
       free(credPointer);
+      free(namePointer);
     }
   }
 
@@ -72,10 +81,11 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       String name, String content, AndroidPromptInfo androidPromptInfo) async {
     final examplePassword = utf8.encode(content) as Uint8List;
     final blob = examplePassword.allocatePointer();
+    final namePointer = TEXT(name);
 
     final credential = CREDENTIAL.allocate()
       ..Type = CRED_TYPE_GENERIC
-      ..TargetName = TEXT(name)
+      ..TargetName = namePointer
       ..Persist = CRED_PERSIST_LOCAL_MACHINE
       ..UserName = TEXT('flutter.biometric_storage')
       ..CredentialBlob = blob
@@ -90,6 +100,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     } finally {
       free(blob);
       free(credential.addressOf);
+      free(namePointer);
     }
   }
 }
