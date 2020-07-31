@@ -1,3 +1,7 @@
+## unreleased
+
+* Updated README to add details about windows.
+
 ## 1.0.0
 
 * Windows: Initial support for windows. only unauthenticated storage in Credential Manager.

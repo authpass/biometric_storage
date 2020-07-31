@@ -12,6 +12,7 @@ of data.
 * Android: Uses androidx with KeyStore.
 * iOS and MacOS: LocalAuthentication with KeyChain.
 * Linux: Stores values in Keyring using libsecret. (No biometric authentication support).
+* Windows: Uses [wincreds.h to store into read/write into credential store](https://docs.microsoft.com/en-us/windows/win32/api/wincred/).
 
 Check out [AuthPass Password Manager](https://authpass.app/) for a app which 
 makes heavy use of this plugin.
