@@ -5,18 +5,18 @@ PODS:
 
 DEPENDENCIES:
   - biometric_storage (from `Flutter/ephemeral/.symlinks/plugins/biometric_storage/macos`)
-  - FlutterMacOS (from `Flutter/ephemeral/.symlinks/flutter/darwin-x64-profile`)
+  - FlutterMacOS (from `Flutter/ephemeral/.symlinks/flutter/darwin-x64`)
 
 EXTERNAL SOURCES:
   biometric_storage:
     :path: Flutter/ephemeral/.symlinks/plugins/biometric_storage/macos
   FlutterMacOS:
-    :path: Flutter/ephemeral/.symlinks/flutter/darwin-x64-profile
+    :path: Flutter/ephemeral/.symlinks/flutter/darwin-x64
 
 SPEC CHECKSUMS:
-  biometric_storage: ecdb7121134e025b5217a084a5d9aa17d6ec5042
+  biometric_storage: 43caa6e7ef00e8e19c074216e7e1786dacda9e76
   FlutterMacOS: 15bea8a44d2fa024068daa0140371c020b4b6ff9
 
-PODFILE CHECKSUM: 3d7f23e3a499e4f844c299df7bc01f656165c909
+PODFILE CHECKSUM: d8ba9b3e9e93c62c74a660b46c6fcb09f03991a7
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.9.3

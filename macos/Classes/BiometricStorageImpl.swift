@@ -147,7 +147,12 @@ class BiometricStorageImpl {
     
     if (initOptions.authenticationRequired) {
       let context = LAContext()
-      context.touchIDAuthenticationAllowableReuseDuration = Double(initOptions.authenticationValidityDurationSeconds)
+        if #available(OSX 10.12, *) {
+            context.touchIDAuthenticationAllowableReuseDuration = Double(initOptions.authenticationValidityDurationSeconds)
+        } else {
+            // Fallback on earlier versions
+            hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
+        }
       let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
         .userPresence,

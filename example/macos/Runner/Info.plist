@@ -26,6 +26,8 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Secure Storage or authorization tokens</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
