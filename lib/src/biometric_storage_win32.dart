@@ -1,4 +1,14 @@
-part of 'biometric_storage.dart';
+import 'dart:convert';
+import 'dart:ffi';
+import 'dart:typed_data';
+
+import 'package:ffi/ffi.dart';
+import 'package:logging/logging.dart';
+import 'package:win32/win32.dart';
+
+import './biometric_storage.dart';
+
+final _logger = Logger('biometric_storage_win32');
 
 class Win32BiometricStoragePlugin extends BiometricStorage {
   Win32BiometricStoragePlugin() : super.create();
@@ -20,7 +30,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       {StorageFileInitOptions options,
       bool forceInit = false,
       AndroidPromptInfo androidPromptInfo =
-          AndroidPromptInfo._defaultValues}) async {
+          AndroidPromptInfo.defaultValues}) async {
     return BiometricStorageFile(this, namePrefix + name, androidPromptInfo);
   }
 
@@ -30,7 +40,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<bool> _delete(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<bool> delete(String name, AndroidPromptInfo androidPromptInfo) async {
     final namePointer = TEXT(name);
     try {
       final result = CredDelete(namePointer, CRED_TYPE_GENERIC, 0);
@@ -50,7 +60,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<String> _read(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<String> read(String name, AndroidPromptInfo androidPromptInfo) async {
     final credPointer = allocate<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);
     try {
@@ -77,7 +87,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<void> _write(
+  Future<void> write(
       String name, String content, AndroidPromptInfo androidPromptInfo) async {
     final examplePassword = utf8.encode(content) as Uint8List;
     final blob = examplePassword.allocatePointer();

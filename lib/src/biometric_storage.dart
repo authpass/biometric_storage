@@ -1,16 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:ffi';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:win32/win32.dart';
-
-part 'biometric_storage_win32.dart';
 
 final _logger = Logger('biometric_storage');
 
@@ -110,7 +104,7 @@ class AndroidPromptInfo {
   final String negativeButton;
   final bool confirmationRequired;
 
-  static const _defaultValues = AndroidPromptInfo();
+  static const defaultValues = AndroidPromptInfo();
 
   Map<String, dynamic> _toJson() => <String, dynamic>{
         'title': title,
@@ -132,9 +126,7 @@ abstract class BiometricStorage extends PlatformInterface {
 
   BiometricStorage.create() : super(token: _token);
 
-  static BiometricStorage _instance = Platform.isWindows
-      ? Win32BiometricStoragePlugin()
-      : MethodChannelBiometricStorage();
+  static BiometricStorage _instance = MethodChannelBiometricStorage();
 
   /// Platform-specific plugins should set this with their own platform-specific
   /// class that extends [UrlLauncherPlatform] when they register themselves.
@@ -173,20 +165,23 @@ abstract class BiometricStorage extends PlatformInterface {
     String name, {
     StorageFileInitOptions options,
     bool forceInit = false,
-    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo._defaultValues,
+    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo.defaultValues,
   });
 
-  Future<String> _read(
+  @protected
+  Future<String> read(
     String name,
     AndroidPromptInfo androidPromptInfo,
   );
 
-  Future<bool> _delete(
+  @protected
+  Future<bool> delete(
     String name,
     AndroidPromptInfo androidPromptInfo,
   );
 
-  Future<void> _write(
+  @protected
+  Future<void> write(
     String name,
     String content,
     AndroidPromptInfo androidPromptInfo,
@@ -200,6 +195,9 @@ class MethodChannelBiometricStorage extends BiometricStorage {
 
   @override
   Future<CanAuthenticateResponse> canAuthenticate() async {
+    if (kIsWeb) {
+      return CanAuthenticateResponse.unsupported;
+    }
     if (Platform.isAndroid ||
         Platform.isIOS ||
         Platform.isMacOS ||
@@ -256,7 +254,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
     String name, {
     StorageFileInitOptions options,
     bool forceInit = false,
-    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo._defaultValues,
+    AndroidPromptInfo androidPromptInfo = AndroidPromptInfo.defaultValues,
   }) async {
     assert(name != null);
     try {
@@ -282,7 +280,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   }
 
   @override
-  Future<String> _read(
+  Future<String> read(
     String name,
     AndroidPromptInfo androidPromptInfo,
   ) =>
@@ -292,7 +290,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       }));
 
   @override
-  Future<bool> _delete(
+  Future<bool> delete(
     String name,
     AndroidPromptInfo androidPromptInfo,
   ) =>
@@ -302,7 +300,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       }));
 
   @override
-  Future<void> _write(
+  Future<void> write(
     String name,
     String content,
     AndroidPromptInfo androidPromptInfo,
@@ -362,12 +360,12 @@ class BiometricStorageFile {
 
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String> read() => _plugin._read(name, androidPromptInfo);
+  Future<String> read() => _plugin.read(name, androidPromptInfo);
 
   /// Write content of this file. Previous value will be overwritten.
   Future<void> write(String content) =>
-      _plugin._write(name, content, androidPromptInfo);
+      _plugin.write(name, content, androidPromptInfo);
 
   /// Delete the content of this storage.
-  Future<void> delete() => _plugin._delete(name, androidPromptInfo);
+  Future<void> delete() => _plugin.delete(name, androidPromptInfo);
 }
