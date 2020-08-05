@@ -35,9 +35,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<bool> linuxCheckAppArmorError() {
-    throw false;
-  }
+  Future<bool> linuxCheckAppArmorError() async => false;
 
   @override
   Future<bool> delete(String name, AndroidPromptInfo androidPromptInfo) async {

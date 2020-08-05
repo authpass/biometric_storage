@@ -1,5 +1,6 @@
-## unreleased
+## 1.0.1
 
+* Support for web support: **Warning**: Unencrypted - stores into local storage on web!
 * Updated README to add details about windows.
 
 ## 1.0.0

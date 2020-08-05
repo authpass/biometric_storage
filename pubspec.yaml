@@ -1,8 +1,9 @@
 name: biometric_storage
 description: |
   Secure Storage: Encrypted data store optionally secured by biometric lock with support
-  for iOS, Android, MacOS, Linux (unauthenticated), Windows (unauthenticated).
-version: 1.0.0
+  for iOS, Android, MacOS, Linux (unauthenticated), Windows (unauthenticated),
+  Web (unauthenticated, unencrypted, uses localStorage).
+version: 1.0.1
 homepage: https://github.com/authpass/biometric_storage/
 
 environment:
@@ -11,6 +12,8 @@ environment:
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_web_plugins:
     sdk: flutter
   logging: ">=0.10.0 <1.0.0"
   plugin_platform_interface: ">=1.0.2 <2.0.0"
@@ -46,3 +49,6 @@ flutter:
       windows:
         dartPluginClass: Win32BiometricStoragePlugin
         pluginClass: none
+      web:
+        pluginClass: BiometricStoragePluginWeb
+        fileName: biometric_storage_web.dart

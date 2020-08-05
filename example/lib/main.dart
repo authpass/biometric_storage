@@ -233,7 +233,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  List<Widget> _appArmorButton() => !Platform.isLinux
+  List<Widget> _appArmorButton() => kIsWeb || !Platform.isLinux
       ? null
       : [
           RaisedButton(

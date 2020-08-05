@@ -3,7 +3,7 @@
 [![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/)
 
 Encrypted file store, **optionally** secured by biometric lock 
-for Android, iOS, MacOS and Linux (partial support). 
+for Android, iOS, MacOS and partial support for Linux, Windows and Web. 
 
 Meant as a way to store small data in a hardware encrypted fashion. E.g. to 
 store passwords, secret keys, etc. but not massive amounts
@@ -13,14 +13,11 @@ of data.
 * iOS and MacOS: LocalAuthentication with KeyChain.
 * Linux: Stores values in Keyring using libsecret. (No biometric authentication support).
 * Windows: Uses [wincreds.h to store into read/write into credential store](https://docs.microsoft.com/en-us/windows/win32/api/wincred/).
+* Web: **Warning** Uses unauthenticated, **unencrypted** storage in localStorage.
+  If you have a better idea for secure storage on web platform, [please open an Issue](https://github.com/authpass/biometric_storage/issues).
 
 Check out [AuthPass Password Manager](https://authpass.app/) for a app which 
 makes heavy use of this plugin.
-
-## Versions
-
-* Use 0.2.x for legacy plugin format for iOS and android support.
-* Use 0.3.x-beta for the new platforms pubspec format which also supports mac OS.
 
 ## Getting Started
 

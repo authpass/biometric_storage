@@ -18,7 +18,7 @@ enum CanAuthenticateResponse {
   errorNoBiometricEnrolled,
   errorNoHardware,
 
-  /// Plugin does not support platform (ie right now everything but android)
+  /// Plugin does not support platform. This should no longer be the case.
   unsupported,
 }
 
