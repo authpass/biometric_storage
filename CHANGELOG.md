@@ -1,3 +1,7 @@
+## 1.0.1+2
+
+* Fix windows plugin config.
+
 ## 1.0.1+1
 
 * Support for web support: **Warning**: Unencrypted - stores into local storage on web!
