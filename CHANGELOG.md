@@ -1,4 +1,4 @@
-## 1.0.1+3
+## 1.0.1+4
 
 * Fix windows plugin config.
 
