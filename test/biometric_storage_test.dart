@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const MethodChannel channel = MethodChannel('biometric_storage');
+  const channel = MethodChannel('biometric_storage');
 
   TestWidgetsFlutterBinding.ensureInitialized();
 
