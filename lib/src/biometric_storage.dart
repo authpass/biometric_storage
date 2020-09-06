@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:biometric_storage/src/biometric_storage_win32.dart';
+import 'package:biometric_storage/src/biometric_storage_win32_noop.dart'
+    if (dart.library.io) 'package:biometric_storage/src/biometric_storage_win32.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
