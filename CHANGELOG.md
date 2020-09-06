@@ -1,3 +1,7 @@
+## 1.0.1+5
+
+* Workaround to not load win32 when compiling for web.
+
 ## 1.0.1+4
 
 * Fix windows plugin config.
