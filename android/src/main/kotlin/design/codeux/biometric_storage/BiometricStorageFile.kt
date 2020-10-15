@@ -1,11 +1,13 @@
 package design.codeux.biometric_storage
 
 import android.content.Context
-import android.security.keystore.*
-import androidx.security.crypto.*
+import androidx.security.crypto.EncryptedFile
+import androidx.security.crypto.MasterKey
 import com.squareup.moshi.JsonClass
 import mu.KotlinLogging
-import java.io.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 private val logger = KotlinLogging.logger {}
 
@@ -28,22 +30,20 @@ class BiometricStorageFile(
         private const val DIRECTORY_NAME = "biometric_storage"
         private const val FILE_SUFFIX = ".txt"
         private const val BACKUP_SUFFIX = "bak"
-        private const val KEY_SIZE = 256
     }
 
     private val masterKeyName = "${baseName}_master_key"
     private val fileName = "$baseName$FILE_SUFFIX"
     private val file: File
 
-    private val masterKeyAlias: String
+    private val masterKey: MasterKey
 
     init {
-        val paramSpec = createAES256GCMKeyGenParameterSpec(masterKeyName)
-            .setUserAuthenticationRequired(options.authenticationRequired)
-//            .setUserAuthenticationValidityDurationSeconds(3600)
-            .setUserAuthenticationValidityDurationSeconds(options.authenticationValidityDurationSeconds)
+        masterKey = MasterKey.Builder(context, masterKeyName)
+            .setUserAuthenticationRequired(
+                options.authenticationRequired, options.authenticationValidityDurationSeconds)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
-        masterKeyAlias = MasterKeys.getOrCreate(paramSpec)
 
         val baseDir = File(context.filesDir, DIRECTORY_NAME)
         if (!baseDir.exists()) {
@@ -57,9 +57,9 @@ class BiometricStorageFile(
 
     private fun buildEncryptedFile(context: Context) =
         EncryptedFile.Builder(
-            file,
             context,
-            masterKeyAlias,
+            file,
+            masterKey,
             EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
         )
             .setKeysetAlias("__biometric_storage__${baseName}_encrypted_file_keyset__")
@@ -101,40 +101,26 @@ class BiometricStorageFile(
             logger.debug { "File $file does not exist. returning null." }
             return null
         }
-        try {
+        return try {
             val encryptedFile = buildEncryptedFile(context)
 
             val bytes = encryptedFile.openFileInput().use { input ->
                 input.readBytes()
             }
-            return String(bytes)
+            String(bytes)
         } catch (ex: IOException) {
             // Error occurred opening file for writing.
             logger.error(ex) { "Error while writing encrypted file $file" }
-            return null
+            null
         }
     }
 
     @Synchronized
     fun deleteFile(): Boolean {
         if (!file.exists()) {
-            return false;
+            return false
         }
-        return file.delete();
-    }
-
-    // Copied from androidx.security.crypto.MasterKeys (1.0.0-alpha02)
-
-    private fun createAES256GCMKeyGenParameterSpec(
-        keyAlias: String
-    ): KeyGenParameterSpec.Builder {
-        return KeyGenParameterSpec.Builder(
-            keyAlias,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(KEY_SIZE)
+        return file.delete()
     }
 
     override fun toString(): String {
