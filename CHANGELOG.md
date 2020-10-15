@@ -1,3 +1,7 @@
+## 1.0.1+6
+
+* Upgrade to latest Android dependencies (gradle plugin, androidx.*, gradle plugin)
+
 ## 1.0.1+5
 
 * Workaround to not load win32 when compiling for web.
