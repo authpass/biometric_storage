@@ -59,6 +59,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   @override
   Future<String> read(String name, AndroidPromptInfo androidPromptInfo) async {
+    _logger.finer('read($name)');
     final credPointer = allocate<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);
     try {
@@ -74,19 +75,24 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       }
       final cred = credPointer.value.ref;
       final blob = cred.CredentialBlob.asTypedList(cred.CredentialBlobSize);
+
+      _logger.fine('CredFree()');
+      CredFree(credPointer.value);
+
       return utf8.decode(blob);
     } finally {
-      if (credPointer.value.address != 0) {
-        CredFree(credPointer.value);
-      }
+      _logger.fine('free(credPointer)');
       free(credPointer);
+      _logger.fine('free(namePointer)');
       free(namePointer);
+      _logger.fine('read($name) done.');
     }
   }
 
   @override
   Future<void> write(
       String name, String content, AndroidPromptInfo androidPromptInfo) async {
+    _logger.fine('write()');
     final examplePassword = utf8.encode(content) as Uint8List;
     final blob = examplePassword.allocatePointer();
     final namePointer = TEXT(name);
@@ -106,9 +112,11 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
             'Error writing credential $name ($result): $errorCode');
       }
     } finally {
+      _logger.fine('free');
       free(blob);
       free(credential.addressOf);
       free(namePointer);
+      _logger.fine('free done');
     }
   }
 }
