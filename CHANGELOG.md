@@ -1,6 +1,8 @@
-## 1.0.1+6
+## 1.1.0
 
 * Upgrade to latest Android dependencies (gradle plugin, androidx.*, gradle plugin)
+  * [androidx.security:security-crypto](https://developer.android.com/jetpack/androidx/releases/security) 1.0.0-rc02 to 1.1.0-alpha02
+  * [androidx.biometric:biometric](https://developer.android.com/jetpack/androidx/releases/biometric) 1.0.1 to 1.1.0-beta01
 
 ## 1.0.1+5
 
