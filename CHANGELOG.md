@@ -1,3 +1,7 @@
+## 1.1.0+1
+
+* upgrade android moshi dependency.
+
 ## 1.1.0
 
 * Upgrade to latest Android dependencies (gradle plugin, androidx.*, gradle plugin)
