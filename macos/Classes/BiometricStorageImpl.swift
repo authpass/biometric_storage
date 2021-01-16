@@ -30,8 +30,10 @@ class BiometricStorageImpl {
   init(storageError: @escaping StorageError, storageMethodNotImplemented: Any) {
     self.storageError = storageError
     self.storageMethodNotImplemented = storageMethodNotImplemented
+    self.context = LAContext()
   }
   
+private var context:LAContext
   private var stores: [String: InitOptions] = [:]
   private let storageError: StorageError
   private let storageMethodNotImplemented: Any
@@ -103,6 +105,7 @@ class BiometricStorageImpl {
     query[kSecUseOperationPrompt as String] = "Unlock to access data"
     query[kSecReturnAttributes as String] = true
     query[kSecReturnData as String] = true
+    query[kSecUseAuthenticationContext as String] = context
     
     var item: CFTypeRef?
     
@@ -146,7 +149,6 @@ class BiometricStorageImpl {
     var query = baseQuery(name: name)
     
     if (initOptions.authenticationRequired) {
-      let context = LAContext()
         if #available(OSX 10.12, *) {
             context.touchIDAuthenticationAllowableReuseDuration = Double(initOptions.authenticationValidityDurationSeconds)
         } else {
@@ -200,7 +202,6 @@ class BiometricStorageImpl {
   }
   
   private func canAuthenticate(result: @escaping StorageCallback) {
-    let context = LAContext()
     if #available(iOS 10.0, OSX 10.12, *) {
       context.localizedCancelTitle = "Checking auth support"
     }
