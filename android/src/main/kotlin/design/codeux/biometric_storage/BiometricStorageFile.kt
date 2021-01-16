@@ -8,6 +8,7 @@ import mu.KotlinLogging
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.Date
 
 private val logger = KotlinLogging.logger {}
 
@@ -35,7 +36,7 @@ class BiometricStorageFile(
     private val masterKeyName = "${baseName}_master_key"
     private val fileName = "$baseName$FILE_SUFFIX"
     private val file: File
-
+    var lastAccess: Date? = null
     private val masterKey: MasterKey
 
     init {

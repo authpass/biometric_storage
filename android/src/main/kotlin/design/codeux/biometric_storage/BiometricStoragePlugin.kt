@@ -14,6 +14,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import mu.KotlinLogging
+import java.util.Date
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.ExecutorService
@@ -155,12 +156,27 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     return cb()
                 }
                 val promptInfo = getAndroidPromptInfo()
-                authenticate(promptInfo, {
-                    cb()
-                }) { info ->
-                    result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)
-                    logger.error("AuthError: $info")
+
+                var shouldAuthenticate = true
+                this.lastAccess?.let {
+                    val currentTime = Date()
+                    it.time = it.time + this.options.authenticationValidityDurationSeconds * 1000
+                    if (it.after(currentTime)) {
+                        shouldAuthenticate = false
+                    }
                 }
+
+                if (shouldAuthenticate) {
+                    return authenticate(promptInfo, {
+                        this.lastAccess = Date()
+                        cb()
+                    }) { info ->
+                        result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)
+                        logger.error("AuthError: $info")
+                    }
+                }
+
+                return cb()
             }
 
             when (call.method) {
