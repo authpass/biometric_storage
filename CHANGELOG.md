@@ -1,3 +1,7 @@
+## 2.0.0-nullsafety.1
+
+* Null safety migration.
+
 ## 1.1.0+1
 
 * upgrade android moshi dependency.
