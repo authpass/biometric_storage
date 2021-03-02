@@ -115,7 +115,7 @@ class _MyAppState extends State<MyApp> {
         body: Column(
           children: [
             const Text('Methods:'),
-            RaisedButton(
+            ElevatedButton(
               child: const Text('init'),
               onPressed: () async {
                 _logger.finer('Initializing $baseName');
@@ -236,7 +236,7 @@ class _MyAppState extends State<MyApp> {
   List<Widget> _appArmorButton() => kIsWeb || !Platform.isLinux
       ? null
       : [
-          RaisedButton(
+          ElevatedButton(
             child: const Text('Check App Armor'),
             onPressed: () async {
               if (await BiometricStorage().linuxCheckAppArmorError()) {
@@ -265,7 +265,7 @@ class StorageActions extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: <Widget>[
-        RaisedButton(
+        ElevatedButton(
           child: const Text('read'),
           onPressed: () async {
             _logger.fine('reading from ${storageFile.name}');
@@ -273,7 +273,7 @@ class StorageActions extends StatelessWidget {
             _logger.fine('read: {$result}');
           },
         ),
-        RaisedButton(
+        ElevatedButton(
           child: const Text('write'),
           onPressed: () async {
             _logger.fine('Going to write...');
@@ -282,7 +282,7 @@ class StorageActions extends StatelessWidget {
             _logger.info('Written content.');
           },
         ),
-        RaisedButton(
+        ElevatedButton(
           child: const Text('delete'),
           onPressed: () async {
             _logger.fine('deleting...');
