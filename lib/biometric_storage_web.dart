@@ -25,7 +25,7 @@ class BiometricStoragePluginWeb extends BiometricStorage {
 
   @override
   Future<BiometricStorageFile> getStorage(String name,
-      {StorageFileInitOptions options,
+      {StorageFileInitOptions? options,
       bool forceInit = false,
       AndroidPromptInfo androidPromptInfo =
           AndroidPromptInfo.defaultValues}) async {
@@ -41,7 +41,7 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   Future<bool> linuxCheckAppArmorError() async => false;
 
   @override
-  Future<String> read(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<String?> read(String name, AndroidPromptInfo androidPromptInfo) async {
     return html.window.localStorage[name];
   }
 

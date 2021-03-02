@@ -27,7 +27,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   @override
   Future<BiometricStorageFile> getStorage(String name,
-      {StorageFileInitOptions options,
+      {StorageFileInitOptions? options,
       bool forceInit = false,
       AndroidPromptInfo androidPromptInfo =
           AndroidPromptInfo.defaultValues}) async {
@@ -58,7 +58,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<String> read(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<String?> read(String name, AndroidPromptInfo androidPromptInfo) async {
     _logger.finer('read($name)');
     final credPointer = calloc<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);

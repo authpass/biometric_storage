@@ -76,10 +76,10 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final String baseName = 'default';
-  BiometricStorageFile _authStorage;
-  BiometricStorageFile _storage;
-  BiometricStorageFile _customPrompt;
-  BiometricStorageFile _noConfirmation;
+  BiometricStorageFile? _authStorage;
+  BiometricStorageFile? _storage;
+  BiometricStorageFile? _customPrompt;
+  BiometricStorageFile? _noConfirmation;
 
   final TextEditingController _writeController =
       TextEditingController(text: 'Lorem Ipsum');
@@ -97,7 +97,7 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  Future<CanAuthenticateResponse> _checkAuthenticate() async {
+  Future<CanAuthenticateResponse?> _checkAuthenticate() async {
     final response = await BiometricStorage().canAuthenticate();
     _logger.info('checked if authentication was possible: $response');
     return response;
@@ -120,7 +120,7 @@ class _MyAppState extends State<MyApp> {
               onPressed: () async {
                 _logger.finer('Initializing $baseName');
                 final authenticate = await _checkAuthenticate();
-                bool supportsAuthenticated = false;
+                var supportsAuthenticated = false;
                 if (authenticate == CanAuthenticateResponse.success) {
                   supportsAuthenticated = true;
                 } else if (authenticate !=
@@ -172,7 +172,7 @@ class _MyAppState extends State<MyApp> {
                     const Text('Biometric Authentication',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
-                        storageFile: _authStorage,
+                        storageFile: _authStorage!,
                         writeController: _writeController),
                     const Divider(),
                   ]),
@@ -182,7 +182,7 @@ class _MyAppState extends State<MyApp> {
                     const Text('Unauthenticated',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
-                        storageFile: _storage,
+                        storageFile: _storage!,
                         writeController: _writeController),
                     const Divider(),
                   ]),
@@ -192,7 +192,7 @@ class _MyAppState extends State<MyApp> {
                     const Text('Custom Authentication Prompt (Android)',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
-                        storageFile: _customPrompt,
+                        storageFile: _customPrompt!,
                         writeController: _writeController),
                     const Divider(),
                   ]),
@@ -202,7 +202,7 @@ class _MyAppState extends State<MyApp> {
                     const Text('No Confirmation Prompt (Android)',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
-                        storageFile: _noConfirmation,
+                        storageFile: _noConfirmation!,
                         writeController: _writeController),
                   ]),
             const Divider(),
@@ -233,7 +233,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  List<Widget> _appArmorButton() => kIsWeb || !Platform.isLinux
+  List<Widget>? _appArmorButton() => kIsWeb || !Platform.isLinux
       ? null
       : [
           ElevatedButton(
@@ -254,7 +254,7 @@ class _MyAppState extends State<MyApp> {
 
 class StorageActions extends StatelessWidget {
   const StorageActions(
-      {Key key, @required this.storageFile, @required this.writeController})
+      {Key? key, required this.storageFile, required this.writeController})
       : super(key: key);
 
   final BiometricStorageFile storageFile;
