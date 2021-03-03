@@ -27,7 +27,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   @override
   Future<BiometricStorageFile> getStorage(String name,
-      {StorageFileInitOptions options,
+      {StorageFileInitOptions? options,
       bool forceInit = false,
       AndroidPromptInfo androidPromptInfo =
           AndroidPromptInfo.defaultValues}) async {
@@ -52,15 +52,15 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         return false;
       }
     } finally {
-      free(namePointer);
+      calloc.free(namePointer);
     }
     return true;
   }
 
   @override
-  Future<String> read(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<String?> read(String name, AndroidPromptInfo androidPromptInfo) async {
     _logger.finer('read($name)');
-    final credPointer = allocate<Pointer<CREDENTIAL>>();
+    final credPointer = calloc<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);
     try {
       if (CredRead(namePointer, CRED_TYPE_GENERIC, 0, credPointer) != TRUE) {
@@ -82,9 +82,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       return utf8.decode(blob);
     } finally {
       _logger.fine('free(credPointer)');
-      free(credPointer);
+      calloc.free(credPointer);
       _logger.fine('free(namePointer)');
-      free(namePointer);
+      calloc.free(namePointer);
       _logger.fine('read($name) done.');
     }
   }
@@ -96,16 +96,17 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     final examplePassword = utf8.encode(content) as Uint8List;
     final blob = examplePassword.allocatePointer();
     final namePointer = TEXT(name);
+    final userNamePointer = TEXT('flutter.biometric_storage');
 
-    final credential = CREDENTIAL.allocate()
-      ..Type = CRED_TYPE_GENERIC
-      ..TargetName = namePointer
-      ..Persist = CRED_PERSIST_LOCAL_MACHINE
-      ..UserName = TEXT('flutter.biometric_storage')
-      ..CredentialBlob = blob
-      ..CredentialBlobSize = examplePassword.length;
+    final credential = calloc<CREDENTIAL>()
+      ..ref.Type = CRED_TYPE_GENERIC
+      ..ref.TargetName = namePointer
+      ..ref.Persist = CRED_PERSIST_LOCAL_MACHINE
+      ..ref.UserName = userNamePointer
+      ..ref.CredentialBlob = blob
+      ..ref.CredentialBlobSize = examplePassword.length;
     try {
-      final result = CredWrite(credential.addressOf, 0);
+      final result = CredWrite(credential, 0);
       if (result != TRUE) {
         final errorCode = GetLastError();
         throw BiometricStorageException(
@@ -113,9 +114,10 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       }
     } finally {
       _logger.fine('free');
-      free(blob);
-      free(credential.addressOf);
-      free(namePointer);
+      calloc.free(blob);
+      calloc.free(credential);
+      calloc.free(namePointer);
+      calloc.free(userNamePointer);
       _logger.fine('free done');
     }
   }
