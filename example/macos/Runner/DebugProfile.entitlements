@@ -11,6 +11,7 @@
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)design.codeux.biometricStorageExample</string>
+		<string>$(AppIdentifierPrefix)software.rdev.example</string>
 	</array>
 </dict>
 </plist>
