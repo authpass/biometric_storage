@@ -204,8 +204,8 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         Platform.isIOS ||
         Platform.isMacOS ||
         Platform.isLinux) {
-      return _canAuthenticateMapping[await (_channel
-          .invokeMethod<String>('canAuthenticate') as FutureOr<String>)];
+      return _canAuthenticateMapping[
+          await _channel.invokeMethod<String>('canAuthenticate')];
     }
     return CanAuthenticateResponse.unsupported;
   }
