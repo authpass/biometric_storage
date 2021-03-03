@@ -156,12 +156,13 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }()
             }
             fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
-                if (!requiresAuthenticationAndTouch()) {
+                if (!requiresAuthentication()) {
                     return cb()
                 }
                 val promptInfo = getAndroidPromptInfo()
 
                 return authenticate(promptInfo, {
+                    touch()
                     cb()
                 }) { info ->
                     result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)

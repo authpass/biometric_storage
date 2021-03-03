@@ -68,13 +68,16 @@ class BiometricStorageFile(
     
     fun exists() = file.exists()
 
-    fun requiresAuthenticationAndTouch(): Boolean {
+    fun requiresAuthentication(): Boolean {
         if (!options.authenticationRequired) {
             return false
         }
         val authRequiredAt = lastAccessMs + (options.authenticationValidityDurationSeconds * 1000)
-        lastAccessMs = System.currentTimeMillis()
         return authRequiredAt < System.currentTimeMillis()
+    }
+
+    fun touch() {
+        lastAccessMs = System.currentTimeMillis()
     }
 
     @Synchronized
