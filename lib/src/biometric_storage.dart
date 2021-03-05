@@ -96,13 +96,11 @@ class AndroidPromptInfo {
     this.description,
     this.negativeButton = 'Cancel',
     this.confirmationRequired = true,
-  })  : assert(title != null),
-        assert(negativeButton != null),
-        assert(confirmationRequired != null);
+  });
 
   final String title;
-  final String subtitle;
-  final String description;
+  final String? subtitle;
+  final String? description;
   final String negativeButton;
   final bool confirmationRequired;
 
@@ -143,7 +141,7 @@ abstract class BiometricStorage extends PlatformInterface {
 
   /// Returns whether this device supports biometric/secure storage or
   /// the reason [CanAuthenticateResponse] why it is not supported.
-  Future<CanAuthenticateResponse> canAuthenticate();
+  Future<CanAuthenticateResponse?> canAuthenticate();
 
   /// Returns true when there is an AppArmor error when trying to read a value.
   ///
@@ -167,19 +165,19 @@ abstract class BiometricStorage extends PlatformInterface {
   /// created in this runtime.
   Future<BiometricStorageFile> getStorage(
     String name, {
-    StorageFileInitOptions options,
+    StorageFileInitOptions? options,
     bool forceInit = false,
     AndroidPromptInfo androidPromptInfo = AndroidPromptInfo.defaultValues,
   });
 
   @protected
-  Future<String> read(
+  Future<String?> read(
     String name,
     AndroidPromptInfo androidPromptInfo,
   );
 
   @protected
-  Future<bool> delete(
+  Future<bool?> delete(
     String name,
     AndroidPromptInfo androidPromptInfo,
   );
@@ -198,7 +196,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   static const MethodChannel _channel = MethodChannel('biometric_storage');
 
   @override
-  Future<CanAuthenticateResponse> canAuthenticate() async {
+  Future<CanAuthenticateResponse?> canAuthenticate() async {
     if (kIsWeb) {
       return CanAuthenticateResponse.unsupported;
     }
@@ -256,11 +254,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   @override
   Future<BiometricStorageFile> getStorage(
     String name, {
-    StorageFileInitOptions options,
+    StorageFileInitOptions? options,
     bool forceInit = false,
     AndroidPromptInfo androidPromptInfo = AndroidPromptInfo.defaultValues,
   }) async {
-    assert(name != null);
     try {
       final result = await _channel.invokeMethod<bool>(
         'init',
@@ -284,7 +281,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   }
 
   @override
-  Future<String> read(
+  Future<String?> read(
     String name,
     AndroidPromptInfo androidPromptInfo,
   ) =>
@@ -294,7 +291,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       }));
 
   @override
-  Future<bool> delete(
+  Future<bool?> delete(
     String name,
     AndroidPromptInfo androidPromptInfo,
   ) =>
@@ -324,17 +321,17 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   }
 
   Future<T> _transformErrors<T>(Future<T> future) =>
-      future.catchError((dynamic error, StackTrace stackTrace) {
-        _logger.warning(
-            'Error during plugin operation (details: ${error.details})',
-            error,
-            stackTrace);
+      future.catchError((Object error, StackTrace stackTrace) {
         if (error is PlatformException) {
+          _logger.warning(
+              'Error during plugin operation (details: ${error.details})',
+              error,
+              stackTrace);
           if (error.code.startsWith('AuthError:')) {
             return Future<T>.error(
               AuthException(
                 _authErrorCodeMapping[error.code] ?? AuthExceptionCode.unknown,
-                error.message,
+                error.message ?? 'Unknown error',
               ),
               stackTrace,
             );
@@ -346,7 +343,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
               _logger.fine('Got app armor error.');
               return Future<T>.error(
                   AuthException(
-                      AuthExceptionCode.linuxAppArmorDenied, error.message),
+                      AuthExceptionCode.linuxAppArmorDenied, error.message!),
                   stackTrace);
             }
           }
@@ -365,14 +362,16 @@ class BiometricStorageFile {
 
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String> read({AndroidPromptInfo perActionPromptInfo}) =>
+  Future<String?> read({AndroidPromptInfo? perActionPromptInfo}) =>
       _plugin.read(name, perActionPromptInfo ?? defaultAndroidPromptInfo);
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content, {AndroidPromptInfo perActionPromptInfo}) =>
-      _plugin.write(name, content, perActionPromptInfo ?? defaultAndroidPromptInfo);
+  Future<void> write(String content,
+          {AndroidPromptInfo? perActionPromptInfo}) =>
+      _plugin.write(
+          name, content, perActionPromptInfo ?? defaultAndroidPromptInfo);
 
   /// Delete the content of this storage.
-  Future<void> delete({AndroidPromptInfo perActionPromptInfo}) =>
+  Future<void> delete({AndroidPromptInfo? perActionPromptInfo}) =>
       _plugin.delete(name, perActionPromptInfo ?? defaultAndroidPromptInfo);
 }
