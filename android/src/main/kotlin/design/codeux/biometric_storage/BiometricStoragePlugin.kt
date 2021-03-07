@@ -12,7 +12,6 @@ import io.flutter.embedding.engine.plugins.activity.*
 import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry.Registrar
 import mu.KotlinLogging
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -35,6 +34,12 @@ enum class CanAuthenticateResponse(val code: Int) {
     ErrorHwUnavailable(BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE),
     ErrorNoBiometricEnrolled(BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED),
     ErrorNoHardware(BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE),
+    ErrorStatusUnknown(BiometricManager.BIOMETRIC_STATUS_UNKNOWN),
+    ;
+
+    override fun toString(): String {
+        return "CanAuthenticateResponse.${name}: $code"
+    }
 }
 
 @Suppress("unused")
@@ -80,7 +85,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         // deprecated, used for v1 plugin api.
         @Suppress("unused")
         @JvmStatic
-        fun registerWith(registrar: Registrar) {
+        fun registerWith(registrar: io.flutter.plugin.common.PluginRegistry.Registrar) {
             BiometricStoragePlugin().apply {
                 initialize(
                     registrar.messenger(),
@@ -164,7 +169,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             }
 
             when (call.method) {
-                "canAuthenticate" -> result.success(canAuthenticate().toString())
+                "canAuthenticate" -> result.success(canAuthenticate().name)
                 "init" -> {
                     val name = getName()
                     if (storageFiles.containsKey(name)) {
@@ -216,9 +221,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     private fun canAuthenticate(): CanAuthenticateResponse {
-        val response = biometricManager.canAuthenticate()
+        val response = biometricManager.canAuthenticate(
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)
         return CanAuthenticateResponse.values().firstOrNull { it.code == response }
-            ?: throw Exception("Unknown response code {$response} (available: ${CanAuthenticateResponse.values()}")
+                ?: throw Exception("Unknown response code {$response} (available: ${
+                    CanAuthenticateResponse
+                        .values()
+                        .contentToString()
+                }")
     }
 
     private fun authenticate(promptInfo: AndroidPromptInfo, onSuccess: () -> Unit, onError: ErrorCallback) {

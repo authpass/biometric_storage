@@ -97,7 +97,7 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  Future<CanAuthenticateResponse?> _checkAuthenticate() async {
+  Future<CanAuthenticateResponse> _checkAuthenticate() async {
     final response = await BiometricStorage().canAuthenticate();
     _logger.info('checked if authentication was possible: $response');
     return response;
@@ -120,17 +120,14 @@ class _MyAppState extends State<MyApp> {
               onPressed: () async {
                 _logger.finer('Initializing $baseName');
                 final authenticate = await _checkAuthenticate();
-                var supportsAuthenticated = false;
-                if (authenticate == CanAuthenticateResponse.success) {
-                  supportsAuthenticated = true;
-                } else if (authenticate !=
-                    CanAuthenticateResponse.unsupported) {
-                  supportsAuthenticated = false;
-                } else {
+                if (authenticate == CanAuthenticateResponse.unsupported) {
                   _logger.severe(
                       'Unable to use authenticate. Unable to get storage.');
                   return;
                 }
+                final supportsAuthenticated =
+                    authenticate == CanAuthenticateResponse.success ||
+                        authenticate == CanAuthenticateResponse.statusUnknown;
                 if (supportsAuthenticated) {
                   _authStorage = await BiometricStorage().getStorage(
                       '${baseName}_authenticated',
