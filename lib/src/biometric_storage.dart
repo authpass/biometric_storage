@@ -20,6 +20,10 @@ enum CanAuthenticateResponse {
   errorNoBiometricEnrolled,
   errorNoHardware,
 
+  /// Used on android if the status is unknown.
+  /// https://developer.android.com/reference/androidx/biometric/BiometricManager#BIOMETRIC_STATUS_UNKNOWN
+  statusUnknown,
+
   /// Plugin does not support platform. This should no longer be the case.
   unsupported,
 }
@@ -30,6 +34,7 @@ const _canAuthenticateMapping = {
   'ErrorNoBiometricEnrolled': CanAuthenticateResponse.errorNoBiometricEnrolled,
   'ErrorNoHardware': CanAuthenticateResponse.errorNoHardware,
   'ErrorUnknown': CanAuthenticateResponse.unsupported,
+  'ErrorStatusUnknown': CanAuthenticateResponse.statusUnknown,
 };
 
 enum AuthExceptionCode {
@@ -141,7 +146,7 @@ abstract class BiometricStorage extends PlatformInterface {
 
   /// Returns whether this device supports biometric/secure storage or
   /// the reason [CanAuthenticateResponse] why it is not supported.
-  Future<CanAuthenticateResponse?> canAuthenticate();
+  Future<CanAuthenticateResponse> canAuthenticate();
 
   /// Returns true when there is an AppArmor error when trying to read a value.
   ///
@@ -196,7 +201,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   static const MethodChannel _channel = MethodChannel('biometric_storage');
 
   @override
-  Future<CanAuthenticateResponse?> canAuthenticate() async {
+  Future<CanAuthenticateResponse> canAuthenticate() async {
     if (kIsWeb) {
       return CanAuthenticateResponse.unsupported;
     }
@@ -204,8 +209,12 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         Platform.isIOS ||
         Platform.isMacOS ||
         Platform.isLinux) {
-      return _canAuthenticateMapping[
-          await _channel.invokeMethod<String>('canAuthenticate')];
+      final response = await _channel.invokeMethod<String>('canAuthenticate');
+      final ret = _canAuthenticateMapping[response];
+      if (ret == null) {
+        throw StateError('Invalid response from native platform. {$response}');
+      }
+      return ret;
     }
     return CanAuthenticateResponse.unsupported;
   }

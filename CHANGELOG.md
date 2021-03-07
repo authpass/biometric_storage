@@ -1,3 +1,8 @@
+## 2.0.1
+
+* Handle android `BIOMETRIC_STATUS_UNKNOWN` response on older devices
+  (Android 9/API 28(?))
+
 ## 2.0.0
 
 * Null safety stable release.
