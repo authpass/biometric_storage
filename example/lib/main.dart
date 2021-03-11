@@ -15,15 +15,7 @@ void main() {
   PrintAppender().attachToLogger(Logger.root);
   logMessages.attachToLogger(Logger.root);
   _logger.fine('Application launched. (v2)');
-  _setTargetPlatformForDesktop();
   runApp(MyApp());
-}
-
-/// If the current platform is desktop, override the default platform to
-/// a supported platform (iOS for macOS, Android for Linux and Windows).
-/// Otherwise, do nothing.
-void _setTargetPlatformForDesktop() {
-  // no longer required.
 }
 
 class StringBufferWrapper with ChangeNotifier {
