@@ -25,6 +25,8 @@ makes heavy use of this plugin.
 * Requirements:
   * Android: API Level >= 23
   * MainActivity must extend FlutterFragmentActivity
+  * Kotlin Version >= 1.3.72
+    * Update the `ext.kotlin_version` in `android/build.gradle`
   * Theme for the main activity must use `Theme.AppCompat` thme.
     (Otherwise there will be crases on Android < 29)
     For example: 
