@@ -1,3 +1,15 @@
+## 2.0.2
+
+* Android upgrade dependencies:
+  * androidx.security:security-crypto from 1.1.0-alpha02 to 1.1.0-alpha03
+  * androidx.biometric:biometric from 1.1.0-beta01 to 1.2.0-alpha03
+  * Update README to clarify minSdkVersion and kotlin version
+
+## 2.0.1
+
+* Handle android `BIOMETRIC_STATUS_UNKNOWN` response on older devices
+  (Android 9/API 28(?))
+
 ## 2.0.0
 
 * Null safety stable release.
