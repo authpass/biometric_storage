@@ -2,14 +2,19 @@ package design.codeux.biometric_storage
 
 import android.app.Activity
 import android.content.Context
-import android.os.*
-import androidx.biometric.*
+import android.os.Handler
+import android.os.Looper
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.embedding.engine.plugins.activity.*
-import io.flutter.plugin.common.*
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.common.MethodCall
+import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import mu.KotlinLogging
@@ -156,11 +161,13 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }()
             }
             fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
-                if (!options.authenticationRequired) {
+                if (!requiresAuthentication()) {
                     return cb()
                 }
                 val promptInfo = getAndroidPromptInfo()
-                authenticate(promptInfo, {
+
+                return authenticate(promptInfo, {
+                    touch()
                     cb()
                 }) { info ->
                     result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)

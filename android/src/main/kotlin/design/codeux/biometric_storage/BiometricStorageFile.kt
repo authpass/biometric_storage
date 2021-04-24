@@ -35,7 +35,7 @@ class BiometricStorageFile(
     private val masterKeyName = "${baseName}_master_key"
     private val fileName = "$baseName$FILE_SUFFIX"
     private val file: File
-
+    private var lastAccessMs: Long = 0
     private val masterKey: MasterKey
 
     init {
@@ -67,6 +67,18 @@ class BiometricStorageFile(
             .build()
     
     fun exists() = file.exists()
+
+    fun requiresAuthentication(): Boolean {
+        if (!options.authenticationRequired) {
+            return false
+        }
+        val authRequiredAt = lastAccessMs + (options.authenticationValidityDurationSeconds * 1000)
+        return authRequiredAt < System.currentTimeMillis()
+    }
+
+    fun touch() {
+        lastAccessMs = System.currentTimeMillis()
+    }
 
     @Synchronized
     fun writeFile(context: Context, content: String) {
