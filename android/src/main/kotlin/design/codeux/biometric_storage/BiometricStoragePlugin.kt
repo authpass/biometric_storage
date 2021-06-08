@@ -372,8 +372,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
                 override fun onAuthenticationFailed() {
                     logger.trace("onAuthenticationFailed()")
-                    // this can happen multiple times, so we don't want to communicate an error.
-//                ui(onError) { onError(AuthenticationErrorInfo(AuthenticationError.Failed, "biometric is valid but not recognized")) }
+                    // this just means the user was not recognised, but the O/S will handle feedback so we don't have to
                 }
             })
 
