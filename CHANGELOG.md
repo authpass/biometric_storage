@@ -1,3 +1,11 @@
+## 2.0.3
+
+* Android
+  * compatibility with kotlin 1.5.20
+  * Remove jcenter() references.
+  * androidx.core:core:1.3.2 to 1.6.0
+  * moshi from 1.11.0 to 1.12.0 (this is the kotlin 1.5.20 compatibility problem)
+
 ## 2.0.2
 
 * Android upgrade dependencies:
