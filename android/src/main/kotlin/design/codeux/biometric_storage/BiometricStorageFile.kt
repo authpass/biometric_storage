@@ -14,7 +14,8 @@ private val logger = KotlinLogging.logger {}
 @JsonClass(generateAdapter = true)
 data class InitOptions(
     val authenticationValidityDurationSeconds: Int = 30,
-    val authenticationRequired: Boolean = true
+    val authenticationRequired: Boolean = true,
+    val biometryOnly: Boolean = false
 )
 
 class BiometricStorageFile(

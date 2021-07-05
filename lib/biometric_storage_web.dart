@@ -24,16 +24,20 @@ class BiometricStoragePluginWeb extends BiometricStorage {
       CanAuthenticateResponse.errorHwUnavailable;
 
   @override
-  Future<BiometricStorageFile> getStorage(String name,
-      {StorageFileInitOptions? options,
-      bool forceInit = false,
-      AndroidPromptInfo androidPromptInfo =
-          AndroidPromptInfo.defaultValues}) async {
-    return BiometricStorageFile(this, namePrefix + name, androidPromptInfo);
+  Future<BiometricStorageFile> getStorage(
+    String name, {
+    StorageFileInitOptions? options,
+    bool forceInit = false,
+    PromptInfo promptInfo = PromptInfo.defaultValues,
+  }) async {
+    return BiometricStorageFile(this, namePrefix + name, promptInfo);
   }
 
   @override
-  Future<bool> delete(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<bool> delete(
+    String name,
+    PromptInfo promptInfo,
+  ) async {
     return html.window.localStorage.remove(name) != null;
   }
 
@@ -41,13 +45,19 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   Future<bool> linuxCheckAppArmorError() async => false;
 
   @override
-  Future<String?> read(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<String?> read(
+    String name,
+    PromptInfo promptInfo,
+  ) async {
     return html.window.localStorage[name];
   }
 
   @override
   Future<void> write(
-      String name, String content, AndroidPromptInfo androidPromptInfo) async {
+    String name,
+    String content,
+    PromptInfo promptInfo,
+  ) async {
     html.window.localStorage[name] = content;
   }
 }
