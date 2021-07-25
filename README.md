@@ -21,7 +21,9 @@ makes heavy use of this plugin.
 
 ## Getting Started
 
-### Android
+### Installation
+
+#### Android
 * Requirements:
   * Android: API Level >= 23 (android/app/build.gradle `minSdkVersion 23`)
   * Make sure to use the latest kotlin version: 
@@ -53,14 +55,19 @@ makes heavy use of this plugin.
     </style>
     ```
 
-### iOS
+##### Resources
+
+* https://developer.android.com/topic/security/data
+* https://developer.android.com/topic/security/best-practices
+
+#### iOS
 
 https://developer.apple.com/documentation/localauthentication/logging_a_user_into_your_app_with_face_id_or_touch_id
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
 * Requires at least iOS 9
 
-### Mac OS
+#### Mac OS
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
 * enable keychain sharing and signing. (not sure why this is required. but without it
@@ -68,8 +75,36 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
     > SecurityError, Error while writing data: -34018: A required entitlement isn't present.
 * Requires at least Mac OS 10.12
 
-## Resources
+### Usage
 
-* https://developer.android.com/topic/security/data
-* https://developer.android.com/topic/security/best-practices
+> You basically only need 4 methods.
 
+1. Check whether biometric authentication is supported by the device
+
+```dart
+  final response = await BiometricStorage().canAuthenticate()
+  if (response != CanAuthenticateResponse.success) {
+    // panic..
+  }
+```
+
+2. Create the access object
+
+```dart
+  final store = BiometricStorage().getStorage('mystorage');
+```
+
+3. Read data
+
+```dart
+  final data = await storageFile.read();
+```
+
+4. Write data
+
+```dart
+  final myNewData = 'Hello World';
+  await storageFile.write(myNewData);
+```
+
+See also the API documentation: https://pub.dev/documentation/biometric_storage/latest/biometric_storage/BiometricStorageFile-class.html#instance-methods
