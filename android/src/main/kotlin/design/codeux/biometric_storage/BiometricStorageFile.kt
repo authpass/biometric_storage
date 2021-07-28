@@ -8,6 +8,7 @@ import mu.KotlinLogging
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.security.KeyStore
 
 private val logger = KotlinLogging.logger {}
 
@@ -18,7 +19,7 @@ data class InitOptions(
 )
 
 class BiometricStorageFile(
-    context: Context,
+    private val context: Context,
     private val baseName: String,
     val options: InitOptions
 ) {
@@ -36,14 +37,13 @@ class BiometricStorageFile(
     private val fileName = "$baseName$FILE_SUFFIX"
     private val file: File
 
-    private val masterKey: MasterKey
+    private val keysetAlias = "__biometric_storage__${baseName}_encrypted_file_keyset__"
+    private val keysetPrefName = "__biometric_storage__${baseName}_encrypted_file_pref__"
+
+    private var masterKey: MasterKey
 
     init {
-        masterKey = MasterKey.Builder(context, masterKeyName)
-            .setUserAuthenticationRequired(
-                options.authenticationRequired, options.authenticationValidityDurationSeconds)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        masterKey = buildMasterKey()
 
         val baseDir = File(context.filesDir, DIRECTORY_NAME)
         if (!baseDir.exists()) {
@@ -54,6 +54,12 @@ class BiometricStorageFile(
         logger.trace { "Initialized $this with $options" }
     }
 
+    private fun buildMasterKey() = MasterKey.Builder(context, masterKeyName)
+        .setUserAuthenticationRequired(
+            options.authenticationRequired, options.authenticationValidityDurationSeconds)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
 
     private fun buildEncryptedFile(context: Context) =
         EncryptedFile.Builder(
@@ -62,8 +68,8 @@ class BiometricStorageFile(
             masterKey,
             EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
         )
-            .setKeysetAlias("__biometric_storage__${baseName}_encrypted_file_keyset__")
-            .setKeysetPrefName("__biometric_storage__${baseName}_encrypted_file_pref__")
+            .setKeysetAlias(keysetAlias)
+            .setKeysetPrefName(keysetPrefName)
             .build()
     
     fun exists() = file.exists()
@@ -117,10 +123,30 @@ class BiometricStorageFile(
 
     @Synchronized
     fun deleteFile(): Boolean {
-        if (!file.exists()) {
-            return false
+        try {
+            if (!file.exists()) {
+                return false
+            }
+            return file.delete()
+        } finally {
+            try {
+                logger.debug { "Deleting master key as well." }
+                deleteMasterKey()
+            } catch (e: Exception) {
+                logger.error(e) { "Error while deleting master key" }
+            }
         }
-        return file.delete()
+    }
+
+    private fun deleteMasterKey() {
+        val ks: KeyStore = KeyStore.getInstance("AndroidKeyStore").apply {
+            load(null)
+        }
+        logger.debug { "Key aliases: ${ks.aliases().toList().joinToString(", ", "{", "}")}" }
+        ks.deleteEntry(keysetAlias)
+        ks.deleteEntry(masterKeyName)
+        // regenerate master key
+        masterKey = buildMasterKey()
     }
 
     override fun toString(): String {

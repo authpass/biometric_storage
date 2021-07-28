@@ -150,10 +150,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             fun withStorage(cb: BiometricStorageFile.() -> Unit) {
                 val name = getName()
-                storageFiles[name]?.apply(cb) ?: return {
+                storageFiles[name]?.apply(cb) ?: run {
                     logger.warn { "User tried to access storage '$name', before initialization" }
                     result.error("Storage $name was not initialized.", null, null)
-                }()
+                    return
+                }
             }
             fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
                 if (!options.authenticationRequired) {
@@ -195,7 +196,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     result.success(true)
                 } ?: throw MethodCallException("NoSuchStorage", "Tried to dispose non existing storage.", null)
                 "read" -> withStorage { if (exists()) { withAuth { result.success(readFile(applicationContext)) } } else { result.success(null) } }
-                "delete" -> withStorage { if (exists()) { withAuth { result.success(deleteFile()) } } else { result.success(false) } }
+                "delete" -> withStorage { result.success(deleteFile()) }
                 "write" -> withStorage { withAuth {
                     writeFile(applicationContext, requiredArgument(PARAM_WRITE_CONTENT))
                     result.success(true)
