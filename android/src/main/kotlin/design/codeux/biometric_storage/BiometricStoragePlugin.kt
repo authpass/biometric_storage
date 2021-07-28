@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.*
 import androidx.biometric.*
+import androidx.biometric.BiometricManager.Authenticators.*
 import androidx.fragment.app.FragmentActivity
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
@@ -160,7 +161,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     return cb()
                 }
                 val promptInfo = getAndroidPromptInfo()
-                authenticate(promptInfo, {
+                authenticate(promptInfo, options, {
                     cb()
                 }) { info ->
                     result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)
@@ -231,7 +232,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }")
     }
 
-    private fun authenticate(promptInfo: AndroidPromptInfo, onSuccess: () -> Unit, onError: ErrorCallback) {
+    private fun authenticate(promptInfo: AndroidPromptInfo, options: InitOptions, onSuccess: () -> Unit, onError: ErrorCallback) {
         logger.trace("authenticate()")
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
@@ -254,13 +255,22 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 //                ui(onError) { onError(AuthenticationErrorInfo(AuthenticationError.Failed, "biometric is valid but not recognized")) }
             }
         })
-        prompt.authenticate(BiometricPrompt.PromptInfo.Builder()
-            .setTitle(promptInfo.title)
-            .setSubtitle(promptInfo.subtitle)
-            .setDescription(promptInfo.description)
+
+        val promptBuilder = BiometricPrompt.PromptInfo.Builder()
+                .setTitle(promptInfo.title)
+                .setSubtitle(promptInfo.subtitle)
+                .setDescription(promptInfo.description)
+                .setConfirmationRequired(promptInfo.confirmationRequired)
+
+        if (options.androidBiometricOnly) {
+            promptBuilder
+            .setAllowedAuthenticators(BIOMETRIC_WEAK or BIOMETRIC_STRONG)
             .setNegativeButtonText(promptInfo.negativeButton)
-            .setConfirmationRequired(promptInfo.confirmationRequired)
-            .build())
+        } else {
+            promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_WEAK or BIOMETRIC_STRONG)
+        }
+
+        prompt.authenticate(promptBuilder.build())
     }
 
     override fun onDetachedFromActivity() {

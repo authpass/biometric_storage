@@ -144,18 +144,22 @@ class _MyAppState extends State<MyApp> {
                       '${baseName}_customPrompt',
                       options: StorageFileInitOptions(
                           authenticationValidityDurationSeconds: 30),
-                      androidPromptInfo: const AndroidPromptInfo(
-                        title: 'Custom title',
-                        subtitle: 'Custom subtitle',
-                        description: 'Custom description',
-                        negativeButton: 'Nope!',
+                      promptInfo: const PromptInfo(
+                        androidPromptInfo: AndroidPromptInfo(
+                          title: 'Custom title',
+                          subtitle: 'Custom subtitle',
+                          description: 'Custom description',
+                          negativeButton: 'Nope!',
+                        ),
                       ));
                   _noConfirmation = await BiometricStorage().getStorage(
                       '${baseName}_customPrompt',
                       options: StorageFileInitOptions(
                           authenticationValidityDurationSeconds: 30),
-                      androidPromptInfo: const AndroidPromptInfo(
-                        confirmationRequired: false,
+                      promptInfo: const PromptInfo(
+                        androidPromptInfo: AndroidPromptInfo(
+                          confirmationRequired: false,
+                        ),
                       ));
                 }
                 setState(() {});

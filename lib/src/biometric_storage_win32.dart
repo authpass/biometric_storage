@@ -26,19 +26,23 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<BiometricStorageFile> getStorage(String name,
-      {StorageFileInitOptions? options,
-      bool forceInit = false,
-      AndroidPromptInfo androidPromptInfo =
-          AndroidPromptInfo.defaultValues}) async {
-    return BiometricStorageFile(this, namePrefix + name, androidPromptInfo);
+  Future<BiometricStorageFile> getStorage(
+    String name, {
+    StorageFileInitOptions? options,
+    bool forceInit = false,
+    PromptInfo promptInfo = PromptInfo.defaultValues,
+  }) async {
+    return BiometricStorageFile(this, namePrefix + name, promptInfo);
   }
 
   @override
   Future<bool> linuxCheckAppArmorError() async => false;
 
   @override
-  Future<bool> delete(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<bool> delete(
+    String name,
+    PromptInfo promptInfo,
+  ) async {
     final namePointer = TEXT(name);
     try {
       final result = CredDelete(namePointer, CRED_TYPE_GENERIC, 0);
@@ -58,7 +62,10 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<String?> read(String name, AndroidPromptInfo androidPromptInfo) async {
+  Future<String?> read(
+    String name,
+    PromptInfo promptInfo,
+  ) async {
     _logger.finer('read($name)');
     final credPointer = calloc<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);
@@ -91,7 +98,10 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   @override
   Future<void> write(
-      String name, String content, AndroidPromptInfo androidPromptInfo) async {
+    String name,
+    String content,
+    PromptInfo promptInfo,
+  ) async {
     _logger.fine('write()');
     final examplePassword = utf8.encode(content) as Uint8List;
     final blob = examplePassword.allocatePointer();

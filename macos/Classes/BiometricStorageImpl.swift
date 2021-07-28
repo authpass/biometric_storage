@@ -21,6 +21,15 @@ class InitOptions {
   let authenticationRequired: Bool!
 }
 
+class IOSPromptInfo {
+  init(params: [String: Any]) {
+    saveTitle = params["saveTitle"] as? String
+    accessTitle = params["accessTitle"] as? String
+  }
+  let saveTitle: String!
+  let accessTitle: String!
+}
+
 private func hpdebug(_ message: String) {
   print(message);
 }
@@ -79,28 +88,34 @@ class BiometricStorageImpl {
       result(true)
     } else if ("read" == call.method) {
       requiredArg("name") { name in
-        read(name, result)
+        requiredArg("iosPromptInfo") { promptInfo in
+          read(name, result, IOSPromptInfo(params: promptInfo))
+        }
       }
     } else if ("write" == call.method) {
       requiredArg("name") { name in
         requiredArg("content") { content in
-          write(name, content, result)
+          requiredArg("iosPromptInfo") { promptInfo in
+            write(name, content, result, IOSPromptInfo(params: promptInfo))
+          }
         }
       }
     } else if ("delete" == call.method) {
       requiredArg("name") { name in
-        delete(name, result)
+        requiredArg("iosPromptInfo") { promptInfo in
+          delete(name, result, IOSPromptInfo(params: promptInfo))
+        }
       }
     } else {
       result(storageMethodNotImplemented)
     }
   }
   
-  private func read(_ name: String, _ result: @escaping StorageCallback) {
+  private func read(_ name: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
     
     var query = baseQuery(name: name)
     query[kSecMatchLimit as String] = kSecMatchLimitOne
-    query[kSecUseOperationPrompt as String] = "Unlock to access data"
+    query[kSecUseOperationPrompt as String] = promptInfo.accessTitle
     query[kSecReturnAttributes as String] = true
     query[kSecReturnData as String] = true
     
@@ -125,7 +140,7 @@ class BiometricStorageImpl {
     result(dataString)
   }
   
-  private func delete(_ name: String, _ result: @escaping StorageCallback) {
+  private func delete(_ name: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
     let query = baseQuery(name: name)
     //    query[kSecMatchLimit as String] = kSecMatchLimitOne
     //    query[kSecReturnData as String] = true
@@ -137,7 +152,7 @@ class BiometricStorageImpl {
     result(true)
   }
   
-  private func write(_ name: String, _ content: String, _ result: @escaping StorageCallback) {
+  private func write(_ name: String, _ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
     guard let initOptions = stores[name] else {
       result(storageError(code: "WriteError", message: "Storage was not initialized. \(name)", details: nil))
       return
@@ -160,7 +175,7 @@ class BiometricStorageImpl {
       query.merge([
         kSecUseAuthenticationContext as String: context,
         kSecAttrAccessControl as String: access as Any,
-        kSecUseOperationPrompt as String: "Unlock to save data",
+        kSecUseOperationPrompt as String: promptInfo.saveTitle,
       ]) { (_, new) in new }
     } else {
       hpdebug("No authentication required for \(name)")
