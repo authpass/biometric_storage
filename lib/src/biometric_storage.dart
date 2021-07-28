@@ -77,7 +77,7 @@ class StorageFileInitOptions {
   StorageFileInitOptions({
     this.authenticationValidityDurationSeconds = 10,
     this.authenticationRequired = true,
-    this.androidBiometryOnly = false,
+    this.androidBiometricOnly = false,
   });
 
   final int authenticationValidityDurationSeconds;
@@ -89,13 +89,13 @@ class StorageFileInitOptions {
 
   /// Only makes difference on Android, where if set true, you can't use
   /// PIN/pattern/password to get the file.
-  final bool androidBiometryOnly;
+  final bool androidBiometricOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'authenticationValidityDurationSeconds':
             authenticationValidityDurationSeconds,
         'authenticationRequired': authenticationRequired,
-        'androidBiometryOnly': androidBiometryOnly,
+        'androidBiometricOnly': androidBiometricOnly,
       };
 }
 
