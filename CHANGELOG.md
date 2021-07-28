@@ -1,3 +1,10 @@
+## 3.0.0-rc.1
+
+* Android: Add support for local (non-biometric) storage (#28, thanks @killalad)
+* iOS: Add support for customizing prompt strings.
+* **Breaking Change**: due to the introduction of iOS prompt info there is now a wrapper object
+  `PromptInfo` which contains `AndroidPromptInfo` and `IosPromptInfo`.
+
 ## 2.0.3
 
 * Android
