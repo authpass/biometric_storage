@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.os.*
 import androidx.biometric.*
+import androidx.biometric.BiometricManager.Authenticators.*
 import androidx.fragment.app.FragmentActivity
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
@@ -261,10 +262,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 .setDescription(promptInfo.description)
                 .setConfirmationRequired(promptInfo.confirmationRequired)
 
-        if (!options.biometryOnly) {
-            promptBuilder.setDeviceCredentialAllowed(true)
+        if (options.androidBiometryOnly) {
+            promptBuilder
+            .setAllowedAuthenticators(BIOMETRIC_WEAK or BIOMETRIC_STRONG)
+            .setNegativeButtonText(promptInfo.negativeButton)
         } else {
-            promptBuilder.setNegativeButtonText(promptInfo.negativeButton)
+            promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_WEAK or BIOMETRIC_STRONG)
         }
 
         prompt.authenticate(promptBuilder.build())

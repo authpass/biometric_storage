@@ -77,7 +77,7 @@ class StorageFileInitOptions {
   StorageFileInitOptions({
     this.authenticationValidityDurationSeconds = 10,
     this.authenticationRequired = true,
-    this.biometryOnly = false,
+    this.androidBiometryOnly = false,
   });
 
   final int authenticationValidityDurationSeconds;
@@ -89,13 +89,13 @@ class StorageFileInitOptions {
 
   /// Only makes difference on Android, where if set true, you can't use
   /// PIN/pattern/password to get the file.
-  final bool biometryOnly;
+  final bool androidBiometryOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'authenticationValidityDurationSeconds':
             authenticationValidityDurationSeconds,
         'authenticationRequired': authenticationRequired,
-        'biometryOnly': biometryOnly,
+        'androidBiometryOnly': androidBiometryOnly,
       };
 }
 
@@ -127,8 +127,8 @@ class AndroidPromptInfo {
 }
 
 /// iOS specific configuration of the prompt displayed for biometry.
-class IOSPromptInfo {
-  const IOSPromptInfo({
+class IosPromptInfo {
+  const IosPromptInfo({
     this.saveTitle = 'Unlock to save data',
     this.accessTitle = 'Unlock to access data',
   });
@@ -136,7 +136,7 @@ class IOSPromptInfo {
   final String saveTitle;
   final String accessTitle;
 
-  static const defaultValues = IOSPromptInfo();
+  static const defaultValues = IosPromptInfo();
 
   Map<String, dynamic> _toJson() => <String, dynamic>{
         'saveTitle': saveTitle,
@@ -148,12 +148,12 @@ class IOSPromptInfo {
 class PromptInfo {
   const PromptInfo({
     this.androidPromptInfo = AndroidPromptInfo.defaultValues,
-    this.iosPromptInfo = IOSPromptInfo.defaultValues,
+    this.iosPromptInfo = IosPromptInfo.defaultValues,
   });
   static const defaultValues = PromptInfo();
 
   final AndroidPromptInfo androidPromptInfo;
-  final IOSPromptInfo iosPromptInfo;
+  final IosPromptInfo iosPromptInfo;
 }
 
 /// Main plugin class to interact with. Is always a singleton right now,
