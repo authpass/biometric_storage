@@ -1,4 +1,4 @@
-## 3.0.0-rc.1
+## 3.0.0-rc.2
 
 * Android: Add support for local (non-biometric) storage (#28, thanks @killalad)
 * iOS: Add support for customizing prompt strings.

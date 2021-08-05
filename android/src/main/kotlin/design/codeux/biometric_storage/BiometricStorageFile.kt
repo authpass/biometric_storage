@@ -15,7 +15,7 @@ private val logger = KotlinLogging.logger {}
 data class InitOptions(
     val authenticationValidityDurationSeconds: Int = 30,
     val authenticationRequired: Boolean = true,
-    val androidBiometryOnly: Boolean = false
+    val androidBiometricOnly: Boolean = false
 )
 
 class BiometricStorageFile(
