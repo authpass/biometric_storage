@@ -1,4 +1,4 @@
-## 3.0.0-rc.4
+## 3.0.0-rc.5
 
 * **Breaking Change**: due to the introduction of iOS prompt info there is now a wrapper object
   `PromptInfo` which contains `AndroidPromptInfo` and `IosPromptInfo`.

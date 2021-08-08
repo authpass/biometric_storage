@@ -77,7 +77,7 @@ class StorageFileInitOptions {
   StorageFileInitOptions({
     this.authenticationValidityDurationSeconds = 10,
     this.authenticationRequired = true,
-    this.androidBiometricOnly = false,
+    this.androidBiometricOnly = true,
   });
 
   final int authenticationValidityDurationSeconds;
