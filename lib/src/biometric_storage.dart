@@ -126,7 +126,7 @@ class AndroidPromptInfo {
       };
 }
 
-/// iOS specific configuration of the prompt displayed for biometry.
+/// iOS **and MacOS** specific configuration of the prompt displayed for biometry.
 class IosPromptInfo {
   const IosPromptInfo({
     this.saveTitle = 'Unlock to save data',
@@ -149,11 +149,13 @@ class PromptInfo {
   const PromptInfo({
     this.androidPromptInfo = AndroidPromptInfo.defaultValues,
     this.iosPromptInfo = IosPromptInfo.defaultValues,
+    this.macOsPromptInfo = IosPromptInfo.defaultValues,
   });
   static const defaultValues = PromptInfo();
 
   final AndroidPromptInfo androidPromptInfo;
   final IosPromptInfo iosPromptInfo;
+  final IosPromptInfo macOsPromptInfo;
 }
 
 /// Main plugin class to interact with. Is always a singleton right now,
@@ -367,8 +369,18 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       return <String, dynamic>{
         'iosPromptInfo': promptInfo.iosPromptInfo._toJson()
       };
-    } else {
+    } else if (Platform.isMacOS) {
+      return <String, dynamic>{
+        // This is no typo, we use the same implementation on iOS and MacOS,
+        // so we use the same parameter.
+        'iosPromptInfo': promptInfo.macOsPromptInfo._toJson()
+      };
+    } else if (Platform.isLinux) {
       return <String, dynamic>{};
+    } else {
+      // Windows has no method channel implementation
+      // Web has a Noop implementation.
+      throw StateError('Unsupported Platform ${Platform.operatingSystem}');
     }
   }
 
