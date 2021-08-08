@@ -1,9 +1,10 @@
-## 3.0.0-rc.2
+## 3.0.0-rc.3
 
-* Android: Add support for local (non-biometric) storage (#28, thanks @killalad)
-* iOS: Add support for customizing prompt strings.
 * **Breaking Change**: due to the introduction of iOS prompt info there is now a wrapper object
   `PromptInfo` which contains `AndroidPromptInfo` and `IosPromptInfo`.
+* Android: Add support for local (non-biometric) storage (#28, thanks @killalad)
+* Android: Update all gradle dependencies, removed gradle-wrapper from plugin folder.
+* iOS: Add support for customizing prompt strings.
 
 ## 2.0.3
 
