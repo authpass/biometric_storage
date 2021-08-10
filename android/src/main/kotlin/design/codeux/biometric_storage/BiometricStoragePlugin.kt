@@ -82,20 +82,6 @@ private fun Throwable.toCompleteString(): String {
 class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     companion object {
-
-        // deprecated, used for v1 plugin api.
-        @Suppress("unused")
-        @JvmStatic
-        fun registerWith(registrar: io.flutter.plugin.common.PluginRegistry.Registrar) {
-            BiometricStoragePlugin().apply {
-                initialize(
-                    registrar.messenger(),
-                    registrar.context()
-                )
-                updateAttachedActivity(registrar.activity())
-            }
-        }
-
         const val PARAM_NAME = "name"
         const val PARAM_WRITE_CONTENT = "content"
         const val PARAM_ANDROID_PROMPT_INFO = "androidPromptInfo"
@@ -123,7 +109,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     }
 
-    fun initialize(messenger: BinaryMessenger, context: Context) {
+    private fun initialize(messenger: BinaryMessenger, context: Context) {
         this.applicationContext = context
         val channel = MethodChannel(messenger, "biometric_storage")
         channel.setMethodCallHandler(this)
@@ -151,10 +137,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             fun withStorage(cb: BiometricStorageFile.() -> Unit) {
                 val name = getName()
-                storageFiles[name]?.apply(cb) ?: return {
+                storageFiles[name]?.apply(cb) ?: run {
                     logger.warn { "User tried to access storage '$name', before initialization" }
                     result.error("Storage $name was not initialized.", null, null)
-                }()
+                    return
+                }
             }
             fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
                 if (!options.authenticationRequired) {
@@ -185,7 +172,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         }
                     }
 
-                    val options = moshi.adapter<InitOptions>(InitOptions::class.java)
+                    val options = moshi.adapter(InitOptions::class.java)
                         .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
                         ?: InitOptions()
                     storageFiles[name] = BiometricStorageFile(applicationContext, name, options)
@@ -223,7 +210,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     private fun canAuthenticate(): CanAuthenticateResponse {
         val response = biometricManager.canAuthenticate(
-            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK)
+            BIOMETRIC_STRONG or BIOMETRIC_WEAK)
         return CanAuthenticateResponse.values().firstOrNull { it.code == response }
                 ?: throw Exception("Unknown response code {$response} (available: ${
                     CanAuthenticateResponse

@@ -2,6 +2,7 @@
 
 * **Breaking Change**: due to the introduction of iOS prompt info there is now a wrapper object
   `PromptInfo` which contains `AndroidPromptInfo` and `IosPromptInfo`.
+* **Breaking Change**: No more support for Android v1 Plugin registration.
 * Android: Add support for local (non-biometric) storage (#28, thanks @killalad)
 * Android: Update all gradle dependencies, removed gradle-wrapper from plugin folder.
 * iOS: Add support for customizing prompt strings.
