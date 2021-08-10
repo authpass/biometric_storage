@@ -18,8 +18,14 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import javax.crypto.Cipher
 
 private val logger = KotlinLogging.logger {}
+
+enum class CipherMode {
+    Encrypt,
+    Decrypt,
+}
 
 typealias ErrorCallback = (errorInfo: AuthenticationErrorInfo) -> Unit
 
@@ -143,13 +149,18 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     return
                 }
             }
-            fun BiometricStorageFile.withAuth(cb: BiometricStorageFile.() -> Unit) {
+            fun BiometricStorageFile.withAuth(mode: CipherMode, cb: BiometricStorageFile.(cipher: Cipher?) -> Unit) {
+                val cipher = if (mode == CipherMode.Encrypt) {
+                    cipherForEncrypt()
+                } else {
+                    cipherForDecrypt()
+                }
                 if (!options.authenticationRequired) {
-                    return cb()
+                    return cb(cipher)
                 }
                 val promptInfo = getAndroidPromptInfo()
-                authenticate(promptInfo, options, {
-                    cb()
+                authenticate(cipher, promptInfo, options, {
+                    cb(cipher)
                 }) { info ->
                     result.error("AuthError:${info.error}", info.message.toString(), info.errorDetails)
                     logger.error("AuthError: $info")
@@ -182,10 +193,10 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     dispose()
                     result.success(true)
                 } ?: throw MethodCallException("NoSuchStorage", "Tried to dispose non existing storage.", null)
-                "read" -> withStorage { if (exists()) { withAuth { result.success(readFile(applicationContext)) } } else { result.success(null) } }
-                "delete" -> withStorage { if (exists()) { withAuth { result.success(deleteFile()) } } else { result.success(false) } }
-                "write" -> withStorage { withAuth {
-                    writeFile(applicationContext, requiredArgument(PARAM_WRITE_CONTENT))
+                "read" -> withStorage { if (exists()) { withAuth(CipherMode.Decrypt) { result.success(readFile(it, applicationContext)) } } else { result.success(null) } }
+                "delete" -> withStorage { if (exists()) { withAuth(CipherMode.Decrypt) { result.success(deleteFile()) } } else { result.success(false) } }
+                "write" -> withStorage { withAuth(CipherMode.Encrypt) {
+                    writeFile(it, applicationContext, requiredArgument(PARAM_WRITE_CONTENT))
                     result.success(true)
                 } }
                 else -> result.notImplemented()
@@ -210,7 +221,8 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     private fun canAuthenticate(): CanAuthenticateResponse {
         val response = biometricManager.canAuthenticate(
-            BIOMETRIC_STRONG or BIOMETRIC_WEAK)
+            BIOMETRIC_STRONG or BIOMETRIC_WEAK
+        )
         return CanAuthenticateResponse.values().firstOrNull { it.code == response }
                 ?: throw Exception("Unknown response code {$response} (available: ${
                     CanAuthenticateResponse
@@ -219,7 +231,13 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }")
     }
 
-    private fun authenticate(promptInfo: AndroidPromptInfo, options: InitOptions, onSuccess: () -> Unit, onError: ErrorCallback) {
+    private fun authenticate(
+        cipher: Cipher?,
+        promptInfo: AndroidPromptInfo,
+        options: InitOptions,
+        onSuccess: (cipher: Cipher?) -> Unit,
+        onError: ErrorCallback
+    ) {
         logger.trace("authenticate()")
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
@@ -233,7 +251,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 logger.trace("onAuthenticationSucceeded($result)")
-                ui(onError) { onSuccess() }
+                ui(onError) { onSuccess(result.cryptoObject?.cipher) }
             }
 
             override fun onAuthenticationFailed() {
@@ -251,13 +269,18 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
         if (options.androidBiometricOnly) {
             promptBuilder
-            .setAllowedAuthenticators(BIOMETRIC_WEAK or BIOMETRIC_STRONG)
+            .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .setNegativeButtonText(promptInfo.negativeButton)
         } else {
-            promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_WEAK or BIOMETRIC_STRONG)
+            promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_STRONG)
         }
 
-        prompt.authenticate(promptBuilder.build())
+        if (cipher == null) {
+            logger.warn { "No cipher given. authenticating without cipher." }
+            prompt.authenticate(promptBuilder.build())
+        } else {
+            prompt.authenticate(promptBuilder.build(), BiometricPrompt.CryptoObject(cipher))
+        }
     }
 
     override fun onDetachedFromActivity() {

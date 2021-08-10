@@ -8,6 +8,7 @@ import mu.KotlinLogging
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import javax.crypto.Cipher
 
 private val logger = KotlinLogging.logger {}
 
@@ -30,14 +31,22 @@ class BiometricStorageFile(
          */
         private const val DIRECTORY_NAME = "biometric_storage"
         private const val FILE_SUFFIX = ".txt"
+        private const val FILE_SUFFIX_V2 = ".v2.txt"
         private const val BACKUP_SUFFIX = "bak"
     }
 
     private val masterKeyName = "${baseName}_master_key"
     private val fileName = "$baseName$FILE_SUFFIX"
+    private val fileNameV2 = "$baseName$FILE_SUFFIX_V2"
     private val file: File
+    private val fileV2: File
 
     private val masterKey: MasterKey
+
+    private val cryptographyManager = CryptographyManager {
+        setUserAuthenticationRequired(options.authenticationRequired)
+        setUserAuthenticationValidityDurationSeconds(options.authenticationValidityDurationSeconds)
+    }
 
     init {
         masterKey = MasterKey.Builder(context, masterKeyName)
@@ -51,8 +60,18 @@ class BiometricStorageFile(
             baseDir.mkdirs()
         }
         file = File(baseDir, fileName)
+        fileV2 = File(baseDir, fileNameV2)
 
         logger.trace { "Initialized $this with $options" }
+    }
+
+    fun cipherForEncrypt() = cryptographyManager.getInitializedCipherForEncryption(masterKeyName)
+    fun cipherForDecrypt(): Cipher? {
+        if (fileV2.exists()) {
+            return cryptographyManager.getInitializedCipherForDecryption(masterKeyName, fileV2)
+        }
+        logger.debug { "No file exists, no IV found. null cipher." }
+        return null
     }
 
 
@@ -67,10 +86,33 @@ class BiometricStorageFile(
             .setKeysetPrefName("__biometric_storage__${baseName}_encrypted_file_pref__")
             .build()
     
-    fun exists() = file.exists()
+    fun exists() = file.exists() or fileV2.exists()
 
     @Synchronized
-    fun writeFile(context: Context, content: String) {
+    fun writeFile(cipher: Cipher?, context: Context, content: String) {
+        if (cipher != null) {
+            try {
+                val encrypted = cryptographyManager.encryptData(content, cipher)
+                fileV2.writeBytes(encrypted.encryptedPayload)
+                logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
+
+                if (file.exists()) {
+                    file.delete()
+                }
+                val backupFile = File(file.parent, "${file.name}$BACKUP_SUFFIX")
+                if (backupFile.exists()) {
+                    backupFile.delete()
+                }
+
+                return
+            } catch (ex: IOException) {
+                // Error occurred opening file for writing.
+                logger.error(ex) { "Error while writing encrypted file $file" }
+                throw ex
+            }
+        }
+
+
         val encryptedFile = buildEncryptedFile(context)
 
         val bytes = content.toByteArray()
@@ -97,7 +139,18 @@ class BiometricStorageFile(
     }
 
     @Synchronized
-    fun readFile(context: Context): String? {
+    fun readFile(cipher: Cipher?, context: Context): String? {
+        if (cipher != null) {
+            if (fileV2.exists()) {
+                return try {
+                    val bytes = fileV2.readBytes()
+                    cryptographyManager.decryptData(bytes, cipher)
+                } catch (ex: IOException) {
+                    logger.error(ex) { "Error while writing encrypted file $fileV2" }
+                    null
+                }
+            }
+        }
         if (!file.exists()) {
             logger.debug { "File $file does not exist. returning null." }
             return null
@@ -118,10 +171,8 @@ class BiometricStorageFile(
 
     @Synchronized
     fun deleteFile(): Boolean {
-        if (!file.exists()) {
-            return false
-        }
-        return file.delete()
+        cryptographyManager.deleteKey(masterKeyName)
+        return fileV2.delete() or file.delete()
     }
 
     override fun toString(): String {

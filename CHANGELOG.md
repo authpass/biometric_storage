@@ -1,8 +1,18 @@
+## 3.0.0-rc.6
+
+* **Breaking Change**: No more support for Android v1 Plugin registration.
+* **Breaking Change**: No longer using androidx.security, but instead handle encryption
+  directly. Temporarily there is a fallback to read old content. This requires either reencrypting
+  everything, or old data will no longer be readable.
+  
+  1. This should fix a lot of errors.
+  2. This now finally also allows using `authenticationValidityDurationSeconds` = -1.
+  3. `BIOMETRIC_WEAK` is no longer used, only `BIOMETRIC_STRONG`.
+
 ## 3.0.0-rc.5
 
 * **Breaking Change**: due to the introduction of iOS prompt info there is now a wrapper object
   `PromptInfo` which contains `AndroidPromptInfo` and `IosPromptInfo`.
-* **Breaking Change**: No more support for Android v1 Plugin registration.
 * Android: Add support for local (non-biometric) storage (#28, thanks @killalad)
 * Android: Update all gradle dependencies, removed gradle-wrapper from plugin folder.
 * iOS: Add support for customizing prompt strings.
