@@ -149,14 +149,18 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     return
                 }
             }
-            fun BiometricStorageFile.withAuth(mode: CipherMode, cb: BiometricStorageFile.(cipher: Cipher?) -> Unit) {
-                val cipher = if (mode == CipherMode.Encrypt) {
-                    cipherForEncrypt()
-                } else {
-                    cipherForDecrypt()
-                }
+            fun BiometricStorageFile.withAuth(
+                mode: CipherMode,
+                cb: BiometricStorageFile.(cipher: Cipher?) -> Unit
+            ) {
                 if (!options.authenticationRequired) {
-                    return cb(cipher)
+                    return cb(null)
+                }
+                val cipher = if (options.authenticationValidityDurationSeconds < 0) {
+                    null
+                } else when (mode) {
+                    CipherMode.Encrypt -> cipherForEncrypt()
+                    CipherMode.Decrypt -> cipherForDecrypt()
                 }
                 val promptInfo = getAndroidPromptInfo()
                 authenticate(cipher, promptInfo, options, {
@@ -196,7 +200,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 "read" -> withStorage { if (exists()) { withAuth(CipherMode.Decrypt) { result.success(readFile(it, applicationContext)) } } else { result.success(null) } }
                 "delete" -> withStorage { if (exists()) { result.success(deleteFile()) } else { result.success(false) } }
                 "write" -> withStorage { withAuth(CipherMode.Encrypt) {
-                    writeFile(it, applicationContext, requiredArgument(PARAM_WRITE_CONTENT))
+                    writeFile(it, requiredArgument(PARAM_WRITE_CONTENT))
                     result.success(true)
                 } }
                 else -> result.notImplemented()
@@ -275,8 +279,9 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_STRONG)
         }
 
-        if (cipher == null) {
-            logger.warn { "No cipher given. authenticating without cipher." }
+        if (cipher == null || options.authenticationValidityDurationSeconds >= 0) {
+            // if authenticationValidityDurationSeconds is not -1 we can't use a CryptoObject
+            logger.debug { "Authenticating without cipher. ${options.authenticationValidityDurationSeconds}" }
             prompt.authenticate(promptBuilder.build())
         } else {
             prompt.authenticate(promptBuilder.build(), BiometricPrompt.CryptoObject(cipher))

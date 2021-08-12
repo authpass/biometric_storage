@@ -75,7 +75,7 @@ class AuthException implements Exception {
 
 class StorageFileInitOptions {
   StorageFileInitOptions({
-    this.authenticationValidityDurationSeconds = 10,
+    this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
   });

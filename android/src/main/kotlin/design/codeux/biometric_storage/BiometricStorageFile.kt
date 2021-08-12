@@ -6,7 +6,6 @@ import androidx.security.crypto.MasterKey
 import com.squareup.moshi.JsonClass
 import mu.KotlinLogging
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import javax.crypto.Cipher
 
@@ -41,7 +40,13 @@ class BiometricStorageFile(
     private val file: File
     private val fileV2: File
 
-    private val masterKey: MasterKey
+    private val masterKey: MasterKey by lazy {
+        MasterKey.Builder(context, masterKeyName)
+            .setUserAuthenticationRequired(
+                options.authenticationRequired, options.authenticationValidityDurationSeconds)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+    }
 
     private val cryptographyManager = CryptographyManager {
         setUserAuthenticationRequired(options.authenticationRequired)
@@ -49,12 +54,6 @@ class BiometricStorageFile(
     }
 
     init {
-        masterKey = MasterKey.Builder(context, masterKeyName)
-            .setUserAuthenticationRequired(
-                options.authenticationRequired, options.authenticationValidityDurationSeconds)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
         val baseDir = File(context.filesDir, DIRECTORY_NAME)
         if (!baseDir.exists()) {
             baseDir.mkdirs()
@@ -89,79 +88,73 @@ class BiometricStorageFile(
     fun exists() = file.exists() or fileV2.exists()
 
     @Synchronized
-    fun writeFile(cipher: Cipher?, context: Context, content: String) {
-        if (cipher != null) {
-            try {
-                val encrypted = cryptographyManager.encryptData(content, cipher)
-                fileV2.writeBytes(encrypted.encryptedPayload)
-                logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
-
-                if (file.exists()) {
-                    file.delete()
-                }
-                val backupFile = File(file.parent, "${file.name}$BACKUP_SUFFIX")
-                if (backupFile.exists()) {
-                    backupFile.delete()
-                }
-
-                return
-            } catch (ex: IOException) {
-                // Error occurred opening file for writing.
-                logger.error(ex) { "Error while writing encrypted file $file" }
-                throw ex
-            }
-        }
-
-
-        val encryptedFile = buildEncryptedFile(context)
-
-        val bytes = content.toByteArray()
-
-        // Write to a file.
+    fun writeFile(cipher: Cipher?, content: String) {
+        // cipher will be null if user does not need authentication or valid period is > -1
+        val useCipher = cipher ?: cipherForEncrypt()
         try {
+            val encrypted = cryptographyManager.encryptData(content, useCipher)
+            fileV2.writeBytes(encrypted.encryptedPayload)
+            logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
+
             if (file.exists()) {
-                val backupFile = File(file.parent, "${file.name}$BACKUP_SUFFIX")
-                if (backupFile.exists()) {
-                    backupFile.delete()
-                }
-                file.renameTo(backupFile)
+                file.delete()
             }
-            val outputStream: FileOutputStream = encryptedFile.openFileOutput()
-            outputStream.use { out ->
-                out.write(bytes)
-                out.flush()
+            val backupFile = File(file.parent, "${file.name}$BACKUP_SUFFIX")
+            if (backupFile.exists()) {
+                backupFile.delete()
             }
-            logger.debug { "Successfully written ${bytes.size} bytes." }
+
+            return
         } catch (ex: IOException) {
             // Error occurred opening file for writing.
             logger.error(ex) { "Error while writing encrypted file $file" }
+            throw ex
         }
     }
 
     @Synchronized
     fun readFile(cipher: Cipher?, context: Context): String? {
-        if (cipher != null) {
-            if (fileV2.exists()) {
-                return try {
-                    val bytes = fileV2.readBytes()
-                    cryptographyManager.decryptData(bytes, cipher)
-                } catch (ex: IOException) {
-                    logger.error(ex) { "Error while writing encrypted file $fileV2" }
-                    null
-                }
+        val useCipher = cipher ?: cipherForDecrypt()
+        // if the file exists, there should *always* be a decryption key.
+        if (useCipher != null && fileV2.exists()) {
+            return try {
+                val bytes = fileV2.readBytes()
+                cryptographyManager.decryptData(bytes, useCipher)
+            } catch (ex: IOException) {
+                logger.error(ex) { "Error while writing encrypted file $fileV2" }
+                null
             }
         }
+
         if (!file.exists()) {
             logger.debug { "File $file does not exist. returning null." }
             return null
         }
+
+        if (options.authenticationValidityDurationSeconds < 0) {
+            logger.warn { "Found old file, but authenticationValidityDurationSeconds == -1, " +
+                    "ignoring file because previously -1 was not supported." }
+            return null
+        }
+
         return try {
             val encryptedFile = buildEncryptedFile(context)
 
             val bytes = encryptedFile.openFileInput().use { input ->
                 input.readBytes()
             }
-            String(bytes)
+            val string = String(bytes)
+
+            if (!options.authenticationRequired || options.authenticationValidityDurationSeconds > -1) {
+                logger.info { "Got old file, try to rewrite it into new encryption format." }
+                try {
+                    writeFile(null, string)
+                } catch (ex: Exception) {
+                    logger.warn(ex) { "Error while (re)writing into new encryption file." }
+                }
+            }
+
+            string
         } catch (ex: IOException) {
             // Error occurred opening file for writing.
             logger.error(ex) { "Error while writing encrypted file $file" }

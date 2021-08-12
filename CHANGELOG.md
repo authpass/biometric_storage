@@ -1,5 +1,8 @@
-## 3.0.0-rc.6
+## 3.0.0-rc.7
 
+* **Breaking Change**: `authenticationValidityDurationSeconds` is now `-1` by default, which was
+  not supported before hand. If you need backward compatibility, make sure to override this value
+  to the previous value of `10`.
 * **Breaking Change**: No more support for Android v1 Plugin registration.
 * **Breaking Change**: No longer using androidx.security, but instead handle encryption
   directly. Temporarily there is a fallback to read old content. This requires either reencrypting
