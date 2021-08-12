@@ -8,6 +8,7 @@
   1. This should fix a lot of errors.
   2. This now finally also allows using `authenticationValidityDurationSeconds` = -1.
   3. `BIOMETRIC_WEAK` is no longer used, only `BIOMETRIC_STRONG`.
+* Don't ask for authentication for delete.
 
 ## 3.0.0-rc.5
 
