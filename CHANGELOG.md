@@ -1,3 +1,7 @@
+## 3.0.0-rc.8
+
+* Fix a few bugs with `authenticationValidityDurationSeconds` == -1
+
 ## 3.0.0-rc.7
 
 * **Breaking Change**: `authenticationValidityDurationSeconds` is now `-1` by default, which was

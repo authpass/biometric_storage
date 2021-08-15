@@ -131,7 +131,7 @@ class BiometricStorageFile(
             return null
         }
 
-        if (options.authenticationValidityDurationSeconds < 0) {
+        if (options.authenticationRequired && options.authenticationValidityDurationSeconds < 0) {
             logger.warn { "Found old file, but authenticationValidityDurationSeconds == -1, " +
                     "ignoring file because previously -1 was not supported." }
             return null

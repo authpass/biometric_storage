@@ -131,8 +131,7 @@ class _MyAppState extends State<MyApp> {
                 if (supportsAuthenticated) {
                   _authStorage = await BiometricStorage().getStorage(
                       '${baseName}_authenticated',
-                      options: StorageFileInitOptions(
-                          authenticationValidityDurationSeconds: 30));
+                      options: StorageFileInitOptions());
                 }
                 _storage = await BiometricStorage()
                     .getStorage('${baseName}_unauthenticated',

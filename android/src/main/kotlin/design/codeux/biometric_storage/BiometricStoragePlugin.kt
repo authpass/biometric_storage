@@ -156,7 +156,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 if (!options.authenticationRequired) {
                     return cb(null)
                 }
-                val cipher = if (options.authenticationValidityDurationSeconds < 0) {
+                val cipher = if (options.authenticationValidityDurationSeconds > -1) {
                     null
                 } else when (mode) {
                     CipherMode.Encrypt -> cipherForEncrypt()
