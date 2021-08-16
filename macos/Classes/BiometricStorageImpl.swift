@@ -54,7 +54,7 @@ class BiometricStorageImpl {
             kSecAttrService as String: "flutter_biometric_storage",
             kSecAttrAccount as String: name]
   }
-  
+
   public func handle(_ call: StorageMethodCall, result: @escaping StorageCallback) {
     
     func requiredArg<T>(_ name: String, _ cb: (T) -> Void) {
@@ -145,11 +145,16 @@ class BiometricStorageImpl {
     //    query[kSecMatchLimit as String] = kSecMatchLimitOne
     //    query[kSecReturnData as String] = true
     let status = SecItemDelete(query as CFDictionary)
-    guard status == errSecSuccess else {
-      handleOSStatusError(status, result, "writing data")
+    if status == errSecSuccess {
+      result(true)
       return
     }
-    result(true)
+    if status == errSecItemNotFound {
+      hpdebug("Item not in keychain. Nothing to delete.")
+      result(true)
+      return
+    }
+    handleOSStatusError(status, result, "writing data")
   }
   
   private func write(_ name: String, _ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
@@ -162,12 +167,14 @@ class BiometricStorageImpl {
     
     if (initOptions.authenticationRequired) {
       let context = LAContext()
+      if initOptions.authenticationValidityDurationSeconds > 0 {
         if #available(OSX 10.12, *) {
-            context.touchIDAuthenticationAllowableReuseDuration = Double(initOptions.authenticationValidityDurationSeconds)
+          context.touchIDAuthenticationAllowableReuseDuration = Double(initOptions.authenticationValidityDurationSeconds)
         } else {
-            // Fallback on earlier versions
-            hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
+          // Fallback on earlier versions
+          hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
         }
+      }
       let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
         .userPresence,
@@ -175,8 +182,10 @@ class BiometricStorageImpl {
       query.merge([
         kSecUseAuthenticationContext as String: context,
         kSecAttrAccessControl as String: access as Any,
-        kSecUseOperationPrompt as String: promptInfo.saveTitle,
       ]) { (_, new) in new }
+      if let operationPrompt = promptInfo.saveTitle {
+        query[kSecUseOperationPrompt as String] = operationPrompt
+      }
     } else {
       hpdebug("No authentication required for \(name)")
     }

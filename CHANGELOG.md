@@ -1,6 +1,8 @@
-## 3.0.0-rc.8
+## 3.0.0-rc.9
 
-* Fix a few bugs with `authenticationValidityDurationSeconds` == -1
+* Android: Fix a few bugs with `authenticationValidityDurationSeconds` == -1
+* iOS/MacOS: Don't set timeout for `authenticationValidityDurationSeconds` == -1
+* iOS/MacOS: Don't raise an error on `delete` if item was not found.
 
 ## 3.0.0-rc.7
 
