@@ -269,17 +269,33 @@ class StorageActions extends StatelessWidget {
           child: const Text('read'),
           onPressed: () async {
             _logger.fine('reading from ${storageFile.name}');
-            final result = await storageFile.read();
-            _logger.fine('read: {$result}');
+            try {
+              final result = await storageFile.read();
+              _logger.fine('read: {$result}');
+            } on AuthException catch (e) {
+              if (e.code == AuthExceptionCode.userCanceled) {
+                _logger.info('User canceled.');
+                return;
+              }
+              rethrow;
+            }
           },
         ),
         ElevatedButton(
           child: const Text('write'),
           onPressed: () async {
             _logger.fine('Going to write...');
-            await storageFile
-                .write(' [${DateTime.now()}] ${writeController.text}');
-            _logger.info('Written content.');
+            try {
+              await storageFile
+                  .write(' [${DateTime.now()}] ${writeController.text}');
+              _logger.info('Written content.');
+            } on AuthException catch (e) {
+              if (e.code == AuthExceptionCode.userCanceled) {
+                _logger.info('User canceled.');
+                return;
+              }
+              rethrow;
+            }
           },
         ),
         ElevatedButton(

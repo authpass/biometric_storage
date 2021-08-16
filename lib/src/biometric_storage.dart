@@ -387,7 +387,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((Object error, StackTrace stackTrace) {
         if (error is PlatformException) {
-          _logger.warning(
+          _logger.finest(
               'Error during plugin operation (details: ${error.details})',
               error,
               stackTrace);

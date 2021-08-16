@@ -50,10 +50,10 @@ enum class CanAuthenticateResponse(val code: Int) {
 }
 
 @Suppress("unused")
-enum class AuthenticationError(val code: Int) {
+enum class AuthenticationError(vararg val code: Int) {
     Canceled(BiometricPrompt.ERROR_CANCELED),
     Timeout(BiometricPrompt.ERROR_TIMEOUT),
-    UserCanceled(BiometricPrompt.ERROR_USER_CANCELED),
+    UserCanceled(BiometricPrompt.ERROR_USER_CANCELED, BiometricPrompt.ERROR_NEGATIVE_BUTTON),
     Unknown(-1),
     /** Authentication valid, but unknown */
     Failed(-2),
@@ -61,7 +61,7 @@ enum class AuthenticationError(val code: Int) {
 
     companion object {
         fun forCode(code: Int) =
-            values().firstOrNull { it.code == code } ?: Unknown
+            values().firstOrNull { it.code.contains(code) } ?: Unknown
     }
 }
 
