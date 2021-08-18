@@ -1,10 +1,11 @@
-## 3.0.0-rc.10
+## 3.0.0-rc.11
 
 * Android: Fix a few bugs with `authenticationValidityDurationSeconds` == -1
 * iOS/MacOS: Don't set timeout for `authenticationValidityDurationSeconds` == -1
 * iOS/MacOS: Don't raise an error on `delete` if item was not found.
 * Android: Fix user cancel code. 
   (Previously an `unknown` exception was thrown instead of `userCanceled`)
+* Android: Ignore `androidBiometricOnly` prior to Android R (30).
 
 ## 3.0.0-rc.7
 

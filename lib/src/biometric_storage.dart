@@ -89,6 +89,8 @@ class StorageFileInitOptions {
 
   /// Only makes difference on Android, where if set true, you can't use
   /// PIN/pattern/password to get the file.
+  /// On Android < 30 this will always be ignored. (always `true`)
+  /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-900358154
   final bool androidBiometricOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
