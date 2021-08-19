@@ -1,4 +1,4 @@
-## 3.0.0-rc.11
+## 3.0.0-rc.12
 
 * Android: Fix a few bugs with `authenticationValidityDurationSeconds` == -1
 * iOS/MacOS: Don't set timeout for `authenticationValidityDurationSeconds` == -1
@@ -6,6 +6,7 @@
 * Android: Fix user cancel code. 
   (Previously an `unknown` exception was thrown instead of `userCanceled`)
 * Android: Ignore `androidBiometricOnly` prior to Android R (30).
+* Introduce `AuthExceptionCode.canceled`
 
 ## 3.0.0-rc.7
 

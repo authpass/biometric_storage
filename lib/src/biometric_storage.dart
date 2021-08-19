@@ -38,7 +38,13 @@ const _canAuthenticateMapping = {
 };
 
 enum AuthExceptionCode {
+  /// User taps the cancel/negative button or presses `back`.
   userCanceled,
+
+  /// Authentication prompt is canceled due to another reason
+  /// (like when biometric sensor becamse unavailable like when
+  /// user switches between apps, logsout, etc).
+  canceled,
   unknown,
   timeout,
   linuxAppArmorDenied,
@@ -46,6 +52,7 @@ enum AuthExceptionCode {
 
 const _authErrorCodeMapping = {
   'AuthError:UserCanceled': AuthExceptionCode.userCanceled,
+  'AuthError:Canceled': AuthExceptionCode.canceled,
   'AuthError:Timeout': AuthExceptionCode.timeout,
 };
 
