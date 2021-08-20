@@ -1,6 +1,8 @@
 package design.codeux.biometric_storage
 
 import android.content.Context
+import android.os.Build
+import android.security.keystore.KeyProperties
 import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.MasterKey
 import com.squareup.moshi.JsonClass
@@ -13,7 +15,7 @@ private val logger = KotlinLogging.logger {}
 
 @JsonClass(generateAdapter = true)
 data class InitOptions(
-    val authenticationValidityDurationSeconds: Int = 30,
+    val authenticationValidityDurationSeconds: Int = -1,
     val authenticationRequired: Boolean = true,
     val androidBiometricOnly: Boolean = true
 )
@@ -50,7 +52,22 @@ class BiometricStorageFile(
 
     private val cryptographyManager = CryptographyManager {
         setUserAuthenticationRequired(options.authenticationRequired)
-        setUserAuthenticationValidityDurationSeconds(options.authenticationValidityDurationSeconds)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (options.authenticationValidityDurationSeconds == -1) {
+                setUserAuthenticationParameters(
+                    0,
+                    KeyProperties.AUTH_BIOMETRIC_STRONG
+                )
+            } else {
+                setUserAuthenticationParameters(
+                    options.authenticationValidityDurationSeconds,
+                    KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
+                )
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            setUserAuthenticationValidityDurationSeconds(options.authenticationValidityDurationSeconds)
+        }
     }
 
     init {
@@ -62,6 +79,14 @@ class BiometricStorageFile(
         fileV2 = File(baseDir, fileNameV2)
 
         logger.trace { "Initialized $this with $options" }
+
+        validateOptions()
+    }
+
+    private fun validateOptions() {
+        if (options.authenticationValidityDurationSeconds == -1 && !options.androidBiometricOnly) {
+            throw IllegalArgumentException("when authenticationValidityDurationSeconds is -1, androidBiometricOnly must be true")
+        }
     }
 
     fun cipherForEncrypt() = cryptographyManager.getInitializedCipherForEncryption(masterKeyName)

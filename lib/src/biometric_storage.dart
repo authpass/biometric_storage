@@ -98,6 +98,10 @@ class StorageFileInitOptions {
   /// PIN/pattern/password to get the file.
   /// On Android < 30 this will always be ignored. (always `true`)
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-900358154
+  ///
+  /// Also: this **must** be `true` if [authenticationValidityDurationSeconds]
+  /// is `-1`.
+  /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-902508609
   final bool androidBiometricOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{

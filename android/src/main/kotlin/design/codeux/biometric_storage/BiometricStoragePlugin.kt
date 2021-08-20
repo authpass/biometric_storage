@@ -272,7 +272,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 .setConfirmationRequired(promptInfo.confirmationRequired)
 
         val biometricOnly =
-            options.androidBiometricOnly || Build.VERSION.SDK_INT < Build.VERSION_CODES.R;
+            options.androidBiometricOnly || Build.VERSION.SDK_INT < Build.VERSION_CODES.R
 
         if (biometricOnly) {
             if (!options.androidBiometricOnly) {
