@@ -1,3 +1,8 @@
+## 3.0.0
+
+* Stable Release 🥳
+* **Please check below for breaking changes in the `-rc` releases.
+
 ## 3.0.0-rc.12
 
 * Android: Fix a few bugs with `authenticationValidityDurationSeconds` == -1
