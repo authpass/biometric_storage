@@ -3,6 +3,7 @@ package design.codeux.biometric_storage
 import android.app.Activity
 import android.content.Context
 import android.os.*
+import android.security.keystore.UserNotAuthenticatedException
 import androidx.biometric.*
 import androidx.biometric.BiometricManager.Authenticators.*
 import androidx.fragment.app.FragmentActivity
@@ -162,6 +163,17 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     CipherMode.Encrypt -> cipherForEncrypt()
                     CipherMode.Decrypt -> cipherForDecrypt()
                 }
+
+                if (cipher == null) {
+                    // if we have no cipher, just try the callback and see if the
+                    // user requires authentication.
+                    try {
+                        return cb(null)
+                    } catch (e: UserNotAuthenticatedException) {
+                        logger.debug(e) { "User requires (re)authentication. showing prompt ..."}
+                    }
+                }
+
                 val promptInfo = getAndroidPromptInfo()
                 authenticate(cipher, promptInfo, options, {
                     cb(cipher)

@@ -1,7 +1,10 @@
-## Unreleased
+## 3.0.0-dev.1
 
 * Android: Validate options on `int`
   When `authenticationValidityDurationSeconds == -1`, then `androidBiometricOnly` must be `true`
+* Android: if `authenticationValidityDurationSeconds` is `> 0` only show authentication prompt when
+  necessary. (It will simply try to use the key, and show the auth prompt only when a
+  `UserNotAuthenticatedException` is thrown).
 
 ## 3.0.0
 

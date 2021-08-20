@@ -79,7 +79,6 @@ class _MyAppState extends State<MyApp> {
   BiometricStorageFile? _authStorage;
   BiometricStorageFile? _storage;
   BiometricStorageFile? _customPrompt;
-  BiometricStorageFile? _noConfirmation;
 
   final TextEditingController _writeController =
       TextEditingController(text: 'Lorem Ipsum');
@@ -142,22 +141,17 @@ class _MyAppState extends State<MyApp> {
                   _customPrompt = await BiometricStorage().getStorage(
                       '${baseName}_customPrompt',
                       options: StorageFileInitOptions(
-                          authenticationValidityDurationSeconds: 30),
+                          authenticationValidityDurationSeconds: 10),
                       promptInfo: const PromptInfo(
+                        iosPromptInfo: IosPromptInfo(
+                          saveTitle: 'Custom save title',
+                          accessTitle: 'Custom access title.',
+                        ),
                         androidPromptInfo: AndroidPromptInfo(
                           title: 'Custom title',
                           subtitle: 'Custom subtitle',
                           description: 'Custom description',
                           negativeButton: 'Nope!',
-                        ),
-                      ));
-                  _noConfirmation = await BiometricStorage().getStorage(
-                      '${baseName}_customPrompt',
-                      options: StorageFileInitOptions(
-                          authenticationValidityDurationSeconds: 30),
-                      promptInfo: const PromptInfo(
-                        androidPromptInfo: AndroidPromptInfo(
-                          confirmationRequired: false,
                         ),
                       ));
                 }
@@ -189,21 +183,12 @@ class _MyAppState extends State<MyApp> {
             ...?(_customPrompt == null
                 ? null
                 : [
-                    const Text('Custom Authentication Prompt (Android)',
+                    const Text('Custom Prompts w/ 10s auth validity',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
                         storageFile: _customPrompt!,
                         writeController: _writeController),
                     const Divider(),
-                  ]),
-            ...?(_noConfirmation == null
-                ? null
-                : [
-                    const Text('No Confirmation Prompt (Android)',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    StorageActions(
-                        storageFile: _noConfirmation!,
-                        writeController: _writeController),
                   ]),
             const Divider(),
             TextField(
