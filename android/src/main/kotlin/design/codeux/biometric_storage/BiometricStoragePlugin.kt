@@ -3,6 +3,7 @@ package design.codeux.biometric_storage
 import android.app.Activity
 import android.content.Context
 import android.os.*
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.UserNotAuthenticatedException
 import androidx.biometric.*
 import androidx.biometric.BiometricManager.Authenticators.*
@@ -157,11 +158,22 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 if (!options.authenticationRequired) {
                     return cb(null)
                 }
-                val cipher = if (options.authenticationValidityDurationSeconds > -1) {
-                    null
-                } else when (mode) {
+
+                fun cipherForMode() = when (mode) {
                     CipherMode.Encrypt -> cipherForEncrypt()
                     CipherMode.Decrypt -> cipherForDecrypt()
+                }
+
+                val cipher = if (options.authenticationValidityDurationSeconds > -1) {
+                    null
+                } else try {
+                    cipherForMode()
+                } catch (e: KeyPermanentlyInvalidatedException) {
+                    // TODO should we communicate this to the caller?
+                    logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
+                    deleteFile()
+                    // if deleting fails, simply throw the second time around.
+                    cipherForMode()
                 }
 
                 if (cipher == null) {

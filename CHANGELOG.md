@@ -5,6 +5,8 @@
 * Android: if `authenticationValidityDurationSeconds` is `> 0` only show authentication prompt when
   necessary. (It will simply try to use the key, and show the auth prompt only when a
   `UserNotAuthenticatedException` is thrown).
+* Android: When biometric key is invalidated (e.g. because biometric security is changed on the 
+  device), we simply delete the old key and data! (KeyPermanentlyInvalidatedException)
 
 ## 3.0.0
 
