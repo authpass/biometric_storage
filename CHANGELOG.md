@@ -1,4 +1,4 @@
-## 3.0.1-dev.1
+## 3.0.1
 
 * Android: Validate options on `int`
   When `authenticationValidityDurationSeconds == -1`, then `androidBiometricOnly` must be `true`
