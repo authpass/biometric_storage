@@ -51,7 +51,7 @@ class BiometricStorageImpl {
 
   private func baseQuery(name: String) -> [String: Any] {
     return [kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "flutter_biometric_storage",
+            kSecAttrService as String: Bundle.main.bundleIdentifier,
             kSecAttrAccount as String: name]
   }
 
