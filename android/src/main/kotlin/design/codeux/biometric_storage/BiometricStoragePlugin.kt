@@ -208,16 +208,9 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 "canAuthenticate" -> result.success(canAuthenticate().name)
                 "init" -> {
                     val name = getName()
-                    if (storageFiles.containsKey(name)) {
-                        if (call.argument<Boolean>("forceInit") == true) {
-                            throw MethodCallException(
-                                "AlreadyInitialized",
-                                "A storage file with the name '$name' was already initialized."
-                            )
-                        } else {
-                            result.success(false)
-                            return
-                        }
+                    if (storageFiles.containsKey(name) && call.argument<Boolean>("forceInit") != true) {
+                        result.success(false)
+                        return
                     }
 
                     val options = call.argument<Map<String, Any>>("options")?.let { it ->
