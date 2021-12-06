@@ -290,6 +290,12 @@ abstract class BiometricStorage extends PlatformInterface {
     String content,
     PromptInfo promptInfo,
   );
+
+  @protected
+  Future<void> dispose(
+    String name,
+    PromptInfo promptInfo,
+  );
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
@@ -425,6 +431,14 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         ..._promptInfoForCurrentPlatform(promptInfo),
       }));
 
+  @override
+  Future<void> dispose(String name, PromptInfo promptInfo) => _transformErrors(
+        _channel.invokeMethod('dispose', <String, dynamic>{
+          'name': name,
+          ..._promptInfoForCurrentPlatform(promptInfo),
+        }),
+      );
+
   Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) {
     // Don't expose Android configurations to other platforms
     if (Platform.isAndroid) {
@@ -501,4 +515,12 @@ class BiometricStorageFile {
   /// Delete the content of this storage.
   Future<void> delete({PromptInfo? promptInfo}) =>
       _plugin.delete(name, promptInfo ?? defaultPromptInfo);
+
+  /// Delete the content of this storage and dispose of the storage instance.
+  /// After calling this method, this BiometricStorageFile instance should not be used.
+  /// A subsequent call to BiometricStorage().getStorage() with the same name will create a new instance.
+  Future<void> deleteAndDispose({PromptInfo? promptInfo}) async {
+    await delete(promptInfo: promptInfo);
+    await _plugin.dispose(name, promptInfo ?? defaultPromptInfo);
+  }
 }
