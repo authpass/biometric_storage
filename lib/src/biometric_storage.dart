@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:biometric_storage/src/biometric_storage_win32_noop.dart'
-    if (dart.library.io) 'package:biometric_storage/src/biometric_storage_win32.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
@@ -182,9 +180,7 @@ abstract class BiometricStorage extends PlatformInterface {
 
   BiometricStorage.create() : super(token: _token);
 
-  static BiometricStorage _instance = !kIsWeb && Platform.isWindows
-      ? Win32BiometricStoragePlugin()
-      : MethodChannelBiometricStorage();
+  static BiometricStorage _instance = MethodChannelBiometricStorage();
 
   /// Platform-specific plugins should set this with their own platform-specific
   /// class that extends [UrlLauncherPlatform] when they register themselves.
