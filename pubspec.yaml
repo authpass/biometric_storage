@@ -2,12 +2,12 @@ name: biometric_storage
 description: |
   Secure Storage: Encrypted data store optionally secured by biometric lock with support
   for iOS, Android, MacOS. Partial support for Linux, Windows and web (localStorage).
-version: 3.0.1
+version: 4.0.0
 homepage: https://github.com/authpass/biometric_storage/
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
-  flutter: ">=1.10.0"
+  flutter: ">=2.8.0"
 
 dependencies:
   flutter:
@@ -46,10 +46,7 @@ flutter:
       linux:
         pluginClass: BiometricStoragePlugin
       windows:
-        # TODO I don't think this is supported yet  https://github.com/flutter/flutter/issues/52267
         dartPluginClass: Win32BiometricStoragePlugin
-        fileName: biometric_storage_win32.dart
-        pluginClass: none
       web:
         pluginClass: BiometricStoragePluginWeb
         fileName: biometric_storage_web.dart

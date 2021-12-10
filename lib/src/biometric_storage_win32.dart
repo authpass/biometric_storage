@@ -16,7 +16,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   static const namePrefix = 'design.codeux.authpass.';
 
   /// Registers this class as the default instance of [PathProviderPlatform]
-  static void register() {
+  static void registerWith() {
     BiometricStorage.instance = Win32BiometricStoragePlugin();
   }
 
