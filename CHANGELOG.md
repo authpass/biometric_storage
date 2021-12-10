@@ -1,3 +1,7 @@
+## 4.0.0-dev.1
+
+* Fixed compile errors with Flutter >= 2.8.0 (Compatible with Flutter 2.5). #47 fix #42
+
 ## 3.0.1
 
 * Android: Validate options on `int`
