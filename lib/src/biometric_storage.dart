@@ -83,6 +83,7 @@ class StorageFileInitOptions {
     this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
+    this.iosBiometricOnly = false,
   });
 
   final int authenticationValidityDurationSeconds;
@@ -102,11 +103,16 @@ class StorageFileInitOptions {
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-902508609
   final bool androidBiometricOnly;
 
+  /// Only makes difference on iOS, where if set true, you can't use
+  /// passcode to get the file.
+  final bool iosBiometricOnly;
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'authenticationValidityDurationSeconds':
             authenticationValidityDurationSeconds,
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
+        'iosBiometricOnly': iosBiometricOnly,
       };
 }
 

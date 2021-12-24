@@ -16,9 +16,11 @@ class InitOptions {
   init(params: [String: Any]) {
     authenticationValidityDurationSeconds = params["authenticationValidityDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
+    iosBiometricOnly = params["iosBiometricOnly"] as? Bool
   }
   let authenticationValidityDurationSeconds: Int!
   let authenticationRequired: Bool!
+  let iosBiometricOnly: Bool!
 }
 
 class IOSPromptInfo {
@@ -35,12 +37,12 @@ private func hpdebug(_ message: String) {
 }
 
 class BiometricStorageImpl {
-  
+
   init(storageError: @escaping StorageError, storageMethodNotImplemented: Any) {
     self.storageError = storageError
     self.storageMethodNotImplemented = storageMethodNotImplemented
   }
-  
+
   private var stores: [String: InitOptions] = [:]
   private let storageError: StorageError
   private let storageMethodNotImplemented: Any
@@ -56,7 +58,7 @@ class BiometricStorageImpl {
   }
 
   public func handle(_ call: StorageMethodCall, result: @escaping StorageCallback) {
-    
+
     func requiredArg<T>(_ name: String, _ cb: (T) -> Void) {
       guard let args = call.arguments as? Dictionary<String, Any> else {
         result(storageError(code: "InvalidArguments", message: "Invalid arguments \(String(describing: call.arguments))", details: nil))
@@ -73,7 +75,7 @@ class BiometricStorageImpl {
       cb(valueTyped)
       return
     }
-    
+
     if ("canAuthenticate" == call.method) {
       canAuthenticate(result: result)
     } else if ("init" == call.method) {
@@ -110,17 +112,17 @@ class BiometricStorageImpl {
       result(storageMethodNotImplemented)
     }
   }
-  
+
   private func read(_ name: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
-    
+
     var query = baseQuery(name: name)
     query[kSecMatchLimit as String] = kSecMatchLimitOne
     query[kSecUseOperationPrompt as String] = promptInfo.accessTitle
     query[kSecReturnAttributes as String] = true
     query[kSecReturnData as String] = true
-    
+
     var item: CFTypeRef?
-    
+
     let status = SecItemCopyMatching(query as CFDictionary, &item)
     guard status != errSecItemNotFound else {
       result(nil)
@@ -139,7 +141,7 @@ class BiometricStorageImpl {
     }
     result(dataString)
   }
-  
+
   private func delete(_ name: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
     let query = baseQuery(name: name)
     //    query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -156,15 +158,15 @@ class BiometricStorageImpl {
     }
     handleOSStatusError(status, result, "writing data")
   }
-  
+
   private func write(_ name: String, _ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
     guard let initOptions = stores[name] else {
       result(storageError(code: "WriteError", message: "Storage was not initialized. \(name)", details: nil))
       return
     }
-    
+
     var query = baseQuery(name: name)
-    
+
     if (initOptions.authenticationRequired) {
       let context = LAContext()
       if initOptions.authenticationValidityDurationSeconds > 0 {
@@ -175,9 +177,17 @@ class BiometricStorageImpl {
           hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
         }
       }
+      var flag = SecAccessControlCreateFlags.userPresence
+      if initOptions.iosBiometricOnly {
+        if #available(iOS 11.3, *) {
+          flag = SecAccessControlCreateFlags.biometryCurrentSet
+        } else {
+          flag = SecAccessControlCreateFlags.touchIDCurrentSet
+        }
+      }
       let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-        .userPresence,
+        flag,
         nil) // Ignore any error.
       query.merge([
         kSecUseAuthenticationContext as String: context,
