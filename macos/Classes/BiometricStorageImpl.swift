@@ -27,11 +27,9 @@ class IOSPromptInfo {
   init(params: [String: Any]) {
     saveTitle = params["saveTitle"] as? String
     accessTitle = params["accessTitle"] as? String
-    iosBiometricOnly = params["iosBiometricOnly"] as? Bool
   }
   let saveTitle: String!
   let accessTitle: String!
-  let iosBiometricOnly: Bool!
 }
 
 private func hpdebug(_ message: String) {
