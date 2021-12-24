@@ -25,9 +25,11 @@ class IOSPromptInfo {
   init(params: [String: Any]) {
     saveTitle = params["saveTitle"] as? String
     accessTitle = params["accessTitle"] as? String
+    iosBiometricOnly = params["iosBiometricOnly"] as? Bool
   }
   let saveTitle: String!
   let accessTitle: String!
+  let iosBiometricOnly: Bool!
 }
 
 private func hpdebug(_ message: String) {
@@ -35,12 +37,12 @@ private func hpdebug(_ message: String) {
 }
 
 class BiometricStorageImpl {
-  
+
   init(storageError: @escaping StorageError, storageMethodNotImplemented: Any) {
     self.storageError = storageError
     self.storageMethodNotImplemented = storageMethodNotImplemented
   }
-  
+
   private var stores: [String: InitOptions] = [:]
   private let storageError: StorageError
   private let storageMethodNotImplemented: Any
@@ -56,7 +58,7 @@ class BiometricStorageImpl {
   }
 
   public func handle(_ call: StorageMethodCall, result: @escaping StorageCallback) {
-    
+
     func requiredArg<T>(_ name: String, _ cb: (T) -> Void) {
       guard let args = call.arguments as? Dictionary<String, Any> else {
         result(storageError(code: "InvalidArguments", message: "Invalid arguments \(String(describing: call.arguments))", details: nil))
@@ -175,9 +177,17 @@ class BiometricStorageImpl {
           hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
         }
       }
+      var flag = SecAccessControlCreateFlags.userPresence
+      if initOptions.iosBiometricOnly {
+        if #available(iOS 11.3, *) {
+          flag = SecAccessControlCreateFlags.biometryCurrentSet
+        } else {
+          flag = SecAccessControlCreateFlags.touchIDCurrentSet
+        }
+      }
       let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-        .userPresence,
+        flag,
         nil) // Ignore any error.
       query.merge([
         kSecUseAuthenticationContext as String: context,
