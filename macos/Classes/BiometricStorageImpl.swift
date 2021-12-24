@@ -16,9 +16,11 @@ class InitOptions {
   init(params: [String: Any]) {
     authenticationValidityDurationSeconds = params["authenticationValidityDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
+    iosBiometricOnly = params["iosBiometricOnly"] as? Bool
   }
   let authenticationValidityDurationSeconds: Int!
   let authenticationRequired: Bool!
+  let iosBiometricOnly: Bool!
 }
 
 class IOSPromptInfo {
