@@ -1,4 +1,4 @@
-## 4.0.0-dev.1
+## 4.0.0
 
 * Fixed compile errors with Flutter >= 2.8.0 (Compatible with Flutter 2.5). #47 fix #42
 
