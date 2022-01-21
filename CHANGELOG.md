@@ -1,3 +1,7 @@
+## 4.0.1
+
+* Update to Moshi 1.13 for Kotlin 1.6.0 compatibility. #53 
+
 ## 4.0.0
 
 * Fixed compile errors with Flutter >= 2.8.0 (Compatible with Flutter 2.5). #47 fix #42
