@@ -5,7 +5,6 @@ import android.os.Build
 import android.security.keystore.KeyProperties
 import androidx.security.crypto.EncryptedFile
 import androidx.security.crypto.MasterKey
-import com.squareup.moshi.JsonClass
 import mu.KotlinLogging
 import java.io.File
 import java.io.IOException
@@ -13,7 +12,6 @@ import javax.crypto.Cipher
 
 private val logger = KotlinLogging.logger {}
 
-@JsonClass(generateAdapter = true)
 data class InitOptions(
     val authenticationValidityDurationSeconds: Int = -1,
     val authenticationRequired: Boolean = true,

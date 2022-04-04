@@ -1,3 +1,7 @@
+## 4.1.0-dev.1
+
+* Android: Remove Moshi dependency altogether. #53
+
 ## 4.0.1
 
 * Update to Moshi 1.13 for Kotlin 1.6.0 compatibility. #53 

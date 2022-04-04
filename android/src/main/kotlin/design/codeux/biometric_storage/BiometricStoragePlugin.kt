@@ -8,8 +8,6 @@ import android.security.keystore.UserNotAuthenticatedException
 import androidx.biometric.*
 import androidx.biometric.BiometricManager.Authenticators.*
 import androidx.fragment.app.FragmentActivity
-import com.squareup.moshi.JsonClass
-import com.squareup.moshi.Moshi
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.*
 import io.flutter.plugin.common.*
@@ -94,10 +92,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         const val PARAM_WRITE_CONTENT = "content"
         const val PARAM_ANDROID_PROMPT_INFO = "androidPromptInfo"
 
-        val moshi = Moshi.Builder()
-            // ... add your own JsonAdapters and factories ...
-            .build() as Moshi
-
         val executor : ExecutorService = Executors.newSingleThreadExecutor()
         private val handler: Handler = Handler(Looper.getMainLooper())
     }
@@ -136,9 +130,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             val getName = { requiredArgument<String>(PARAM_NAME) }
             val getAndroidPromptInfo = {
                 requiredArgument<Map<String, Any>>(PARAM_ANDROID_PROMPT_INFO).let {
-                    moshi.adapter(AndroidPromptInfo::class.java).fromJsonValue(it) ?: throw MethodCallException(
-                        "BadArgument",
-                        "'$PARAM_ANDROID_PROMPT_INFO' is not well formed"
+                    AndroidPromptInfo(
+                            title = it["title"] as String,
+                            subtitle = it["subtitle"] as String?,
+                            description = it["description"] as String?,
+                            negativeButton = it["negativeButton"] as String,
+                            confirmationRequired = it["confirmationRequired"] as Boolean,
                     )
                 }
             }
@@ -211,9 +208,16 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         }
                     }
 
-                    val options = moshi.adapter(InitOptions::class.java)
-                        .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
-                        ?: InitOptions()
+                    val options = call.argument<Map<String, Any>>("options")?.let { it ->
+                        InitOptions(
+                                authenticationValidityDurationSeconds = it["authenticationValidityDurationSeconds"] as Int,
+                                authenticationRequired = it["authenticationRequired"] as Boolean,
+                                androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
+                        )
+                    } ?: InitOptions()
+//                    val options = moshi.adapter(InitOptions::class.java)
+//                        .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
+//                        ?: InitOptions()
                     storageFiles[name] = BiometricStorageFile(applicationContext, name, options)
                     result.success(true)
                 }
@@ -344,7 +348,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 }
 
-@JsonClass(generateAdapter = true)
 data class AndroidPromptInfo(
     val title: String,
     val subtitle: String?,
