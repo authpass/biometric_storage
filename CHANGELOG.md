@@ -1,4 +1,4 @@
-## 4.1.0-dev.1
+## 4.1.0
 
 * Android: Remove Moshi dependency altogether. #53
 
