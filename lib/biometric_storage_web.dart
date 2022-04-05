@@ -9,6 +9,8 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 import 'package:biometric_storage/src/biometric_storage.dart';
 
+export 'src/biometric_storage.dart';
+
 /// A web implementation of the BiometricStorage plugin.
 class BiometricStoragePluginWeb extends BiometricStorage {
   BiometricStoragePluginWeb() : super.create();
