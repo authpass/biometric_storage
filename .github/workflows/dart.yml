@@ -40,8 +40,9 @@ jobs:
           - os: ubuntu-20.04
             buildcommand: linux
         include:
-          - buildcommand: macos
-            os: macos-latest
+#          No macos build for now, have to configure code signing..
+#          - buildcommand: macos
+#            os: macos-latest
           - buildcommand: ios
             buildargs: --no-codesign
             os: macos-latest
