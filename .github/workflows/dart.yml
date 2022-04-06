@@ -41,7 +41,6 @@ jobs:
             buildcommand: linux
         include:
           - buildcommand: macos
-            buildargs: --no-codesign
             os: macos-latest
           - buildcommand: ios
             buildargs: --no-codesign
