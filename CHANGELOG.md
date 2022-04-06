@@ -1,3 +1,7 @@
+## 4.1.1
+
+* Fix building on all platforms, add github actions to test building.
+
 ## 4.1.0
 
 * Android: Remove Moshi dependency altogether. #53
