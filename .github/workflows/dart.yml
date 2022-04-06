@@ -32,6 +32,7 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         buildcommand: [linux]
         os: [ubuntu-20.04]
@@ -40,8 +41,10 @@ jobs:
             buildcommand: linux
         include:
           - buildcommand: macos
+            buildargs: --no-codesign
             os: macos-latest
           - buildcommand: ios
+            buildargs: --no-codesign
             os: macos-latest
           - buildcommand: windows
             os: windows-latest
@@ -73,4 +76,4 @@ jobs:
         if: matrix.buildcommand == 'macos' || matrix.buildcommand == 'linux'
         run: flutter config --enable-${{ matrix.buildcommand }}-desktop
       - name: Build for ${{ matrix.buildcommand }}
-        run: cd example && flutter build ${{ matrix.buildcommand }}
+        run: cd example && flutter build ${{ matrix.buildcommand }} ${{ matrix.buildargs }}
