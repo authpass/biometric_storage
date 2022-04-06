@@ -3,7 +3,7 @@ name: Dart CI
 on: [push]
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-20.04
     
@@ -19,3 +19,44 @@ jobs:
       run: flutter pub get
     - name: Run tests
       run: flutter test
+
+  web:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # or: 'dev' or 'beta'
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        buidcommand: [linux]
+        include:
+          - os: macos-latest
+            buildcommand: macos
+          - os: macos-latest
+            buildcommand: ios
+          - os: windows-latest
+            buildcommand: windows
+          - os: ubuntu-latest
+            buildcommand: linux
+          - os: ubuntu-latest
+            buildcommand: appbundle
+          - os: ubuntu-latest
+            buildcommand: web
+          - os: ubuntu-latest
+            buildcommand: android
+
+    steps:
+      - uses: actions/checkout@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # or: 'dev' or 'beta'
+      - name: Enable build
+        if: matrix.buildcommand == 'macos' || matrix.buildcommand == 'linux'
+        run: flutter config --enable-${{ matrix.buildcommand }}-desktop
+      - name: Build for ${{ matrix.buildcommand }}
+        run: cd example && flutter build ${{ matrix.buildcommand }}

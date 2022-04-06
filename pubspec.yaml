@@ -47,6 +47,7 @@ flutter:
         pluginClass: BiometricStoragePlugin
       windows:
         dartPluginClass: Win32BiometricStoragePlugin
+        fileName: src/biometric_storage_win32.dart
       web:
         pluginClass: BiometricStoragePluginWeb
-        fileName: biometric_storage_web.dart
+        fileName: src/biometric_storage_web.dart

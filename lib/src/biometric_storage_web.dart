@@ -5,9 +5,8 @@ import 'dart:async';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html show window;
 
-import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-
 import 'package:biometric_storage/src/biometric_storage.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 /// A web implementation of the BiometricStorage plugin.
 class BiometricStoragePluginWeb extends BiometricStorage {
