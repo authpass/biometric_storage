@@ -91,9 +91,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         const val PARAM_NAME = "name"
         const val PARAM_WRITE_CONTENT = "content"
         const val PARAM_ANDROID_PROMPT_INFO = "androidPromptInfo"
-
-        val executor : ExecutorService = Executors.newSingleThreadExecutor()
-        private val handler: Handler = Handler(Looper.getMainLooper())
     }
 
     private var attachedActivity: FragmentActivity? = null
@@ -242,7 +239,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         }
     }
 
-    private inline fun ui(crossinline onError: ErrorCallback, crossinline cb: () -> Unit) = handler.post {
+    private inline fun ui(crossinline onError: ErrorCallback, crossinline cb: () -> Unit) {
         try {
             cb()
         } catch (e: Throwable) {
@@ -275,7 +272,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             logger.error { "We are not attached to an activity." }
             onError(AuthenticationErrorInfo(AuthenticationError.Failed, "Plugin not attached to any activity."))
         }
-        val prompt = BiometricPrompt(activity, executor, object: BiometricPrompt.AuthenticationCallback() {
+        val prompt = BiometricPrompt(activity, Executors.newSingleThreadExecutor(), object: BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 logger.trace("onAuthenticationError($errorCode, $errString)")
                 ui(onError) { onError(AuthenticationErrorInfo(AuthenticationError.forCode(errorCode), errString)) }
