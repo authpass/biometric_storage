@@ -71,10 +71,10 @@ class MemoryAppender extends BaseLogAppender {
 
 class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   final String baseName = 'default';
   BiometricStorageFile? _authStorage;
   BiometricStorageFile? _storage;

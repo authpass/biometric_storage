@@ -175,10 +175,16 @@ class BiometricStorageImpl {
           hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
         }
       }
-      let access = SecAccessControlCreateWithFlags(nil, // Use the default allocator.
+      var error: Unmanaged<CFError>?
+      guard let access = SecAccessControlCreateWithFlags(
+        nil, // Use the default allocator.
         kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
         .userPresence,
-        nil) // Ignore any error.
+        &error) else {
+        hpdebug("Error while creating access control flags. \(String(describing: error))")
+        result(storageError(code:"writing data", message:"error writing data", details:"\(String(describing: error))"));
+        return;
+      }
       query.merge([
         kSecUseAuthenticationContext as String: context,
         kSecAttrAccessControl as String: access as Any,
