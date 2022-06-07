@@ -142,6 +142,7 @@ class BiometricStorageFile(
         if (useCipher != null && fileV2.exists()) {
             return try {
                 val bytes = fileV2.readBytes()
+                logger.debug { "read ${bytes.size}" }
                 cryptographyManager.decryptData(bytes, useCipher)
             } catch (ex: IOException) {
                 logger.error(ex) { "Error while writing encrypted file $fileV2" }
