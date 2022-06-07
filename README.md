@@ -67,6 +67,9 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
 * Requires at least iOS 9
 
+**Known Issue**: since iOS 15 the simulator seem to no longer support local authentication:
+    https://developer.apple.com/forums/thread/685773
+
 #### Mac OS
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
