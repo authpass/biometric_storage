@@ -17,8 +17,8 @@ dependencies:
   logging: ">=1.0.0 <2.0.0"
   plugin_platform_interface: ^2.0.0
 
-  ffi: ^1.0.0
-  win32: ^2.0.0
+  ffi: '>=1.0.0 <3.0.0'
+  win32: '>=2.0.0 <4.0.0'
 
 dev_dependencies:
   flutter_test:
