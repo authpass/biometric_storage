@@ -92,9 +92,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         const val PARAM_WRITE_CONTENT = "content"
         const val PARAM_ANDROID_PROMPT_INFO = "androidPromptInfo"
 
-        val executor : ExecutorService = Executors.newSingleThreadExecutor()
-        private val handler: Handler = Handler(Looper.getMainLooper())
     }
+
+    private val executor : ExecutorService by lazy { Executors.newSingleThreadExecutor() }
+    private val handler: Handler by lazy { Handler(Looper.getMainLooper()) }
+
 
     private var attachedActivity: FragmentActivity? = null
 
@@ -105,16 +107,13 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     private lateinit var applicationContext: Context
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        initialize(binding.binaryMessenger, binding.applicationContext)
+        this.applicationContext = binding.applicationContext
+        val channel = MethodChannel(binding.binaryMessenger, "biometric_storage")
+        channel.setMethodCallHandler(this)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    }
-
-    private fun initialize(messenger: BinaryMessenger, context: Context) {
-        this.applicationContext = context
-        val channel = MethodChannel(messenger, "biometric_storage")
-        channel.setMethodCallHandler(this)
+        executor.shutdown()
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
