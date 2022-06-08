@@ -1,3 +1,8 @@
+## 4.1.2
+
+* Android: Move File I/O and encryption to background thread. (Previously used UI Thread)
+     https://github.com/authpass/biometric_storage/pull/64   
+
 ## 4.1.1
 
 * Fix building on all platforms, add github actions to test building.
