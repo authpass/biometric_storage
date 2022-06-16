@@ -39,10 +39,9 @@ class BiometricStorageImpl {
   init(storageError: @escaping StorageError, storageMethodNotImplemented: Any) {
     self.storageError = storageError
     self.storageMethodNotImplemented = storageMethodNotImplemented
-    self.context = LAContext()
   }
   
-private var context:LAContext
+  private lazy var context: LAContext = LAContext()
   private var stores: [String: InitOptions] = [:]
   private let storageError: StorageError
   private let storageMethodNotImplemented: Any
