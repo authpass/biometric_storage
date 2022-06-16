@@ -1,3 +1,8 @@
+## 4.1.3
+
+* iOS/MacOS: Reuse LAContext to make `touchIDAuthenticationAllowableReuseDuration` work.
+    thanks @radvansky-tomas
+
 ## 4.1.2
 
 * Android: Move File I/O and encryption to background thread. (Previously used UI Thread)
