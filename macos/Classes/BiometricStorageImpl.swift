@@ -231,9 +231,6 @@ class BiometricStorageImpl {
   }
   
   private func canAuthenticate(result: @escaping StorageCallback) {
-    if #available(iOS 10.0, OSX 10.12, *) {
-      context.localizedCancelTitle = "Checking auth support"
-    }
     var error: NSError?
     if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
       result("Success")
