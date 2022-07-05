@@ -1,3 +1,7 @@
+## 4.1.4
+
+* Allow overriding of `promptInfo` during `read`/`write` thanks @luckyrat
+
 ## 4.1.3
 
 * iOS/MacOS: Reuse LAContext to make `touchIDAuthenticationAllowableReuseDuration` work.
