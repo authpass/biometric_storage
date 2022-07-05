@@ -426,20 +426,22 @@ class MethodChannelBiometricStorage extends BiometricStorage {
 }
 
 class BiometricStorageFile {
-  BiometricStorageFile(this._plugin, this.name, this.promptInfo);
+  BiometricStorageFile(this._plugin, this.name, this.defaultPromptInfo);
 
   final BiometricStorage _plugin;
   final String name;
-  final PromptInfo promptInfo;
+  final PromptInfo defaultPromptInfo;
 
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String?> read() => _plugin.read(name, promptInfo);
+  Future<String?> read({PromptInfo? promptInfo}) =>
+      _plugin.read(name, promptInfo ?? defaultPromptInfo);
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content) =>
-      _plugin.write(name, content, promptInfo);
+  Future<void> write(String content, {PromptInfo? promptInfo}) =>
+      _plugin.write(name, content, promptInfo ?? defaultPromptInfo);
 
   /// Delete the content of this storage.
-  Future<void> delete() => _plugin.delete(name, promptInfo);
+  Future<void> delete({PromptInfo? promptInfo}) =>
+      _plugin.delete(name, promptInfo ?? defaultPromptInfo);
 }
