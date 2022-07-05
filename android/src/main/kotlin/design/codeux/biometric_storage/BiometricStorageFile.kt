@@ -1,10 +1,9 @@
 package design.codeux.biometric_storage
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyProperties
-import androidx.security.crypto.EncryptedFile
-import androidx.security.crypto.MasterKey
 import mu.KotlinLogging
 import java.io.File
 import java.io.IOException
@@ -20,7 +19,7 @@ data class InitOptions(
 
 class BiometricStorageFile(
     context: Context,
-    private val baseName: String,
+    baseName: String,
     val options: InitOptions
 ) {
 
@@ -29,27 +28,19 @@ class BiometricStorageFile(
          * Name of directory inside private storage where all encrypted files are stored.
          */
         private const val DIRECTORY_NAME = "biometric_storage"
-        private const val FILE_SUFFIX = ".txt"
         private const val FILE_SUFFIX_V2 = ".v2.txt"
-        private const val BACKUP_SUFFIX = "bak"
     }
 
     private val masterKeyName = "${baseName}_master_key"
-    private val fileName = "$baseName$FILE_SUFFIX"
     private val fileNameV2 = "$baseName$FILE_SUFFIX_V2"
-    private val file: File
     private val fileV2: File
-
-    private val masterKey: MasterKey by lazy {
-        MasterKey.Builder(context, masterKeyName)
-            .setUserAuthenticationRequired(
-                options.authenticationRequired, options.authenticationValidityDurationSeconds)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-    }
 
     private val cryptographyManager = CryptographyManager {
         setUserAuthenticationRequired(options.authenticationRequired)
+        val useStrongBox = context.packageManager.hasSystemFeature(
+            PackageManager.FEATURE_STRONGBOX_KEYSTORE
+        )
+        setIsStrongBoxBacked(useStrongBox)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (options.authenticationValidityDurationSeconds == -1) {
                 setUserAuthenticationParameters(
@@ -73,7 +64,6 @@ class BiometricStorageFile(
         if (!baseDir.exists()) {
             baseDir.mkdirs()
         }
-        file = File(baseDir, fileName)
         fileV2 = File(baseDir, fileNameV2)
 
         logger.trace { "Initialized $this with $options" }
@@ -96,19 +86,7 @@ class BiometricStorageFile(
         return null
     }
 
-
-    private fun buildEncryptedFile(context: Context) =
-        EncryptedFile.Builder(
-            context,
-            file,
-            masterKey,
-            EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-        )
-            .setKeysetAlias("__biometric_storage__${baseName}_encrypted_file_keyset__")
-            .setKeysetPrefName("__biometric_storage__${baseName}_encrypted_file_pref__")
-            .build()
-    
-    fun exists() = file.exists() or fileV2.exists()
+    fun exists() = fileV2.exists()
 
     @Synchronized
     fun writeFile(cipher: Cipher?, content: String) {
@@ -119,24 +97,16 @@ class BiometricStorageFile(
             fileV2.writeBytes(encrypted.encryptedPayload)
             logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
 
-            if (file.exists()) {
-                file.delete()
-            }
-            val backupFile = File(file.parent, "${file.name}$BACKUP_SUFFIX")
-            if (backupFile.exists()) {
-                backupFile.delete()
-            }
-
             return
         } catch (ex: IOException) {
             // Error occurred opening file for writing.
-            logger.error(ex) { "Error while writing encrypted file $file" }
+            logger.error(ex) { "Error while writing encrypted file $fileV2" }
             throw ex
         }
     }
 
     @Synchronized
-    fun readFile(cipher: Cipher?, context: Context): String? {
+    fun readFile(cipher: Cipher?): String? {
         val useCipher = cipher ?: cipherForDecrypt()
         // if the file exists, there should *always* be a decryption key.
         if (useCipher != null && fileV2.exists()) {
@@ -150,50 +120,19 @@ class BiometricStorageFile(
             }
         }
 
-        if (!file.exists()) {
-            logger.debug { "File $file does not exist. returning null." }
-            return null
-        }
+        logger.debug { "File $fileV2 does not exist. returning null." }
+        return null
 
-        if (options.authenticationRequired && options.authenticationValidityDurationSeconds < 0) {
-            logger.warn { "Found old file, but authenticationValidityDurationSeconds == -1, " +
-                    "ignoring file because previously -1 was not supported." }
-            return null
-        }
-
-        return try {
-            val encryptedFile = buildEncryptedFile(context)
-
-            val bytes = encryptedFile.openFileInput().use { input ->
-                input.readBytes()
-            }
-            val string = String(bytes)
-
-            if (!options.authenticationRequired || options.authenticationValidityDurationSeconds > -1) {
-                logger.info { "Got old file, try to rewrite it into new encryption format." }
-                try {
-                    writeFile(null, string)
-                } catch (ex: Exception) {
-                    logger.warn(ex) { "Error while (re)writing into new encryption file." }
-                }
-            }
-
-            string
-        } catch (ex: IOException) {
-            // Error occurred opening file for writing.
-            logger.error(ex) { "Error while writing encrypted file $file" }
-            null
-        }
     }
 
     @Synchronized
     fun deleteFile(): Boolean {
         cryptographyManager.deleteKey(masterKeyName)
-        return fileV2.delete() or file.delete()
+        return fileV2.delete()
     }
 
     override fun toString(): String {
-        return "BiometricStorageFile(masterKeyName='$masterKeyName', fileName='$fileName', file=$file)"
+        return "BiometricStorageFile(masterKeyName='$masterKeyName', fileName='$fileNameV2', file=$fileV2)"
     }
 
     fun dispose() {

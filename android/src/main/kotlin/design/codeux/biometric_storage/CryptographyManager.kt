@@ -168,6 +168,7 @@ class CryptographyManagerImpl(
             setEncryptionPaddings(ENCRYPTION_PADDING)
             setKeySize(KEY_SIZE)
             setUserAuthenticationRequired(true)
+            setIsStrongBoxBacked(true)
             configure()
         }
 

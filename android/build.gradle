@@ -42,14 +42,12 @@ android {
 }
 
 dependencies {
-    def security_version = "1.1.0-alpha03"
     def biometric_version = "1.2.0-alpha04"
 
     api "androidx.core:core-ktx:1.8.0"
     api "androidx.fragment:fragment-ktx:1.5.0"
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "androidx.security:security-crypto:$security_version"
     implementation "androidx.biometric:biometric:$biometric_version"
     implementation "io.github.microutils:kotlin-logging:1.7.6"
 }

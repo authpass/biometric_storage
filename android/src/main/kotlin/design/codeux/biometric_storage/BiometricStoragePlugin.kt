@@ -246,7 +246,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         withAuth(CipherMode.Decrypt) {
                             val ret = readFile(
                                     it,
-                                    applicationContext
                                 )
                             ui(resultError) { result.success(ret) }
                         }
