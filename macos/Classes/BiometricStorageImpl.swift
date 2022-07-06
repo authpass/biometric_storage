@@ -42,6 +42,7 @@ class BiometricStorageImpl {
   }
   
   private lazy var context: LAContext = LAContext()
+  private var contextFirstAuthenticatedAt: Date?
   private var stores: [String: InitOptions] = [:]
   private let storageError: StorageError
   private let storageMethodNotImplemented: Any
@@ -54,6 +55,23 @@ class BiometricStorageImpl {
     return [kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "flutter_biometric_storage",
             kSecAttrAccount as String: name]
+  }
+
+  private func currentContext(name: String) -> LAContext {
+    guard let initOptions = stores[name] else {
+      hpdebug("Store not initialised; creating new context.")
+      context = LAContext()
+      contextFirstAuthenticatedAt = nil
+      return context
+    }
+    
+    if (initOptions.authenticationValidityDurationSeconds <= 0 || 
+        contextFirstAuthenticatedAt == nil || 
+        contextFirstAuthenticatedAt! < Date(timeIntervalSinceNow: Double(-initOptions.authenticationValidityDurationSeconds))) {
+      context = LAContext()
+      contextFirstAuthenticatedAt = nil
+    }
+    return context;
   }
 
   public func handle(_ call: StorageMethodCall, result: @escaping StorageCallback) {
@@ -114,6 +132,7 @@ class BiometricStorageImpl {
   
   private func read(_ name: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
     
+    let context = currentContext(name:name)
     var query = baseQuery(name: name)
     query[kSecMatchLimit as String] = kSecMatchLimitOne
     query[kSecUseOperationPrompt as String] = promptInfo.accessTitle
@@ -138,6 +157,9 @@ class BiometricStorageImpl {
       else {
         result(storageError(code: "RetrieveError", message: "Unexpected data.", details: nil))
         return
+    }
+    if (contextFirstAuthenticatedAt == nil) {
+      contextFirstAuthenticatedAt = Date()
     }
     result(dataString)
   }
@@ -166,6 +188,7 @@ class BiometricStorageImpl {
     }
     
     var query = baseQuery(name: name)
+    let context = currentContext(name:name)
     
     if (initOptions.authenticationRequired) {
       if initOptions.authenticationValidityDurationSeconds > 0 {
@@ -210,6 +233,9 @@ class BiometricStorageImpl {
     guard status == errSecSuccess else {
       handleOSStatusError(status, result, "writing data")
       return
+    }
+    if (contextFirstAuthenticatedAt == nil) {
+      contextFirstAuthenticatedAt = Date()
     }
     result(nil)
   }
