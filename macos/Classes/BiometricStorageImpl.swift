@@ -151,7 +151,7 @@ class BiometricStorageImpl {
 class BiometricStorageFile {
   private let name: String
   private let initOptions: InitOptions
-  private lazy var context: LAContext = {
+  private var context: LAContext { get {
     let context = LAContext()
     if (initOptions.authenticationRequired) {
       if initOptions.authenticationValidityDurationSeconds > 0 {
@@ -164,7 +164,7 @@ class BiometricStorageFile {
       }
     }
     return context
-  }()
+  } }
   private let storageError: StorageError
 
   init(name: String, initOptions: InitOptions, storageError: @escaping StorageError) {
@@ -173,15 +173,56 @@ class BiometricStorageFile {
     self.storageError = storageError
   }
   
-  private func baseQuery() -> [String: Any] {
-    return [kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "flutter_biometric_storage",
-            kSecAttrAccount as String: name]
+  private func baseQuery(_ result: @escaping StorageCallback) -> [String: Any]? {
+    var query = [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: "flutter_biometric_storage",
+      kSecAttrAccount as String: name,
+    ] as [String : Any]
+    if initOptions.authenticationRequired {
+      guard let access = accessControl(result) else {
+        return nil
+      }
+      if #available(iOS 13.0, *) {
+        query[kSecUseDataProtectionKeychain as String] = true
+      }
+      query[kSecAttrAccessControl as String] = access
+    }
+    return query
+  }
+  
+  private func accessControl(_ result: @escaping StorageCallback) -> SecAccessControl? {
+    let accessControlFlags: SecAccessControlCreateFlags
+    
+    if #available(iOS 11.3, *) {
+      accessControlFlags =  .biometryCurrentSet
+    } else {
+      accessControlFlags = .touchIDCurrentSet
+    }
+        
+//      access = SecAccessControlCreateWithFlags(nil,
+//                                               kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+//                                               accessControlFlags,
+//                                               &error)
+    var error: Unmanaged<CFError>?
+    guard let access = SecAccessControlCreateWithFlags(
+      nil, // Use the default allocator.
+      kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+      accessControlFlags,
+      &error) else {
+      hpdebug("Error while creating access control flags. \(String(describing: error))")
+      result(storageError("writing data", "error writing data", "\(String(describing: error))"));
+      return nil
+    }
+
+    return access
   }
   
   func read(_ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
-    
-    var query = baseQuery()
+
+    guard var query = baseQuery(result) else {
+      return;
+    }
     query[kSecMatchLimit as String] = kSecMatchLimitOne
     query[kSecUseOperationPrompt as String] = promptInfo.accessTitle
     query[kSecReturnAttributes as String] = true
@@ -210,7 +251,9 @@ class BiometricStorageFile {
   }
   
   func delete(_ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
-    let query = baseQuery()
+    guard let query = baseQuery(result) else {
+      return;
+    }
     //    query[kSecMatchLimit as String] = kSecMatchLimitOne
     //    query[kSecReturnData as String] = true
     let status = SecItemDelete(query as CFDictionary)
@@ -227,22 +270,13 @@ class BiometricStorageFile {
   }
   
   func write(_ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
-    var query = baseQuery()
-    
+    guard var query = baseQuery(result) else {
+      return;
+    }
+
     if (initOptions.authenticationRequired) {
-      var error: Unmanaged<CFError>?
-      guard let access = SecAccessControlCreateWithFlags(
-        nil, // Use the default allocator.
-        kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-        .userPresence,
-        &error) else {
-        hpdebug("Error while creating access control flags. \(String(describing: error))")
-        result(storageError("writing data", "error writing data", "\(String(describing: error))"));
-        return;
-      }
       query.merge([
         kSecUseAuthenticationContext as String: context,
-        kSecAttrAccessControl as String: access as Any,
       ]) { (_, new) in new }
       if let operationPrompt = promptInfo.saveTitle {
         query[kSecUseOperationPrompt as String] = operationPrompt

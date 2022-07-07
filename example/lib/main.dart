@@ -133,7 +133,7 @@ class MyAppState extends State<MyApp> {
                   _customPrompt = await BiometricStorage().getStorage(
                       '${baseName}_customPrompt',
                       options: StorageFileInitOptions(
-                          authenticationValidityDurationSeconds: 10),
+                          authenticationValidityDurationSeconds: 5),
                       promptInfo: const PromptInfo(
                         iosPromptInfo: IosPromptInfo(
                           saveTitle: 'Custom save title',
@@ -175,7 +175,7 @@ class MyAppState extends State<MyApp> {
             ...?(_customPrompt == null
                 ? null
                 : [
-                    const Text('Custom Prompts w/ 10s auth validity',
+                    const Text('Custom Prompts w/ 5s auth validity',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     StorageActions(
                         storageFile: _customPrompt!,
