@@ -15,7 +15,8 @@ private val logger = KotlinLogging.logger {}
 data class InitOptions(
     val androidAuthenticationValidityDuration: Duration? = null,
     val authenticationRequired: Boolean = true,
-    val androidBiometricOnly: Boolean = true
+    val androidBiometricOnly: Boolean = true,
+    val androidUseStrongBox: Boolean = true
 )
 
 class BiometricStorageFile(
@@ -39,7 +40,7 @@ class BiometricStorageFile(
     private val cryptographyManager = CryptographyManager {
         setUserAuthenticationRequired(options.authenticationRequired)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val useStrongBox = context.packageManager.hasSystemFeature(
+            val useStrongBox = options.androidUseStrongBox && context.packageManager.hasSystemFeature(
                 PackageManager.FEATURE_STRONGBOX_KEYSTORE
             )
             setIsStrongBoxBacked(useStrongBox)

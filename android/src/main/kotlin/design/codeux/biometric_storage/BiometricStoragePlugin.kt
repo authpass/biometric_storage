@@ -211,6 +211,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     androidAuthenticationValidityDuration = (it["androidAuthenticationValidityDurationSeconds"] as Int?)?.seconds,
                     authenticationRequired = it["authenticationRequired"] as Boolean,
                     androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
+                    androidUseStrongBox = it["androidUseStrongBox"] as Boolean,
                 )
             } ?: InitOptions()
 
