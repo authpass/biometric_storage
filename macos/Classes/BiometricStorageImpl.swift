@@ -14,10 +14,12 @@ struct StorageMethodCall {
 
 class InitOptions {
   init(params: [String: Any]) {
-    authenticationValidityDurationSeconds = params["authenticationValidityDurationSeconds"] as? Int
+    iosTouchIDAuthenticationAllowableReuseDuration = params["iosTouchIDAuthenticationAllowableReuseDurationSeconds"] as? Int
+    iosTouchIDAuthenticationForceReuseContextDuration = params["iosTouchIDAuthenticationForceReuseContextDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
   }
-  let authenticationValidityDurationSeconds: Int!
+  let iosTouchIDAuthenticationAllowableReuseDuration: Int?
+  let iosTouchIDAuthenticationForceReuseContextDuration: Int?
   let authenticationRequired: Bool!
 }
 
@@ -148,23 +150,41 @@ class BiometricStorageImpl {
   }
 }
 
+typealias StoredContext = (context: LAContext, expireAt: Date)
+
 class BiometricStorageFile {
   private let name: String
   private let initOptions: InitOptions
-  private var context: LAContext { get {
-    let context = LAContext()
-    if (initOptions.authenticationRequired) {
-      if initOptions.authenticationValidityDurationSeconds > 0 {
-        if #available(OSX 10.12, *) {
-          context.touchIDAuthenticationAllowableReuseDuration = Double(initOptions.authenticationValidityDurationSeconds)
+  private var _context: StoredContext?
+  private var context: LAContext {
+    get {
+      if let context = _context {
+        if context.expireAt.timeIntervalSinceNow < 0 {
+          // already expired.
+          _context = nil
         } else {
-          // Fallback on earlier versions
-          hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
+          return context.context
         }
       }
+      
+      let context = LAContext()
+      if (initOptions.authenticationRequired) {
+        if let duration = initOptions.iosTouchIDAuthenticationAllowableReuseDuration {
+          if #available(OSX 10.12, *) {
+            context.touchIDAuthenticationAllowableReuseDuration = Double(duration)
+          } else {
+            // Fallback on earlier versions
+            hpdebug("Pre OSX 10.12 no touchIDAuthenticationAllowableReuseDuration available. ignoring.")
+          }
+        }
+        
+        if let duration = initOptions.iosTouchIDAuthenticationForceReuseContextDuration {
+          _context = (context: context, expireAt: Date(timeIntervalSinceNow: Double(duration)))
+        }
+      }
+      return context
     }
-    return context
-  } }
+  }
   private let storageError: StorageError
 
   init(name: String, initOptions: InitOptions, storageError: @escaping StorageError) {
