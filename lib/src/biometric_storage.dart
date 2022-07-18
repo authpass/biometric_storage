@@ -80,12 +80,20 @@ class AuthException implements Exception {
 
 class StorageFileInitOptions {
   StorageFileInitOptions({
+    Duration? androidAuthenticationValidityDuration,
     this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
-  });
+  }) : androidAuthenticationValidityDuration =
+            androidAuthenticationValidityDuration ??
+                (authenticationValidityDurationSeconds <= 0
+                    ? null
+                    : Duration(seconds: authenticationValidityDurationSeconds));
 
+  @Deprecated('use ')
   final int authenticationValidityDurationSeconds;
+
+  final Duration? androidAuthenticationValidityDuration;
 
   /// Whether an authentication is required. if this is
   /// false NO BIOMETRIC CHECK WILL BE PERFORMED! and the value
@@ -97,14 +105,16 @@ class StorageFileInitOptions {
   /// On Android < 30 this will always be ignored. (always `true`)
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-900358154
   ///
-  /// Also: this **must** be `true` if [authenticationValidityDurationSeconds]
-  /// is `-1`.
+  /// Also: this **must** be `true` if [androidAuthenticationValidityDuration]
+  /// is null.
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-902508609
   final bool androidBiometricOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'authenticationValidityDurationSeconds':
             authenticationValidityDurationSeconds,
+        'androidAuthenticationValidityDurationSeconds':
+            androidAuthenticationValidityDuration?.inSeconds,
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
       };

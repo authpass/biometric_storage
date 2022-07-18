@@ -22,6 +22,8 @@ import java.io.StringWriter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.crypto.Cipher
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 private val logger = KotlinLogging.logger {}
 
@@ -223,6 +225,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     val options = call.argument<Map<String, Any>>("options")?.let { it ->
                         InitOptions(
                             authenticationValidityDurationSeconds = it["authenticationValidityDurationSeconds"] as Int,
+                            androidAuthenticationValidityDuration = (it["androidAuthenticationValidityDurationSeconds"] as Int?)?.seconds,
                             authenticationRequired = it["authenticationRequired"] as Boolean,
                             androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
                         )
