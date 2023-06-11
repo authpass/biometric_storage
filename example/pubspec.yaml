@@ -11,8 +11,8 @@ dependencies:
     path: ../
   flutter:
     sdk: flutter
-  logging: ^1.0.0
-  logging_appenders: ^1.0.0
+  logging: ^1.2.0
+  logging_appenders: ^1.1.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

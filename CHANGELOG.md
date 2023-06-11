@@ -1,10 +1,11 @@
-## unreleased
+## 5.0.0
 
 * Allow overriding of `promptInfo` during `read`/`write` thanks @luckyrat
 * Android: (POTENTIALLY BREAKING): Completely removed deprecated old file backend 
   based on `androidx.security`. This was deprecated since version 3.0.0 and users 
   should have been migrated on every read or write. (this is only internally, does not change
   anything of the API).
+* Update dependencies.
 
 ## 4.1.3
 
