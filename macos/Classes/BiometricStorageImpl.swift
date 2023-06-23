@@ -192,23 +192,12 @@ class BiometricStorageFile {
   }
   
   private func accessControl(_ result: @escaping StorageCallback) -> SecAccessControl? {
-    let accessControlFlags: SecAccessControlCreateFlags
-    
-    if #available(iOS 11.3, *) {
-      accessControlFlags =  .biometryCurrentSet
-    } else {
-      accessControlFlags = .touchIDCurrentSet
-    }
-        
-//      access = SecAccessControlCreateWithFlags(nil,
-//                                               kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
-//                                               accessControlFlags,
-//                                               &error)
+
     var error: Unmanaged<CFError>?
     guard let access = SecAccessControlCreateWithFlags(
       nil, // Use the default allocator.
       kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-      accessControlFlags,
+      .userPresence,
       &error) else {
       hpdebug("Error while creating access control flags. \(String(describing: error))")
       result(storageError("writing data", "error writing data", "\(String(describing: error))"));
