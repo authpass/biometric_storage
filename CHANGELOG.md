@@ -1,3 +1,7 @@
+## 5.0.0+1
+
+* fix building on MacOS
+
 ## 5.0.0
 
 * Allow overriding of `promptInfo` during `read`/`write` thanks @luckyrat

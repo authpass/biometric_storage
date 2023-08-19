@@ -183,7 +183,7 @@ class BiometricStorageFile {
       guard let access = accessControl(result) else {
         return nil
       }
-      if #available(iOS 13.0, *) {
+      if #available(iOS 13.0, macOS 10.15, *) {
         query[kSecUseDataProtectionKeychain as String] = true
       }
       query[kSecAttrAccessControl as String] = access
