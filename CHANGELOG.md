@@ -1,6 +1,7 @@
-## 5.0.0+2
+## 5.0.0+3
 
 * Android: Upgrade AGP, fix building with AGP 8
+* Android: Depend on slf4j-api.
 
 ## 5.0.0+1
 
