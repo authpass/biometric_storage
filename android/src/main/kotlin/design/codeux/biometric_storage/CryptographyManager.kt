@@ -20,7 +20,7 @@ package design.codeux.biometric_storage
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.nio.charset.Charset
 import java.security.KeyStore

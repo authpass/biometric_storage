@@ -25,9 +25,18 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
+kotlin {
+    jvmToolchain(17)
+}
+
 android {
     compileSdkVersion 33
     ndkVersion "21.1.6352462"
+
+    compileOptions {
+        sourceCompatibility = 17
+        targetCompatibility = 17
+    }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -62,6 +71,7 @@ android {
     lint {
         disable 'InvalidPackage'
     }
+    namespace 'design.codeux.biometric_storage_example'
 }
 
 flutter {
@@ -69,11 +79,10 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'org.slf4j:slf4j-api:1.7.30'
-    implementation 'com.github.tony19:logback-android:2.0.0'
-    implementation "io.github.microutils:kotlin-logging:1.7.6"
-    implementation "androidx.appcompat:appcompat:1.4.1"
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'com.github.tony19:logback-android:3.0.0'
+    implementation "io.github.oshai:kotlin-logging-jvm:5.0.1"
+    implementation "androidx.appcompat:appcompat:1.6.1"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.4.0'

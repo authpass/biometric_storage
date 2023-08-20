@@ -1,6 +1,10 @@
+## 5.0.0+2
+
+* Android: Upgrade AGP, fix building with AGP 8
+
 ## 5.0.0+1
 
-* fix building on MacOS
+* MacOS: fix building on MacOS
 
 ## 5.0.0
 
