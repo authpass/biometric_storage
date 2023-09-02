@@ -1,3 +1,7 @@
+## 
+
+* Add topics to pubspec.yaml
+
 ## 5.0.0+3
 
 * Android: Upgrade AGP, fix building with AGP 8
