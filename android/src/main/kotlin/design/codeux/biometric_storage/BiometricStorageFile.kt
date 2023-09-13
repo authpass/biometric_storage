@@ -8,11 +8,12 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.io.IOException
 import javax.crypto.Cipher
+import kotlin.time.Duration
 
 private val logger = KotlinLogging.logger {}
 
 data class InitOptions(
-    val authenticationValidityDurationSeconds: Int = -1,
+    val androidAuthenticationValidityDuration: Duration? = null,
     val authenticationRequired: Boolean = true,
     val androidBiometricOnly: Boolean = true
 )
@@ -44,20 +45,22 @@ class BiometricStorageFile(
             setIsStrongBoxBacked(useStrongBox)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (options.authenticationValidityDurationSeconds == -1) {
+            if (options.androidAuthenticationValidityDuration == null) {
                 setUserAuthenticationParameters(
                     0,
                     KeyProperties.AUTH_BIOMETRIC_STRONG
                 )
             } else {
                 setUserAuthenticationParameters(
-                    options.authenticationValidityDurationSeconds,
+                    options.androidAuthenticationValidityDuration.inWholeSeconds.toInt(),
                     KeyProperties.AUTH_DEVICE_CREDENTIAL or KeyProperties.AUTH_BIOMETRIC_STRONG
                 )
             }
         } else {
             @Suppress("DEPRECATION")
-            setUserAuthenticationValidityDurationSeconds(options.authenticationValidityDurationSeconds)
+            setUserAuthenticationValidityDurationSeconds(
+                options.androidAuthenticationValidityDuration?.inWholeSeconds?.toInt() ?: -1
+            )
         }
     }
 
@@ -74,8 +77,8 @@ class BiometricStorageFile(
     }
 
     private fun validateOptions() {
-        if (options.authenticationValidityDurationSeconds == -1 && !options.androidBiometricOnly) {
-            throw IllegalArgumentException("when authenticationValidityDurationSeconds is -1, androidBiometricOnly must be true")
+        if (options.androidAuthenticationValidityDuration == null && !options.androidBiometricOnly) {
+            throw IllegalArgumentException("when androidAuthenticationValidityDuration is null, androidBiometricOnly must be true")
         }
     }
 
