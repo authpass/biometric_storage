@@ -16,9 +16,11 @@ class InitOptions {
   init(params: [String: Any]) {
     authenticationValidityDurationSeconds = params["authenticationValidityDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
+    darwinBiometricOnly = params["darwinBiometricOnly"] as? Bool
   }
   let authenticationValidityDurationSeconds: Int!
   let authenticationRequired: Bool!
+  let darwinBiometricOnly: Bool!
 }
 
 class IOSPromptInfo {
@@ -136,7 +138,9 @@ class BiometricStorageImpl {
     case .touchIDNotAvailable:
       result("ErrorHwUnavailable")
       break;
-    case .passcodeNotSet: fallthrough
+    case .passcodeNotSet:
+      result("ErrorPasscodeNotSet")
+      break;
     case .touchIDNotEnrolled:
       result("ErrorNoBiometricEnrolled")
       break;
@@ -194,10 +198,14 @@ class BiometricStorageFile {
   private func accessControl(_ result: @escaping StorageCallback) -> SecAccessControl? {
     let accessControlFlags: SecAccessControlCreateFlags
     
-    if #available(iOS 11.3, *) {
-      accessControlFlags =  .biometryCurrentSet
+    if initOptions.darwinBiometricOnly {
+      if #available(iOS 11.3, *) {
+        accessControlFlags =  .biometryCurrentSet
+      } else {
+        accessControlFlags = .touchIDCurrentSet
+      }
     } else {
-      accessControlFlags = .touchIDCurrentSet
+      accessControlFlags = .userPresence
     }
         
 //      access = SecAccessControlCreateWithFlags(nil,

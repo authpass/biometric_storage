@@ -45,6 +45,7 @@ enum class CanAuthenticateResponse(val code: Int) {
     ErrorNoBiometricEnrolled(BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED),
     ErrorNoHardware(BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE),
     ErrorStatusUnknown(BiometricManager.BIOMETRIC_STATUS_UNKNOWN),
+    ErrorPasscodeNotSet(-99),
     ;
 
     override fun toString(): String {
@@ -317,6 +318,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     private fun canAuthenticate(): CanAuthenticateResponse {
+        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL);
+        logger.debug { "canAuthenticate for DEVICE_CREDENTIAL: $credentialsResponse" }
+        if (credentialsResponse == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
+            return CanAuthenticateResponse.Success
+        }
+
         val response = biometricManager.canAuthenticate(
             BIOMETRIC_STRONG or BIOMETRIC_WEAK
         )
