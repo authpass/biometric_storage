@@ -159,7 +159,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     errorInfo.message.toString(),
                     errorInfo.errorDetails
                 )
-                logger.error("AuthError: $errorInfo")
+                logger.error { "AuthError: $errorInfo" }
 
             }
 
@@ -221,7 +221,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         }
                     }
 
-                    val options = call.argument<Map<String, Any>>("options")?.let { it ->
+                    val options = call.argument<Map<String, Any>>("options")?.let {
                         InitOptions(
                             authenticationValidityDurationSeconds = it["authenticationValidityDurationSeconds"] as Int,
                             authenticationRequired = it["authenticationRequired"] as Boolean,
@@ -318,7 +318,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     private fun canAuthenticate(): CanAuthenticateResponse {
-        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL);
+        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL)
         logger.debug { "canAuthenticate for DEVICE_CREDENTIAL: $credentialsResponse" }
         if (credentialsResponse == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
             return CanAuthenticateResponse.Success
@@ -345,7 +345,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         @WorkerThread onSuccess: (cipher: Cipher?) -> Unit,
         onError: ErrorCallback
     ) {
-        logger.trace("authenticate()")
+        logger.trace {"authenticate()" }
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
             onError(
@@ -358,7 +358,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         val prompt =
             BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    logger.trace("onAuthenticationError($errorCode, $errString)")
+                    logger.trace { "onAuthenticationError($errorCode, $errString)" }
                     ui(onError) {
                         onError(
                             AuthenticationErrorInfo(
@@ -372,12 +372,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
                 @WorkerThread
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    logger.trace("onAuthenticationSucceeded($result)")
+                    logger.trace { "onAuthenticationSucceeded($result)" }
                     worker(onError) { onSuccess(result.cryptoObject?.cipher) }
                 }
 
                 override fun onAuthenticationFailed() {
-                    logger.trace("onAuthenticationFailed()")
+                    logger.trace { "onAuthenticationFailed()" }
                     // this just means the user was not recognised, but the O/S will handle feedback so we don't have to
                 }
             })

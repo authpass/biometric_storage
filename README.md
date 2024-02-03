@@ -30,29 +30,33 @@ makes heavy use of this plugin.
     * `android/build.gradle`: `ext.kotlin_version = '1.4.31'`
   * MainActivity must extend FlutterFragmentActivity
   * Theme for the main activity must use `Theme.AppCompat` thme.
-    (Otherwise there will be crases on Android < 29)
+    (Otherwise there will be crashes on Android < 29)
     For example: 
     
-    **AndroidManifest.xml**:
+    **android/app/src/main/AndroidManifest.xml**:
     ```xml
     <activity
-    android:name=".MainActivity"
-    android:launchMode="singleTop"
-    android:theme="@style/LaunchTheme"
+        android:name=".MainActivity"
+        android:launchMode="singleTop"
+        android:theme="@style/LaunchTheme">
+        [...]
+        <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+    </activity>
     ```
 
-    **xml/styles.xml**:
+    **android/app/src/main/res/values/styles.xml**:
     ```xml
-        <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
-        <!-- Show a splash screen on the activity. Automatically removed when
-             Flutter draws its first frame -->
-        <item name="android:windowBackground">@drawable/launch_background</item>
-
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
-        <item name="android:windowFullscreen">true</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
+    <resources>
+      <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
+        ...
+      </style>
+      <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
+        ...
+      </style>
+    </resources>
     ```
 
 ##### Resources
@@ -65,7 +69,7 @@ makes heavy use of this plugin.
 https://developer.apple.com/documentation/localauthentication/logging_a_user_into_your_app_with_face_id_or_touch_id
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
-* Requires at least iOS 9
+* Supports all iOS versions supported by Flutter. (ie. iOS 12)
 
 **Known Issue**: since iOS 15 the simulator seem to no longer support local authentication:
     https://developer.apple.com/forums/thread/685773
@@ -76,7 +80,7 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
 * enable keychain sharing and signing. (not sure why this is required. but without it
     You will probably see an error like: 
     > SecurityError, Error while writing data: -34018: A required entitlement isn't present.
-* Requires at least Mac OS 10.12
+* Supports all MacOS Versions supported by Flutter (ie. >= MacOS 10.14)
 
 ### Usage
 

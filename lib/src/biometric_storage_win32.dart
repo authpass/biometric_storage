@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:ffi';
-import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
@@ -103,7 +102,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     PromptInfo promptInfo,
   ) async {
     _logger.fine('write()');
-    final examplePassword = utf8.encode(content) as Uint8List;
+    final examplePassword = utf8.encode(content);
     final blob = examplePassword.allocatePointer();
     final namePointer = TEXT(name);
     final userNamePointer = TEXT('flutter.biometric_storage');

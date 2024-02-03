@@ -1,8 +1,9 @@
-## 5.0.1-dev.1
+## 5.0.1
 
 * Add option for iOS/MacOS to allow non-biometric authentication (`darwinBiometricOnly`) #101
   * Improve [canAuthenticate] to differentiate between no available biometry and no available 
     user code.
+* Bump dart sdk requirement to `3.2`.
 
 ## 5.0.0+4
 
