@@ -1,9 +1,5 @@
 import 'dart:async';
-// In order to *not* need this ignore, consider extracting the "web" version
-// of your plugin as a separate package, instead of inlining it in the same
-// package as the core of your plugin.
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html show window;
+import 'package:web/web.dart' as web show window;
 
 import 'package:biometric_storage/src/biometric_storage.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -37,7 +33,9 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     String name,
     PromptInfo promptInfo,
   ) async {
-    return html.window.localStorage.remove(name) != null;
+    final oldValue = web.window.localStorage.getItem(name);
+    web.window.localStorage.removeItem(name);
+    return oldValue != null;
   }
 
   @override
@@ -48,7 +46,7 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     String name,
     PromptInfo promptInfo,
   ) async {
-    return html.window.localStorage[name];
+    return web.window.localStorage.getItem(name);
   }
 
   @override
@@ -57,6 +55,6 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     String content,
     PromptInfo promptInfo,
   ) async {
-    html.window.localStorage[name] = content;
+    web.window.localStorage.setItem(name, content);
   }
 }

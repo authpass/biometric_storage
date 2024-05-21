@@ -1,9 +1,10 @@
-## 5.1.0-rc.2
+## 5.1.0-rc.3
 
 * Split Split authenticationValidityDurationSeconds between android and iOS
   * `darwinTouchIDAuthenticationForceReuseContextDuration`: Basically the equivalent to `androidAuthenticationValidityDuration`
   * `darwinTouchIDAuthenticationAllowableReuseDuration`
 * android: return correct code if no biometric is enrolled #115 @ThomasLamprecht
+* web: migrate from dart:html to package:web (for wasm support).
 
 ## 5.0.1
 
