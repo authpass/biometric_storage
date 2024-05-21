@@ -18,6 +18,9 @@ enum CanAuthenticateResponse {
   errorNoBiometricEnrolled,
   errorNoHardware,
 
+  /// Passcode is not set (iOS/MacOS) or no user credentials (on macos).
+  errorPasscodeNotSet,
+
   /// Used on android if the status is unknown.
   /// https://developer.android.com/reference/androidx/biometric/BiometricManager#BIOMETRIC_STATUS_UNKNOWN
   statusUnknown,
@@ -31,6 +34,7 @@ const _canAuthenticateMapping = {
   'ErrorHwUnavailable': CanAuthenticateResponse.errorHwUnavailable,
   'ErrorNoBiometricEnrolled': CanAuthenticateResponse.errorNoBiometricEnrolled,
   'ErrorNoHardware': CanAuthenticateResponse.errorNoHardware,
+  'ErrorPasscodeNotSet': CanAuthenticateResponse.errorPasscodeNotSet,
   'ErrorUnknown': CanAuthenticateResponse.unsupported,
   'ErrorStatusUnknown': CanAuthenticateResponse.statusUnknown,
 };
@@ -86,6 +90,7 @@ class StorageFileInitOptions {
     this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
+    this.darwinBiometricOnly = true,
   })  : androidAuthenticationValidityDuration =
             androidAuthenticationValidityDuration ??
                 (authenticationValidityDurationSeconds <= 0
@@ -134,6 +139,11 @@ class StorageFileInitOptions {
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-902508609
   final bool androidBiometricOnly;
 
+  /// Only for iOS and macOS:
+  /// Uses `.biometryCurrentSet` if true, `.userPresence` otherwise.
+  /// https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/1392879-userpresence
+  final bool darwinBiometricOnly;
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'authenticationValidityDurationSeconds':
             authenticationValidityDurationSeconds,
@@ -145,6 +155,7 @@ class StorageFileInitOptions {
             iosTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
+        'darwinBiometricOnly': darwinBiometricOnly,
       };
 }
 

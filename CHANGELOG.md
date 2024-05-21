@@ -1,10 +1,31 @@
-## unreleased
+## 5.0.1
+
+* Add option for iOS/MacOS to allow non-biometric authentication (`darwinBiometricOnly`) #101
+  * Improve [canAuthenticate] to differentiate between no available biometry and no available 
+    user code.
+* Bump dart sdk requirement to `3.2`.
+
+## 5.0.0+4
+
+* Add topics to pubspec.yaml
+
+## 5.0.0+3
+
+* Android: Upgrade AGP, fix building with AGP 8
+* Android: Depend on slf4j-api.
+
+## 5.0.0+1
+
+* MacOS: fix building on MacOS
+
+## 5.0.0
 
 * Allow overriding of `promptInfo` during `read`/`write` thanks @luckyrat
 * Android: (POTENTIALLY BREAKING): Completely removed deprecated old file backend 
   based on `androidx.security`. This was deprecated since version 3.0.0 and users 
   should have been migrated on every read or write. (this is only internally, does not change
   anything of the API).
+* Update dependencies.
 
 ## 4.1.3
 

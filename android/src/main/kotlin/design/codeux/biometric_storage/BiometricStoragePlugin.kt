@@ -16,7 +16,7 @@ import io.flutter.embedding.engine.plugins.activity.*
 import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.ExecutorService
@@ -47,6 +47,7 @@ enum class CanAuthenticateResponse(val code: Int) {
     ErrorNoBiometricEnrolled(BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED),
     ErrorNoHardware(BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE),
     ErrorStatusUnknown(BiometricManager.BIOMETRIC_STATUS_UNKNOWN),
+    ErrorPasscodeNotSet(-99),
     ;
 
     override fun toString(): String {
@@ -160,7 +161,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     errorInfo.message.toString(),
                     errorInfo.errorDetails
                 )
-                logger.error("AuthError: $errorInfo")
+                logger.error { "AuthError: $errorInfo" }
 
             }
 
@@ -222,7 +223,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         }
                     }
 
-                    val options = call.argument<Map<String, Any>>("options")?.let { it ->
+                    val options = call.argument<Map<String, Any>>("options")?.let {
                         InitOptions(
                             androidAuthenticationValidityDuration = (it["androidAuthenticationValidityDurationSeconds"] as Int?)?.seconds,
                             authenticationRequired = it["authenticationRequired"] as Boolean,
@@ -319,6 +320,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     private fun canAuthenticate(): CanAuthenticateResponse {
+        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL)
+        logger.debug { "canAuthenticate for DEVICE_CREDENTIAL: $credentialsResponse" }
+        if (credentialsResponse == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
+            return CanAuthenticateResponse.Success
+        }
+
         val response = biometricManager.canAuthenticate(
             BIOMETRIC_STRONG or BIOMETRIC_WEAK
         )
@@ -340,7 +347,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         @WorkerThread onSuccess: (cipher: Cipher?) -> Unit,
         onError: ErrorCallback
     ) {
-        logger.trace("authenticate()")
+        logger.trace {"authenticate()" }
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
             onError(
@@ -353,7 +360,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         val prompt =
             BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    logger.trace("onAuthenticationError($errorCode, $errString)")
+                    logger.trace { "onAuthenticationError($errorCode, $errString)" }
                     ui(onError) {
                         onError(
                             AuthenticationErrorInfo(
@@ -367,12 +374,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
                 @WorkerThread
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    logger.trace("onAuthenticationSucceeded($result)")
+                    logger.trace { "onAuthenticationSucceeded($result)" }
                     worker(onError) { onSuccess(result.cryptoObject?.cipher) }
                 }
 
                 override fun onAuthenticationFailed() {
-                    logger.trace("onAuthenticationFailed()")
+                    logger.trace { "onAuthenticationFailed()" }
                     // this just means the user was not recognised, but the O/S will handle feedback so we don't have to
                 }
             })
