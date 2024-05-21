@@ -85,8 +85,10 @@ class AuthException implements Exception {
 class StorageFileInitOptions {
   StorageFileInitOptions({
     Duration? androidAuthenticationValidityDuration,
-    Duration? iosTouchIDAuthenticationAllowableReuseDuration,
+    Duration? darwinTouchIDAuthenticationAllowableReuseDuration,
     this.darwinTouchIDAuthenticationForceReuseContextDuration,
+    @Deprecated(
+        'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
     this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
@@ -97,7 +99,7 @@ class StorageFileInitOptions {
                     ? null
                     : Duration(seconds: authenticationValidityDurationSeconds)),
         darwinTouchIDAuthenticationAllowableReuseDuration =
-            iosTouchIDAuthenticationAllowableReuseDuration ??
+            darwinTouchIDAuthenticationAllowableReuseDuration ??
                 (authenticationValidityDurationSeconds <= 0
                     ? null
                     : Duration(seconds: authenticationValidityDurationSeconds));
@@ -123,6 +125,8 @@ class StorageFileInitOptions {
   /// see https://github.com/authpass/biometric_storage/pull/73
   /// This is pretty much undocumented behavior, but works similar to
   /// `androidAuthenticationValidityDuration`.
+  ///
+  /// See also [darwinTouchIDAuthenticationAllowableReuseDuration]
   final Duration? darwinTouchIDAuthenticationForceReuseContextDuration;
 
   /// Whether an authentication is required. if this is
@@ -146,8 +150,6 @@ class StorageFileInitOptions {
   final bool darwinBiometricOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'authenticationValidityDurationSeconds':
-            authenticationValidityDurationSeconds,
         'androidAuthenticationValidityDurationSeconds':
             androidAuthenticationValidityDuration?.inSeconds,
         'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
