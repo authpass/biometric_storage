@@ -84,13 +84,50 @@ class AuthException implements Exception {
 
 class StorageFileInitOptions {
   StorageFileInitOptions({
+    Duration? androidAuthenticationValidityDuration,
+    Duration? darwinTouchIDAuthenticationAllowableReuseDuration,
+    this.darwinTouchIDAuthenticationForceReuseContextDuration,
+    @Deprecated(
+        'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
     this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
     this.darwinBiometricOnly = true,
-  });
+  })  : androidAuthenticationValidityDuration =
+            androidAuthenticationValidityDuration ??
+                (authenticationValidityDurationSeconds <= 0
+                    ? null
+                    : Duration(seconds: authenticationValidityDurationSeconds)),
+        darwinTouchIDAuthenticationAllowableReuseDuration =
+            darwinTouchIDAuthenticationAllowableReuseDuration ??
+                (authenticationValidityDurationSeconds <= 0
+                    ? null
+                    : Duration(seconds: authenticationValidityDurationSeconds));
 
+  @Deprecated(
+      'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
   final int authenticationValidityDurationSeconds;
+
+  /// see https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUserAuthenticationParameters(int,%20int)
+  final Duration? androidAuthenticationValidityDuration;
+
+  /// see https://developer.apple.com/documentation/localauthentication/lacontext/1622329-touchidauthenticationallowablere
+  /// > If the user unlocks the device using Touch ID within the specified time interval, then authentication for the receiver succeeds automatically, without prompting the user for Touch ID. This bypasses a scenario where the user unlocks the device and then is almost immediately prompted for another fingerprint.
+  /// and https://developer.apple.com/documentation/localauthentication/accessing_keychain_items_with_face_id_or_touch_id
+  /// > Note that this grace period applies specifically to device unlock with Touch ID, not keychain retrieval authentications
+  ///
+  /// If you want to avoid requiring authentication after a successful
+  /// keychain retrieval see [darwinTouchIDAuthenticationForceReuseContextDuration]
+  final Duration? darwinTouchIDAuthenticationAllowableReuseDuration;
+
+  /// To prevent forcing the user to authenticate again after unlocking once
+  /// we can reuse the `LAContext` object for the given amount of time.
+  /// see https://github.com/authpass/biometric_storage/pull/73
+  /// This is pretty much undocumented behavior, but works similar to
+  /// `androidAuthenticationValidityDuration`.
+  ///
+  /// See also [darwinTouchIDAuthenticationAllowableReuseDuration]
+  final Duration? darwinTouchIDAuthenticationForceReuseContextDuration;
 
   /// Whether an authentication is required. if this is
   /// false NO BIOMETRIC CHECK WILL BE PERFORMED! and the value
@@ -102,8 +139,8 @@ class StorageFileInitOptions {
   /// On Android < 30 this will always be ignored. (always `true`)
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-900358154
   ///
-  /// Also: this **must** be `true` if [authenticationValidityDurationSeconds]
-  /// is `-1`.
+  /// Also: this **must** be `true` if [androidAuthenticationValidityDuration]
+  /// is null.
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-902508609
   final bool androidBiometricOnly;
 
@@ -113,8 +150,12 @@ class StorageFileInitOptions {
   final bool darwinBiometricOnly;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'authenticationValidityDurationSeconds':
-            authenticationValidityDurationSeconds,
+        'androidAuthenticationValidityDurationSeconds':
+            androidAuthenticationValidityDuration?.inSeconds,
+        'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
+            darwinTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
+        'darwinTouchIDAuthenticationForceReuseContextDurationSeconds':
+            darwinTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
         'darwinBiometricOnly': darwinBiometricOnly,

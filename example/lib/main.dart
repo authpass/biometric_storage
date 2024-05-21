@@ -15,7 +15,7 @@ void main() {
   PrintAppender().attachToLogger(Logger.root);
   logMessages.attachToLogger(Logger.root);
   _logger.fine('Application launched. (v2)');
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class StringBufferWrapper with ChangeNotifier {
@@ -62,6 +62,8 @@ class MemoryAppender extends BaseLogAppender {
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   MyAppState createState() => MyAppState();
 }
@@ -130,22 +132,26 @@ class MyAppState extends State<MyApp> {
                           authenticationRequired: false,
                         ));
                 if (supportsAuthenticated) {
-                  _customPrompt = await BiometricStorage().getStorage(
-                      '${baseName}_customPrompt',
-                      options: StorageFileInitOptions(
-                          authenticationValidityDurationSeconds: 5),
-                      promptInfo: const PromptInfo(
-                        iosPromptInfo: IosPromptInfo(
-                          saveTitle: 'Custom save title',
-                          accessTitle: 'Custom access title.',
-                        ),
-                        androidPromptInfo: AndroidPromptInfo(
-                          title: 'Custom title',
-                          subtitle: 'Custom subtitle',
-                          description: 'Custom description',
-                          negativeButton: 'Nope!',
-                        ),
-                      ));
+                  _customPrompt = await BiometricStorage()
+                      .getStorage('${baseName}_customPrompt',
+                          options: StorageFileInitOptions(
+                            androidAuthenticationValidityDuration:
+                                const Duration(seconds: 5),
+                            darwinTouchIDAuthenticationForceReuseContextDuration:
+                                const Duration(seconds: 5),
+                          ),
+                          promptInfo: const PromptInfo(
+                            iosPromptInfo: IosPromptInfo(
+                              saveTitle: 'Custom save title',
+                              accessTitle: 'Custom access title.',
+                            ),
+                            androidPromptInfo: AndroidPromptInfo(
+                              title: 'Custom title',
+                              subtitle: 'Custom subtitle',
+                              description: 'Custom description',
+                              negativeButton: 'Nope!',
+                            ),
+                          ));
                 }
                 setState(() {});
                 _logger.info('initiailzed $baseName');
@@ -194,13 +200,13 @@ class MyAppState extends State<MyApp> {
                 color: Colors.white,
                 constraints: const BoxConstraints.expand(),
                 child: SingleChildScrollView(
+                  reverse: true,
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       logMessages.log.toString(),
                     ),
                   ),
-                  reverse: true,
                 ),
               ),
             ),
@@ -230,9 +236,11 @@ class MyAppState extends State<MyApp> {
 }
 
 class StorageActions extends StatelessWidget {
-  const StorageActions(
-      {Key? key, required this.storageFile, required this.writeController})
-      : super(key: key);
+  const StorageActions({
+    super.key,
+    required this.storageFile,
+    required this.writeController,
+  });
 
   final BiometricStorageFile storageFile;
   final TextEditingController writeController;
