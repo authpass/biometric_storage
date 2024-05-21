@@ -137,7 +137,7 @@ class MyAppState extends State<MyApp> {
                           options: StorageFileInitOptions(
                             androidAuthenticationValidityDuration:
                                 const Duration(seconds: 5),
-                            darwinTouchIDAuthenticationAllowableReuseDuration:
+                            darwinTouchIDAuthenticationForceReuseContextDuration:
                                 const Duration(seconds: 5),
                           ),
                           promptInfo: const PromptInfo(
