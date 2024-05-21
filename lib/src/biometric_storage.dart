@@ -86,7 +86,7 @@ class StorageFileInitOptions {
   StorageFileInitOptions({
     Duration? androidAuthenticationValidityDuration,
     Duration? iosTouchIDAuthenticationAllowableReuseDuration,
-    this.iosTouchIDAuthenticationForceReuseContextDuration,
+    this.darwinTouchIDAuthenticationForceReuseContextDuration,
     this.authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
@@ -96,13 +96,14 @@ class StorageFileInitOptions {
                 (authenticationValidityDurationSeconds <= 0
                     ? null
                     : Duration(seconds: authenticationValidityDurationSeconds)),
-        iosTouchIDAuthenticationAllowableReuseDuration =
+        darwinTouchIDAuthenticationAllowableReuseDuration =
             iosTouchIDAuthenticationAllowableReuseDuration ??
                 (authenticationValidityDurationSeconds <= 0
                     ? null
                     : Duration(seconds: authenticationValidityDurationSeconds));
 
-  @Deprecated('use androidAuthenticationValidityDuration instead')
+  @Deprecated(
+      'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
   final int authenticationValidityDurationSeconds;
 
   /// see https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUserAuthenticationParameters(int,%20int)
@@ -114,15 +115,15 @@ class StorageFileInitOptions {
   /// > Note that this grace period applies specifically to device unlock with Touch ID, not keychain retrieval authentications
   ///
   /// If you want to avoid requiring authentication after a successful
-  /// keychain retrieval see [iosTouchIDAuthenticationForceReuseContextDuration]
-  final Duration? iosTouchIDAuthenticationAllowableReuseDuration;
+  /// keychain retrieval see [darwinTouchIDAuthenticationForceReuseContextDuration]
+  final Duration? darwinTouchIDAuthenticationAllowableReuseDuration;
 
   /// To prevent forcing the user to authenticate again after unlocking once
   /// we can reuse the `LAContext` object for the given amount of time.
   /// see https://github.com/authpass/biometric_storage/pull/73
   /// This is pretty much undocumented behavior, but works similar to
   /// `androidAuthenticationValidityDuration`.
-  final Duration? iosTouchIDAuthenticationForceReuseContextDuration;
+  final Duration? darwinTouchIDAuthenticationForceReuseContextDuration;
 
   /// Whether an authentication is required. if this is
   /// false NO BIOMETRIC CHECK WILL BE PERFORMED! and the value
@@ -149,10 +150,10 @@ class StorageFileInitOptions {
             authenticationValidityDurationSeconds,
         'androidAuthenticationValidityDurationSeconds':
             androidAuthenticationValidityDuration?.inSeconds,
-        'iosTouchIDAuthenticationAllowableReuseDurationSeconds':
-            iosTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
-        'iosTouchIDAuthenticationForceReuseContextDurationSeconds':
-            iosTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
+        'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
+            darwinTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
+        'darwinTouchIDAuthenticationForceReuseContextDurationSeconds':
+            darwinTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
         'darwinBiometricOnly': darwinBiometricOnly,

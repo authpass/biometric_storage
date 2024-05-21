@@ -14,13 +14,13 @@ struct StorageMethodCall {
 
 class InitOptions {
   init(params: [String: Any]) {
-    iosTouchIDAuthenticationAllowableReuseDuration = params["iosTouchIDAuthenticationAllowableReuseDurationSeconds"] as? Int
-    iosTouchIDAuthenticationForceReuseContextDuration = params["iosTouchIDAuthenticationForceReuseContextDurationSeconds"] as? Int
+    darwinTouchIDAuthenticationAllowableReuseDuration = params["drawinTouchIDAuthenticationAllowableReuseDurationSeconds"] as? Int
+    darwinTouchIDAuthenticationForceReuseContextDuration = params["darwinTouchIDAuthenticationForceReuseContextDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
     darwinBiometricOnly = params["darwinBiometricOnly"] as? Bool
   }
-  let iosTouchIDAuthenticationAllowableReuseDuration: Int?
-  let iosTouchIDAuthenticationForceReuseContextDuration: Int?
+  let darwinTouchIDAuthenticationAllowableReuseDuration: Int?
+  let darwinTouchIDAuthenticationForceReuseContextDuration: Int?
   let authenticationRequired: Bool!
   let darwinBiometricOnly: Bool!
 }
@@ -173,7 +173,7 @@ class BiometricStorageFile {
       
       let context = LAContext()
       if (initOptions.authenticationRequired) {
-        if let duration = initOptions.iosTouchIDAuthenticationAllowableReuseDuration {
+        if let duration = initOptions.darwinTouchIDAuthenticationAllowableReuseDuration {
           if #available(OSX 10.12, *) {
             context.touchIDAuthenticationAllowableReuseDuration = Double(duration)
           } else {
@@ -182,7 +182,7 @@ class BiometricStorageFile {
           }
         }
         
-        if let duration = initOptions.iosTouchIDAuthenticationForceReuseContextDuration {
+        if let duration = initOptions.darwinTouchIDAuthenticationForceReuseContextDuration {
           _context = (context: context, expireAt: Date(timeIntervalSinceNow: Double(duration)))
         }
       }
