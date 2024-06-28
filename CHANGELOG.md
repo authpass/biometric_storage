@@ -1,3 +1,7 @@
+## 5.1.0-rc.4
+
+* enable building on jdk 17 and up https://github.com/authpass/biometric_storage/issues/117 thanks @connyduck
+
 ## 5.1.0-rc.3
 
 * Split Split authenticationValidityDurationSeconds between android and iOS
