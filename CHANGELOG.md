@@ -1,3 +1,7 @@
+## 5.1.0-rc.5
+
+* upgrade dependency to web 1.0
+
 ## 5.1.0-rc.4
 
 * enable building on jdk 17 and up https://github.com/authpass/biometric_storage/issues/117 thanks @connyduck
