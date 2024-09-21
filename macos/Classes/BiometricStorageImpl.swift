@@ -14,7 +14,7 @@ struct StorageMethodCall {
 
 class InitOptions {
   init(params: [String: Any]) {
-    darwinTouchIDAuthenticationAllowableReuseDuration = params["drawinTouchIDAuthenticationAllowableReuseDurationSeconds"] as? Int
+    darwinTouchIDAuthenticationAllowableReuseDuration = params["darwinTouchIDAuthenticationAllowableReuseDurationSeconds"] as? Int
     darwinTouchIDAuthenticationForceReuseContextDuration = params["darwinTouchIDAuthenticationForceReuseContextDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
     darwinBiometricOnly = params["darwinBiometricOnly"] as? Bool
