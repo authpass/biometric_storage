@@ -1,3 +1,7 @@
+## 5.1.0
+
+* Fix typo in Flutter to iOS reuse duration parameter name @jefmathiot #125
+
 ## 5.1.0-rc.5
 
 * upgrade dependency to web 1.0
