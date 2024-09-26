@@ -44,8 +44,8 @@ enum AuthExceptionCode {
   userCanceled,
 
   /// Authentication prompt is canceled due to another reason
-  /// (like when biometric sensor becamse unavailable like when
-  /// user switches between apps, logsout, etc).
+  /// (like when biometric sensor becomes unavailable like when
+  /// user switches between apps, logs out, etc).
   canceled,
   unknown,
   timeout,
