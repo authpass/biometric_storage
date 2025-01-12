@@ -22,7 +22,6 @@ import java.io.StringWriter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.crypto.Cipher
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 private val logger = KotlinLogging.logger {}
@@ -207,8 +206,16 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }, onError = resultError)
             }
 
+            fun parseInitOptions() = call.argument<Map<String, Any>>("options")?.let {
+                InitOptions(
+                    androidAuthenticationValidityDuration = (it["androidAuthenticationValidityDurationSeconds"] as Int?)?.seconds,
+                    authenticationRequired = it["authenticationRequired"] as Boolean,
+                    androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
+                )
+            } ?: InitOptions()
+
             when (call.method) {
-                "canAuthenticate" -> result.success(canAuthenticate().name)
+                "canAuthenticate" -> result.success(canAuthenticate(parseInitOptions()).name)
                 "init" -> {
                     val name = getName()
                     if (storageFiles.containsKey(name)) {
@@ -223,19 +230,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         }
                     }
 
-                    val options = call.argument<Map<String, Any>>("options")?.let {
-                        InitOptions(
-                            androidAuthenticationValidityDuration = (it["androidAuthenticationValidityDurationSeconds"] as Int?)?.seconds,
-                            authenticationRequired = it["authenticationRequired"] as Boolean,
-                            androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
-                        )
-                    } ?: InitOptions()
+                    val options = parseInitOptions()
 //                    val options = moshi.adapter(InitOptions::class.java)
 //                        .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
 //                        ?: InitOptions()
                     storageFiles[name] = BiometricStorageFile(applicationContext, name, options)
                     result.success(true)
                 }
+
                 "dispose" -> storageFiles.remove(getName())?.apply {
                     dispose()
                     result.success(true)
@@ -244,18 +246,20 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     "Tried to dispose non existing storage.",
                     null
                 )
+
                 "read" -> withStorage {
                     if (exists()) {
                         withAuth(CipherMode.Decrypt) {
                             val ret = readFile(
-                                    it,
-                                )
+                                it,
+                            )
                             ui(resultError) { result.success(ret) }
                         }
                     } else {
                         result.success(null)
                     }
                 }
+
                 "delete" -> withStorage {
                     if (exists()) {
                         result.success(deleteFile())
@@ -263,12 +267,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         result.success(false)
                     }
                 }
+
                 "write" -> withStorage {
                     withAuth(CipherMode.Encrypt) {
                         writeFile(it, requiredArgument(PARAM_WRITE_CONTENT))
                         ui(resultError) { result.success(true) }
                     }
                 }
+
                 else -> result.notImplemented()
             }
         } catch (e: MethodCallException) {
@@ -319,15 +325,18 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         }
     }
 
-    private fun canAuthenticate(): CanAuthenticateResponse {
-        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL)
-        logger.debug { "canAuthenticate for DEVICE_CREDENTIAL: $credentialsResponse" }
-        if (credentialsResponse == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
-            return CanAuthenticateResponse.ErrorNoBiometricEnrolled
+    private fun canAuthenticate(initOptions: InitOptions): CanAuthenticateResponse {
+        if (!initOptions.authenticationRequired) {
+            // doesn't really make sense...
+            logger.warn { "called `canAuthenticate` with initOptions.authenticationRequired == false. $initOptions" }
+            return CanAuthenticateResponse.Success
         }
-
         val response = biometricManager.canAuthenticate(
-            BIOMETRIC_STRONG or BIOMETRIC_WEAK
+            if (initOptions.androidBiometricOnly) {
+                BIOMETRIC_STRONG
+            } else {
+                DEVICE_CREDENTIAL or BIOMETRIC_STRONG
+            }
         )
         return CanAuthenticateResponse.values().firstOrNull { it.code == response }
             ?: throw Exception(
@@ -347,7 +356,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         @WorkerThread onSuccess: (cipher: Cipher?) -> Unit,
         onError: ErrorCallback
     ) {
-        logger.trace {"authenticate()" }
+        logger.trace { "authenticate()" }
         val activity = attachedActivity ?: return run {
             logger.error { "We are not attached to an activity." }
             onError(

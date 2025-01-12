@@ -15,7 +15,9 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   }
 
   @override
-  Future<CanAuthenticateResponse> canAuthenticate() async =>
+  Future<CanAuthenticateResponse> canAuthenticate({
+    StorageFileInitOptions? options,
+  }) async =>
       CanAuthenticateResponse.errorHwUnavailable;
 
   @override

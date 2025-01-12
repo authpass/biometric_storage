@@ -20,7 +20,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<CanAuthenticateResponse> canAuthenticate() async {
+  Future<CanAuthenticateResponse> canAuthenticate({
+    StorageFileInitOptions? options,
+  }) async {
     return CanAuthenticateResponse.errorHwUnavailable;
   }
 

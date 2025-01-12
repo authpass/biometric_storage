@@ -1,3 +1,7 @@
+## 5.1.1-dev.1
+
+* Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
+
 ## 5.1.0
 
 * Fix typo in Flutter to iOS reuse duration parameter name @jefmathiot #125

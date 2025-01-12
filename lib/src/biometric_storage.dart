@@ -245,7 +245,9 @@ abstract class BiometricStorage extends PlatformInterface {
 
   /// Returns whether this device supports biometric/secure storage or
   /// the reason [CanAuthenticateResponse] why it is not supported.
-  Future<CanAuthenticateResponse> canAuthenticate();
+  Future<CanAuthenticateResponse> canAuthenticate({
+    StorageFileInitOptions? options,
+  });
 
   /// Returns true when there is an AppArmor error when trying to read a value.
   ///
@@ -300,7 +302,9 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   static const MethodChannel _channel = MethodChannel('biometric_storage');
 
   @override
-  Future<CanAuthenticateResponse> canAuthenticate() async {
+  Future<CanAuthenticateResponse> canAuthenticate({
+    StorageFileInitOptions? options,
+  }) async {
     if (kIsWeb) {
       return CanAuthenticateResponse.unsupported;
     }
@@ -308,7 +312,12 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         Platform.isIOS ||
         Platform.isMacOS ||
         Platform.isLinux) {
-      final response = await _channel.invokeMethod<String>('canAuthenticate');
+      final response = await _channel.invokeMethod<String>(
+        'canAuthenticate',
+        {
+          'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
+        },
+      );
       final ret = _canAuthenticateMapping[response];
       if (ret == null) {
         throw StateError('Invalid response from native platform. {$response}');
