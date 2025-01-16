@@ -70,6 +70,16 @@ class MyApp extends StatefulWidget {
 
 class MyAppState extends State<MyApp> {
   final String baseName = 'default';
+
+  static final _authStorageInitOptions = StorageFileInitOptions();
+  static final _customPromptInitOptions = StorageFileInitOptions(
+    androidBiometricOnly: false,
+    androidAuthenticationValidityDuration: const Duration(seconds: 5),
+    darwinBiometricOnly: false,
+    darwinTouchIDAuthenticationForceReuseContextDuration:
+        const Duration(seconds: 5),
+  );
+
   BiometricStorageFile? _authStorage;
   BiometricStorageFile? _storage;
   BiometricStorageFile? _customPrompt;
@@ -81,7 +91,7 @@ class MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     logMessages.log.addListener(_logChanged);
-    _checkAuthenticate();
+    // _checkAuthenticate();
   }
 
   @override
@@ -90,8 +100,10 @@ class MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  Future<CanAuthenticateResponse> _checkAuthenticate() async {
-    final response = await BiometricStorage().canAuthenticate();
+  Future<CanAuthenticateResponse> _checkAuthenticate(
+    StorageFileInitOptions? options,
+  ) async {
+    final response = await BiometricStorage().canAuthenticate(options: options);
     _logger.info('checked if authentication was possible: $response');
     return response;
   }
@@ -112,34 +124,33 @@ class MyAppState extends State<MyApp> {
               child: const Text('init'),
               onPressed: () async {
                 _logger.finer('Initializing $baseName');
-                final authenticate = await _checkAuthenticate();
-                if (authenticate == CanAuthenticateResponse.unsupported) {
+                final authStorageSupport =
+                    await _checkAuthenticate(_authStorageInitOptions);
+                if (authStorageSupport == CanAuthenticateResponse.unsupported) {
                   _logger.severe(
                       'Unable to use authenticate. Unable to get storage.');
                   return;
                 }
-                final supportsAuthenticated =
-                    authenticate == CanAuthenticateResponse.success ||
-                        authenticate == CanAuthenticateResponse.statusUnknown;
+                final supportsAuthenticated = authStorageSupport ==
+                        CanAuthenticateResponse.success ||
+                    authStorageSupport == CanAuthenticateResponse.statusUnknown;
                 if (supportsAuthenticated) {
                   _authStorage = await BiometricStorage().getStorage(
-                      '${baseName}_authenticated',
-                      options: StorageFileInitOptions());
+                    '${baseName}_authenticated',
+                    options: _authStorageInitOptions,
+                  );
                 }
                 _storage = await BiometricStorage()
                     .getStorage('${baseName}_unauthenticated',
                         options: StorageFileInitOptions(
                           authenticationRequired: false,
                         ));
-                if (supportsAuthenticated) {
+                final supportsCustomPrompt =
+                    await _checkAuthenticate(_customPromptInitOptions);
+                if (supportsCustomPrompt == CanAuthenticateResponse.success) {
                   _customPrompt = await BiometricStorage()
                       .getStorage('${baseName}_customPrompt',
-                          options: StorageFileInitOptions(
-                            androidAuthenticationValidityDuration:
-                                const Duration(seconds: 5),
-                            darwinTouchIDAuthenticationForceReuseContextDuration:
-                                const Duration(seconds: 5),
-                          ),
+                          options: _customPromptInitOptions,
                           promptInfo: const PromptInfo(
                             iosPromptInfo: IosPromptInfo(
                               saveTitle: 'Custom save title',

@@ -2,14 +2,14 @@ group 'design.codeux.biometric_storage'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.8.10'
+    ext.kotlin_version = '2.0.21'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.android.tools.build:gradle:8.1.4'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -25,9 +25,13 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 
+kotlin {
+    jvmToolchain(17)
+}
+
 android {
     namespace "design.codeux.biometric_storage"
-    compileSdk 31
+    compileSdk 35
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -52,7 +56,7 @@ android {
 }
 
 dependencies {
-    def biometric_version = "1.2.0-alpha05"
+    def biometric_version = "1.4.0-alpha02"
 
     api "androidx.core:core-ktx:1.10.1"
     api "androidx.fragment:fragment-ktx:1.6.1"

@@ -89,7 +89,7 @@ class StorageFileInitOptions {
     this.darwinTouchIDAuthenticationForceReuseContextDuration,
     @Deprecated(
         'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
-    this.authenticationValidityDurationSeconds = -1,
+    int authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
     this.darwinBiometricOnly = true,
@@ -103,10 +103,6 @@ class StorageFileInitOptions {
                 (authenticationValidityDurationSeconds <= 0
                     ? null
                     : Duration(seconds: authenticationValidityDurationSeconds));
-
-  @Deprecated(
-      'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
-  final int authenticationValidityDurationSeconds;
 
   /// see https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUserAuthenticationParameters(int,%20int)
   final Duration? androidAuthenticationValidityDuration;

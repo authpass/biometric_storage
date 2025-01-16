@@ -30,7 +30,7 @@ kotlin {
 }
 
 android {
-    compileSdkVersion 33
+    compileSdk 35
     ndkVersion "21.1.6352462"
 
     compileOptions {
@@ -47,7 +47,7 @@ android {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "design.codeux.biometric_storage_example"
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
