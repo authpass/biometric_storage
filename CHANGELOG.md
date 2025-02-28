@@ -1,3 +1,8 @@
+## 5.1.1-dev.2
+
+* Add flag `forceBiometricAuthentication` for `BiometricStorage.read`to enforce biometric prompt in any case. Only for iOS and android.
+
+
 ## 5.1.1-dev.1
 
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.

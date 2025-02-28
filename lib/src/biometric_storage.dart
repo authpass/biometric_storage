@@ -272,11 +272,18 @@ abstract class BiometricStorage extends PlatformInterface {
     PromptInfo promptInfo = PromptInfo.defaultValues,
   });
 
+  /// Reads the content of a secure storage file identified by [name].
+  ///
+  /// Returns the stored string content or null.
+  /// If [forceBiometricAuthentication] is set to true, show biometric prompt
+  /// even auth validity duration is not expired yet.
+  /// Only works on ios and android.
   @protected
   Future<String?> read(
     String name,
-    PromptInfo promptInfo,
-  );
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  });
 
   @protected
   Future<bool?> delete(
@@ -396,10 +403,12 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   @override
   Future<String?> read(
     String name,
-    PromptInfo promptInfo,
-  ) =>
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) =>
       _transformErrors(_channel.invokeMethod<String>('read', <String, dynamic>{
         'name': name,
+        'forceBiometricAuthentication': forceBiometricAuthentication,
         ..._promptInfoForCurrentPlatform(promptInfo),
       }));
 
@@ -491,8 +500,15 @@ class BiometricStorageFile {
 
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String?> read({PromptInfo? promptInfo}) =>
-      _plugin.read(name, promptInfo ?? defaultPromptInfo);
+  Future<String?> read({
+    PromptInfo? promptInfo,
+    bool forceBiometricAuthentication = false,
+  }) =>
+      _plugin.read(
+        name,
+        promptInfo ?? defaultPromptInfo,
+        forceBiometricAuthentication: forceBiometricAuthentication,
+      );
 
   /// Write content of this file. Previous value will be overwritten.
   Future<void> write(String content, {PromptInfo? promptInfo}) =>

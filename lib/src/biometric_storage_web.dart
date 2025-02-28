@@ -46,8 +46,9 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   @override
   Future<String?> read(
     String name,
-    PromptInfo promptInfo,
-  ) async {
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) async {
     return web.window.localStorage.getItem(name);
   }
 

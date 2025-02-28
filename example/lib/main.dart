@@ -258,8 +258,7 @@ class StorageActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return Wrap(
       children: <Widget>[
         ElevatedButton(
           child: const Text('read'),
@@ -267,6 +266,25 @@ class StorageActions extends StatelessWidget {
             _logger.fine('reading from ${storageFile.name}');
             try {
               final result = await storageFile.read();
+              _logger.fine('read: {$result}');
+            } on AuthException catch (e) {
+              if (e.code == AuthExceptionCode.userCanceled) {
+                _logger.info('User canceled.');
+                return;
+              }
+              rethrow;
+            }
+          },
+        ),
+        ElevatedButton(
+          child: const Text('read with force'),
+          onPressed: () async {
+            _logger.fine(
+                'reading with forceBiometricAuthentication from ${storageFile.name}');
+            try {
+              final result = await storageFile.read(
+                forceBiometricAuthentication: true,
+              );
               _logger.fine('read: {$result}');
             } on AuthException catch (e) {
               if (e.code == AuthExceptionCode.userCanceled) {
