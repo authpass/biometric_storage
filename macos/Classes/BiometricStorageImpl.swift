@@ -103,10 +103,12 @@ class BiometricStorageImpl {
             }
         } else if ("write" == call.method) {
             requiredArg("name") { name in
-                requiredArg("content") { content in
-                    requiredArg("iosPromptInfo") { promptInfo in
-                        requireStorage(name) { file in
-                            file.write(content, result, IOSPromptInfo(params: promptInfo))
+                requiredArg("content") {
+                    content in requiredArg("forceBiometricAuthentication") { forceBiometricAuthentication in
+                        requiredArg("iosPromptInfo") { promptInfo in
+                            requireStorage(name) { file in
+                                file.write(content, result, IOSPromptInfo(params: promptInfo), forceBiometricAuthentication)
+                            }
                         }
                     }
                 }
@@ -304,7 +306,12 @@ class BiometricStorageFile {
         handleOSStatusError(status, result, "writing data")
     }
     
-    func write(_ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
+    func write(_ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo, _ forceBiometricAuthentication: Bool) {
+        if(forceBiometricAuthentication){
+            // invalidate current LAContext to enforce recreation of LAContext in context getter.
+            _context = nil
+        }
+        
         guard var query = baseQuery(result) else {
             return;
         }

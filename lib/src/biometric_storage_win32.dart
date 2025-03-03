@@ -103,8 +103,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   Future<void> write(
     String name,
     String content,
-    PromptInfo promptInfo,
-  ) async {
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) async {
     _logger.fine('write()');
     final examplePassword = utf8.encode(content);
     final blob = examplePassword.allocatePointer();

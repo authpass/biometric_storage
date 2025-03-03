@@ -56,8 +56,9 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   Future<void> write(
     String name,
     String content,
-    PromptInfo promptInfo,
-  ) async {
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) async {
     web.window.localStorage.setItem(name, content);
   }
 }

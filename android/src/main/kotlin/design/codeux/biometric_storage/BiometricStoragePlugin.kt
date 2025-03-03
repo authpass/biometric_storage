@@ -274,8 +274,9 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }
 
                 "write" -> withStorage {
-
-                    withAuth(CipherMode.Encrypt) {
+                    withAuth(CipherMode.Encrypt,
+                        forceBiometricAuthentication = requiredArgument<Boolean>(PARAM_FORCE_BIOMETRIC_AUTHENTICATION),
+                    ) {
                         writeFile(it, requiredArgument(PARAM_WRITE_CONTENT))
                         ui(resultError) { result.success(true) }
                     }

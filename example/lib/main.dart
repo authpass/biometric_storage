@@ -313,6 +313,25 @@ class StorageActions extends StatelessWidget {
           },
         ),
         ElevatedButton(
+          child: const Text('write with forceBiometricAuthentication'),
+          onPressed: () async {
+            _logger.fine('Going to write with force...');
+            try {
+              await storageFile.write(
+                ' [${DateTime.now()}] ${writeController.text}',
+                forceBiometricAuthentication: true,
+              );
+              _logger.info('Written content.');
+            } on AuthException catch (e) {
+              if (e.code == AuthExceptionCode.userCanceled) {
+                _logger.info('User canceled.');
+                return;
+              }
+              rethrow;
+            }
+          },
+        ),
+        ElevatedButton(
           child: const Text('delete'),
           onPressed: () async {
             _logger.fine('deleting...');
