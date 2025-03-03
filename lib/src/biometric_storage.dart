@@ -291,12 +291,18 @@ abstract class BiometricStorage extends PlatformInterface {
     PromptInfo promptInfo,
   );
 
+  /// Write [content] for [name].
+  ///
+  /// If [forceBiometricAuthentication] is set to true, show biometric prompt
+  /// even auth validity duration is not expired yet.
+  /// Only works on ios and android.
   @protected
   Future<void> write(
     String name,
     String content,
-    PromptInfo promptInfo,
-  );
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  });
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
@@ -426,11 +432,13 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   Future<void> write(
     String name,
     String content,
-    PromptInfo promptInfo,
-  ) =>
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) =>
       _transformErrors(_channel.invokeMethod('write', <String, dynamic>{
         'name': name,
         'content': content,
+        'forceBiometricAuthentication': forceBiometricAuthentication,
         ..._promptInfoForCurrentPlatform(promptInfo),
       }));
 
@@ -500,6 +508,8 @@ class BiometricStorageFile {
 
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
+  ///
+  /// If [forceBiometricAuthentication] is true, show biometric prompt in any case.
   Future<String?> read({
     PromptInfo? promptInfo,
     bool forceBiometricAuthentication = false,
@@ -511,8 +521,19 @@ class BiometricStorageFile {
       );
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content, {PromptInfo? promptInfo}) =>
-      _plugin.write(name, content, promptInfo ?? defaultPromptInfo);
+  ///
+  ///  If [forceBiometricAuthentication] is true, show biometric prompt in any case.
+  Future<void> write(
+    String content, {
+    PromptInfo? promptInfo,
+    bool forceBiometricAuthentication = false,
+  }) =>
+      _plugin.write(
+        name,
+        content,
+        promptInfo ?? defaultPromptInfo,
+        forceBiometricAuthentication: forceBiometricAuthentication,
+      );
 
   /// Delete the content of this storage.
   Future<void> delete({PromptInfo? promptInfo}) =>
