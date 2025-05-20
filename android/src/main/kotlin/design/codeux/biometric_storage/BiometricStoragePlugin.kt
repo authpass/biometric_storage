@@ -333,9 +333,9 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         }
         val response = biometricManager.canAuthenticate(
             if (initOptions.androidBiometricOnly) {
-                BIOMETRIC_STRONG
+                BIOMETRIC_STRONG or BIOMETRIC_WEAK
             } else {
-                DEVICE_CREDENTIAL or BIOMETRIC_STRONG
+                DEVICE_CREDENTIAL or BIOMETRIC_STRONG or BIOMETRIC_WEAK
             }
         )
         return CanAuthenticateResponse.values().firstOrNull { it.code == response }
@@ -410,10 +410,10 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }
             }
             promptBuilder
-                .setAllowedAuthenticators(BIOMETRIC_STRONG)
+                .setAllowedAuthenticators(BIOMETRIC_STRONG or BIOMETRIC_WEAK)
                 .setNegativeButtonText(promptInfo.negativeButton)
         } else {
-            promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_STRONG)
+            promptBuilder.setAllowedAuthenticators(DEVICE_CREDENTIAL or BIOMETRIC_STRONG or BIOMETRIC_WEAK)
         }
 
         if (cipher == null || options.androidAuthenticationValidityDuration != null) {
