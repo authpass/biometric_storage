@@ -1,4 +1,4 @@
-## 5.1.1-dev.1
+## 5.1.1-dev.2
 
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
 

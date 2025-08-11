@@ -2,7 +2,7 @@ name: biometric_storage
 description: |
   Secure Storage: Encrypted data store optionally secured by biometric lock with support
   for iOS, Android, MacOS. Partial support for Linux, Windows and web (localStorage).
-version: 5.1.1-dev.1
+version: 5.1.1-dev.2
 homepage: https://github.com/authpass/biometric_storage/
 
 environment:
