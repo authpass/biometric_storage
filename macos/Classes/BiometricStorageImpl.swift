@@ -80,7 +80,10 @@ class BiometricStorageImpl {
     }
     
     if ("canAuthenticate" == call.method) {
-      canAuthenticate(result: result)
+      requiredArg("options") { options in
+        let initOptions = InitOptions(params: options)
+        canAuthenticate(options: initOptions, result: result)
+      }
     } else if ("init" == call.method) {
       requiredArg("name") { name in
         requiredArg("options") { options in
@@ -123,10 +126,11 @@ class BiometricStorageImpl {
   }
   
 
-  private func canAuthenticate(result: @escaping StorageCallback) {
+  private func canAuthenticate(options: InitOptions, result: @escaping StorageCallback) {
     var error: NSError?
     let context = LAContext()
-    if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
+    let policy: LAPolicy = options.darwinBiometricOnly ? .deviceOwnerAuthenticationWithBiometrics : .deviceOwnerAuthentication
+    if context.canEvaluatePolicy(policy, error: &error) {
       result("Success")
       return
     }
