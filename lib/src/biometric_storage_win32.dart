@@ -46,10 +46,10 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   ) async {
     final namePointer = TEXT(name);
     try {
-      final result = CredDelete(namePointer, CRED_TYPE.CRED_TYPE_GENERIC, 0);
+      final result = CredDelete(namePointer, CRED_TYPE_GENERIC, 0);
       if (result != TRUE) {
         final errorCode = GetLastError();
-        if (errorCode == WIN32_ERROR.ERROR_NOT_FOUND) {
+        if (errorCode == ERROR_NOT_FOUND) {
           _logger.fine('Unable to find credential of name $name');
         } else {
           _logger.warning('Error ($result): $errorCode');
@@ -71,10 +71,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     final credPointer = calloc<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);
     try {
-      if (CredRead(namePointer, CRED_TYPE.CRED_TYPE_GENERIC, 0, credPointer) !=
-          TRUE) {
+      if (CredRead(namePointer, CRED_TYPE_GENERIC, 0, credPointer) != TRUE) {
         final errorCode = GetLastError();
-        if (errorCode == WIN32_ERROR.ERROR_NOT_FOUND) {
+        if (errorCode == ERROR_NOT_FOUND) {
           _logger.fine('Unable to find credential of name $name');
         } else {
           _logger.warning('Error: $errorCode ',
@@ -111,9 +110,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     final userNamePointer = TEXT('flutter.biometric_storage');
 
     final credential = calloc<CREDENTIAL>()
-      ..ref.Type = CRED_TYPE.CRED_TYPE_GENERIC
+      ..ref.Type = CRED_TYPE_GENERIC
       ..ref.TargetName = namePointer
-      ..ref.Persist = CRED_PERSIST.CRED_PERSIST_LOCAL_MACHINE
+      ..ref.Persist = CRED_PERSIST_LOCAL_MACHINE
       ..ref.UserName = userNamePointer
       ..ref.CredentialBlob = blob
       ..ref.CredentialBlobSize = examplePassword.length;
