@@ -91,6 +91,7 @@ class StorageFileInitOptions {
         'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
     int authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
+    this.androidUseStrongBox = true,
     this.androidBiometricOnly = true,
     this.darwinBiometricOnly = true,
   })  : androidAuthenticationValidityDuration =
@@ -145,6 +146,15 @@ class StorageFileInitOptions {
   /// https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/1392879-userpresence
   final bool darwinBiometricOnly;
 
+  /// Whether to use Android StrongBox when available.
+  /// Only affects Android API 28+ devices that have StrongBox hardware support.
+  /// When true and StrongBox is supported, keys will be stored in the more secure
+  /// Secure Element (isolated from the main CPU, etc.). When false, keys will use
+  /// the Trusted Execution Environment (TEE). The StrongBox/SE implementation is
+  /// broken on some devices, leading to crashes and data loss.
+  /// Defaults to `true` for backwards compatibility.
+  final bool androidUseStrongBox;
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'androidAuthenticationValidityDurationSeconds':
             androidAuthenticationValidityDuration?.inSeconds,
@@ -155,6 +165,7 @@ class StorageFileInitOptions {
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
         'darwinBiometricOnly': darwinBiometricOnly,
+        'androidUseStrongBox': androidUseStrongBox,
       };
 }
 
