@@ -120,53 +120,92 @@ class MyAppState extends State<MyApp> {
         body: Column(
           children: [
             const Text('Methods:'),
-            ElevatedButton(
-              child: const Text('init'),
-              onPressed: () async {
-                _logger.finer('Initializing $baseName');
-                final authStorageSupport =
-                    await _checkAuthenticate(_authStorageInitOptions);
-                if (authStorageSupport == CanAuthenticateResponse.unsupported) {
-                  _logger.severe(
-                      'Unable to use authenticate. Unable to get storage.');
-                  return;
-                }
-                final supportsAuthenticated = authStorageSupport ==
-                        CanAuthenticateResponse.success ||
-                    authStorageSupport == CanAuthenticateResponse.statusUnknown;
-                if (supportsAuthenticated) {
-                  _authStorage = await BiometricStorage().getStorage(
-                    '${baseName}_authenticated',
-                    options: _authStorageInitOptions,
-                  );
-                }
-                _storage = await BiometricStorage()
-                    .getStorage('${baseName}_unauthenticated',
-                        options: StorageFileInitOptions(
-                          authenticationRequired: false,
-                        ));
-                final supportsCustomPrompt =
-                    await _checkAuthenticate(_customPromptInitOptions);
-                if (supportsCustomPrompt == CanAuthenticateResponse.success) {
-                  _customPrompt = await BiometricStorage()
-                      .getStorage('${baseName}_customPrompt',
-                          options: _customPromptInitOptions,
-                          promptInfo: const PromptInfo(
-                            iosPromptInfo: IosPromptInfo(
-                              saveTitle: 'Custom save title',
-                              accessTitle: 'Custom access title.',
-                            ),
-                            androidPromptInfo: AndroidPromptInfo(
-                              title: 'Custom title',
-                              subtitle: 'Custom subtitle',
-                              description: 'Custom description',
-                              negativeButton: 'Nope!',
-                            ),
-                          ));
-                }
-                setState(() {});
-                _logger.info('initiailzed $baseName');
-              },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                ElevatedButton(
+                  child: const Text('init'),
+                  onPressed: () async {
+                    _logger.finer('Initializing $baseName');
+                    final authStorageSupport =
+                        await _checkAuthenticate(_authStorageInitOptions);
+                    if (authStorageSupport ==
+                        CanAuthenticateResponse.unsupported) {
+                      _logger.severe(
+                          'Unable to use authenticate. Unable to get storage.');
+                      return;
+                    }
+                    final supportsAuthenticated =
+                        authStorageSupport == CanAuthenticateResponse.success ||
+                            authStorageSupport ==
+                                CanAuthenticateResponse.statusUnknown;
+                    if (supportsAuthenticated) {
+                      _authStorage = await BiometricStorage().getStorage(
+                        '${baseName}_authenticated',
+                        options: _authStorageInitOptions,
+                      );
+                    }
+                    _storage = await BiometricStorage()
+                        .getStorage('${baseName}_unauthenticated',
+                            options: StorageFileInitOptions(
+                              authenticationRequired: false,
+                            ));
+                    final supportsCustomPrompt =
+                        await _checkAuthenticate(_customPromptInitOptions);
+                    if (supportsCustomPrompt ==
+                        CanAuthenticateResponse.success) {
+                      _customPrompt = await BiometricStorage()
+                          .getStorage('${baseName}_customPrompt',
+                              options: _customPromptInitOptions,
+                              promptInfo: const PromptInfo(
+                                iosPromptInfo: IosPromptInfo(
+                                  saveTitle: 'Custom save title',
+                                  accessTitle: 'Custom access title.',
+                                ),
+                                androidPromptInfo: AndroidPromptInfo(
+                                  title: 'Custom title',
+                                  subtitle: 'Custom subtitle',
+                                  description: 'Custom description',
+                                  negativeButton: 'Nope!',
+                                ),
+                              ));
+                    }
+                    setState(() {});
+                    _logger.info('initialized $baseName');
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text('Delete and dispose all'),
+                  onPressed: () async {
+                    _logger.info('Deleting and disposing all storages');
+                    try {
+                      if (_authStorage != null) {
+                        await _authStorage!.deleteAndDispose();
+                        _authStorage = null;
+                        _logger.finer(
+                            'Deleted and disposed authenticated storage');
+                      }
+                      if (_storage != null) {
+                        await _storage!.deleteAndDispose();
+                        _storage = null;
+                        _logger.finer(
+                            'Deleted and disposed unauthenticated storage');
+                      }
+                      if (_customPrompt != null) {
+                        await _customPrompt!.deleteAndDispose();
+                        _customPrompt = null;
+                        _logger.finer(
+                            'Deleted and disposed custom prompt storage');
+                      }
+                      setState(() {});
+                      _logger.info('All storages deleted and disposed');
+                    } catch (e) {
+                      _logger
+                          .severe('Error deleting and disposing storages: $e');
+                    }
+                  },
+                ),
+              ],
             ),
             ...?_appArmorButton(),
             ...(_authStorage == null

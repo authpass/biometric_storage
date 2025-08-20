@@ -133,4 +133,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       _logger.fine('free done');
     }
   }
+
+  @override
+  Future<void> dispose(String name, PromptInfo promptInfo) async {
+    // Nothing to dispose for Win32 implementation
+  }
 }
