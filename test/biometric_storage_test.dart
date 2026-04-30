@@ -90,6 +90,7 @@ void main() {
         darwinTouchIDAuthenticationForceReuseContextDuration:
             const Duration(seconds: 33),
         authenticationRequired: false,
+        androidUseStrongBox: false,
         androidBiometricOnly: false,
         darwinBiometricOnly: false,
       );
@@ -99,6 +100,7 @@ void main() {
         'darwinTouchIDAuthenticationAllowableReuseDurationSeconds': 22,
         'darwinTouchIDAuthenticationForceReuseContextDurationSeconds': 33,
         'authenticationRequired': false,
+        'androidUseStrongBox': false,
         'androidBiometricOnly': false,
         'darwinBiometricOnly': false,
       });
@@ -114,6 +116,7 @@ void main() {
         'darwinTouchIDAuthenticationAllowableReuseDurationSeconds': 7,
         'darwinTouchIDAuthenticationForceReuseContextDurationSeconds': null,
         'authenticationRequired': true,
+        'androidUseStrongBox': true,
         'androidBiometricOnly': true,
         'darwinBiometricOnly': true,
       });

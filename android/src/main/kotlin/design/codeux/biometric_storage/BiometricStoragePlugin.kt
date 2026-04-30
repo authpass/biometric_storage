@@ -212,8 +212,9 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             fun parseInitOptions() = call.argument<Map<String, Any>>("options")?.let {
                 InitOptions(
                     androidAuthenticationValidityDuration = (it["androidAuthenticationValidityDurationSeconds"] as Int?)?.seconds,
-                    authenticationRequired = it["authenticationRequired"] as Boolean,
-                    androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
+                    authenticationRequired = it["authenticationRequired"] as? Boolean ?: true,
+                    androidBiometricOnly = it["androidBiometricOnly"] as? Boolean ?: true,
+                    androidUseStrongBox = it["androidUseStrongBox"] as? Boolean ?: true,
                 )
             } ?: InitOptions()
 
