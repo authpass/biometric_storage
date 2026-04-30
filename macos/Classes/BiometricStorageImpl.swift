@@ -92,8 +92,14 @@ class BiometricStorageImpl {
             }
             result(true)
         } else if ("dispose" == call.method) {
-            // nothing to dispose
-            result(true)
+            requiredArg("name") { name in
+                guard let file = stores.removeValue(forKey: name) else {
+                    result(storageError(code: "NoSuchStorage", message: "Tried to dispose non existing storage.", details: nil))
+                    return
+                }
+                file.dispose()
+                result(true)
+            }
         } else if ("read" == call.method) {
             requiredArg("name") { name in
                 requiredArg("forceBiometricAuthentication") { forceBiometricAuthentication in
@@ -202,6 +208,10 @@ class BiometricStorageFile {
         self.name = name
         self.initOptions = initOptions
         self.storageError = storageError
+    }
+
+    func dispose() {
+        _context = nil
     }
     
     private func baseQuery(_ result: @escaping StorageCallback) -> [String: Any]? {

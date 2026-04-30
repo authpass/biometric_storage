@@ -237,6 +237,41 @@ void main() {
         });
       }
     });
+
+    test('deleteAndDispose forwards delete then dispose', () async {
+      methodCallHandler = (MethodCall methodCall) async {
+        switch (methodCall.method) {
+          case 'init':
+          case 'delete':
+          case 'dispose':
+            return true;
+        }
+        throw PlatformException(code: 'NotImplemented');
+      };
+
+      final storage = await BiometricStorage().getStorage('dispose-secret');
+
+      await storage.deleteAndDispose();
+
+      expect(
+        methodCalls.map((methodCall) => methodCall.method),
+        <String>['init', 'delete', 'dispose'],
+      );
+      expect(methodCalls[1].arguments, <String, dynamic>{
+        'name': 'dispose-secret',
+        'iosPromptInfo': <String, dynamic>{
+          'saveTitle': 'Unlock to save data',
+          'accessTitle': 'Unlock to access data',
+        },
+      });
+      expect(methodCalls[2].arguments, <String, dynamic>{
+        'name': 'dispose-secret',
+        'iosPromptInfo': <String, dynamic>{
+          'saveTitle': 'Unlock to save data',
+          'accessTitle': 'Unlock to access data',
+        },
+      });
+    });
   });
 
   group('platform error translation', () {
