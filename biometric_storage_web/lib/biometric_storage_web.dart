@@ -41,6 +41,13 @@ class BiometricStorageWeb extends BiometricStoragePlatform {
       _storage.read(key: _key(name));
 
   @override
+  Future<bool> exists(
+    String name,
+    PromptInfo promptInfo,
+  ) async =>
+      await _storage.containsKey(key: _key(name));
+
+  @override
   Future<bool?> delete(
     String name,
     PromptInfo promptInfo,

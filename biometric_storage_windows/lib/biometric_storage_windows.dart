@@ -174,6 +174,13 @@ class BiometricStorageWindows extends BiometricStoragePlatform {
   }
 
   @override
+  Future<bool> exists(
+    String name,
+    PromptInfo promptInfo,
+  ) async =>
+      await read(name, promptInfo) != null;
+
+  @override
   Future<void> write(
     String name,
     String content,

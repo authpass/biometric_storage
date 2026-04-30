@@ -6,6 +6,10 @@
 
 * Android: retry key generation without StrongBox when devices falsely advertise StrongBox support but fail during Android Keystore key creation.
 
+* Add `BiometricStorageFile.exists()` to check whether protected data is present without reading it.
+
+* Android: sanitize unsafe storage names before using them as filenames to avoid `ENOENT` failures for names containing path separators.
+
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
 
 ## 5.1.0

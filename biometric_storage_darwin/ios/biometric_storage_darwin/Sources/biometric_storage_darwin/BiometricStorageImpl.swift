@@ -110,6 +110,12 @@ class BiometricStorageImpl {
 					}
 				}
 			}
+		} else if ("exists" == call.method) {
+			requiredArg("name") { name in
+				requireStorage(name) { file in
+					file.exists(result)
+				}
+			}
 		} else if ("write" == call.method) {
 			requiredArg("name") { name in
 				requiredArg("content") {
@@ -307,6 +313,27 @@ class BiometricStorageFile {
 			return
 		}
 		handleOSStatusError(status, result, "writing data")
+	}
+
+	func exists(_ result: @escaping StorageCallback) {
+		guard var query = baseQuery(result) else {
+			return
+		}
+		query[kSecMatchLimit as String] = kSecMatchLimitOne
+		query[kSecReturnAttributes as String] = false
+		if #available(iOS 9.0, macOS 10.11, *) {
+			query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail
+		}
+
+		let status = SecItemCopyMatching(query as CFDictionary, nil)
+		switch status {
+		case errSecSuccess, errSecInteractionNotAllowed:
+			result(true)
+		case errSecItemNotFound:
+			result(false)
+		default:
+			handleOSStatusError(status, result, "checking for item")
+		}
 	}
     
 	func write(_ content: String, _ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo, _ forceBiometricAuthentication: Bool) {

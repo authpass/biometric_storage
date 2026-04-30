@@ -266,6 +266,10 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     }
                 }
 
+                "exists" -> withStorage {
+                    result.success(exists())
+                }
+
                 "delete" -> withStorage {
                     if (exists()) {
                         result.success(deleteFile())

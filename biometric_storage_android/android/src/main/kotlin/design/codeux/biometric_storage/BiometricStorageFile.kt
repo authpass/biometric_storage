@@ -9,6 +9,7 @@ import java.io.File
 import java.io.IOException
 import java.security.ProviderException
 import javax.crypto.Cipher
+import kotlin.text.Charsets.UTF_8
 import kotlin.time.Duration
 
 private val logger = KotlinLogging.logger {}
@@ -29,10 +30,11 @@ class BiometricStorageFile(
     companion object {
         private const val DIRECTORY_NAME = "biometric_storage"
         private const val FILE_SUFFIX_V2 = ".v2.txt"
+        private const val ENCODED_FILE_NAME_PREFIX = "_encoded_"
     }
 
     private val masterKeyName = "${baseName}_master_key"
-    private val fileNameV2 = "$baseName$FILE_SUFFIX_V2"
+    private val fileNameV2 = buildFileName(baseName)
     private val fileV2: File
     private val strongBoxSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
         options.androidUseStrongBox &&
@@ -51,6 +53,22 @@ class BiometricStorageFile(
         logger.trace { "Initialized $this with $options" }
 
         validateOptions()
+    }
+
+    private fun buildFileName(baseName: String): String {
+        val fileComponent = sanitizeFileComponent(baseName)
+        return "$fileComponent$FILE_SUFFIX_V2"
+    }
+
+    private fun sanitizeFileComponent(baseName: String): String {
+        if (!baseName.contains('/') && !baseName.contains('\\')) {
+            return baseName
+        }
+
+        val encoded = baseName.toByteArray(UTF_8).joinToString(separator = "") {
+            "%02x".format(it)
+        }
+        return "$ENCODED_FILE_NAME_PREFIX$encoded"
     }
 
     private fun validateOptions() {
@@ -115,6 +133,7 @@ class BiometricStorageFile(
     fun writeFile(cipher: Cipher?, content: String) {
         val useCipher = cipher ?: cipherForEncrypt()
         try {
+            fileV2.parentFile?.mkdirs()
             val encrypted = cryptographyManager.encryptData(content, useCipher)
             fileV2.writeBytes(encrypted.encryptedPayload)
             logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
@@ -156,6 +175,17 @@ class BiometricStorageFile(
     fun dispose() {
         logger.trace { "dispose" }
     }
+}
+
+internal fun androidStorageFileName(baseName: String): String {
+    if (!baseName.contains('/') && !baseName.contains('\\')) {
+        return "$baseName.v2.txt"
+    }
+
+    val encoded = baseName.toByteArray(UTF_8).joinToString(separator = "") {
+        "%02x".format(it)
+    }
+    return "_encoded_$encoded.v2.txt"
 }
 
 internal inline fun <T> retryWithoutStrongBoxIfNeeded(

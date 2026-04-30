@@ -48,6 +48,21 @@ abstract class MethodChannelBiometricStoragePlatform
       );
 
   @override
+  Future<bool> exists(
+    String name,
+    PromptInfo promptInfo,
+  ) =>
+      transformErrors(
+        channel.invokeMethod<bool>(
+          'exists',
+          <String, dynamic>{
+            'name': name,
+            ...buildPromptInfoArguments(promptInfo),
+          },
+        ),
+      ).then((value) => value ?? false);
+
+  @override
   Future<bool?> delete(
     String name,
     PromptInfo promptInfo,

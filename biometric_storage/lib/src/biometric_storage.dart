@@ -65,6 +65,12 @@ class BiometricStorageFile {
     );
   }
 
+  Future<bool> exists({PromptInfo? promptInfo}) =>
+      BiometricStoragePlatform.instance.exists(
+        name,
+        promptInfo ?? defaultPromptInfo,
+      );
+
   Future<void> deleteAndDispose({PromptInfo? promptInfo}) async {
     final resolvedPromptInfo = promptInfo ?? defaultPromptInfo;
     await delete(promptInfo: resolvedPromptInfo);

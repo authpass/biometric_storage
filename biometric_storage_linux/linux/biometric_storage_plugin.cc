@@ -11,6 +11,7 @@ const char kSecurityAccessError[] = "Security Access Error";
 const char kMethodRead[] = "read";
 const char kMethodWrite[] = "write";
 const char kMethodDelete[] = "delete";
+const char kMethodExists[] = "exists";
 const char kNamePrefix[] = "design.codeux.authpass";
 
 #define METHOD_PARAM_NAME(varName, args) \
@@ -119,6 +120,27 @@ static void on_password_lookup(GObject *source, GAsyncResult *result, gpointer u
   g_object_unref(method_call);
 }
 
+static void on_password_exists(GObject *source, GAsyncResult *result, gpointer user_data) {
+  GError *error = NULL;
+  FlMethodCall *method_call = (FlMethodCall *)user_data;
+  g_autoptr(FlMethodResponse) response = nullptr;
+
+  gchar *password = secret_password_lookup_finish(result, &error);
+
+  if (error != NULL) {
+    response = _handle_error("Failed to lookup secret", error);
+    g_error_free(error);
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(
+        fl_value_new_bool(password != NULL)));
+    if (password != NULL) {
+      secret_password_free(password);
+    }
+  }
+  fl_method_call_respond(method_call, response, nullptr);
+  g_object_unref(method_call);
+}
+
 static void biometric_storage_plugin_handle_method_call(BiometricStoragePlugin *self, FlMethodCall *method_call) {
   g_autoptr(FlMethodResponse) response = nullptr;
 
@@ -142,6 +164,12 @@ static void biometric_storage_plugin_handle_method_call(BiometricStoragePlugin *
     METHOD_PARAM_NAME(name, args);
     g_object_ref(method_call);
     secret_password_lookup(BIOMETRIC_SCHEMA, NULL, on_password_lookup,
+                           method_call, "name", name, NULL);
+    return;
+  } else if (IS_METHOD(method, kMethodExists)) {
+    METHOD_PARAM_NAME(name, args);
+    g_object_ref(method_call);
+    secret_password_lookup(BIOMETRIC_SCHEMA, NULL, on_password_exists,
                            method_call, "name", name, NULL);
     return;
   } else if (IS_METHOD(method, kMethodDelete)) {

@@ -1,12 +1,28 @@
 package design.codeux.biometric_storage
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.security.ProviderException
 
 class BiometricStorageFileTest {
+
+    @Test
+    fun `encodes unsafe Android storage names into flat file names`() {
+        val fileName = androidStorageFileName("g/Owg7F/hx8=nonce")
+
+        assertTrue(fileName.endsWith(".v2.txt"))
+        assertTrue(fileName.startsWith("_encoded_"))
+        assertFalse(fileName.removeSuffix(".v2.txt").contains('/'))
+        assertFalse(fileName.removeSuffix(".v2.txt").contains('\\'))
+    }
+
+    @Test
+    fun `keeps safe Android storage names unchanged`() {
+        assertEquals("plain-name.v2.txt", androidStorageFileName("plain-name"))
+    }
 
     @Test
     fun `retries without StrongBox after provider exception`() {

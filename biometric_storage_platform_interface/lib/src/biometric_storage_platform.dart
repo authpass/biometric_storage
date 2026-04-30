@@ -35,6 +35,11 @@ abstract class BiometricStoragePlatform extends PlatformInterface {
     bool forceBiometricAuthentication = false,
   });
 
+  Future<bool> exists(
+    String name,
+    PromptInfo promptInfo,
+  );
+
   Future<bool?> delete(
     String name,
     PromptInfo promptInfo,
@@ -77,6 +82,15 @@ class UnsupportedBiometricStoragePlatform extends BiometricStoragePlatform {
     PromptInfo promptInfo, {
     bool forceBiometricAuthentication = false,
   }) {
+    throw UnsupportedError(
+        'No biometric_storage platform implementation registered.');
+  }
+
+  @override
+  Future<bool> exists(
+    String name,
+    PromptInfo promptInfo,
+  ) {
     throw UnsupportedError(
         'No biometric_storage platform implementation registered.');
   }

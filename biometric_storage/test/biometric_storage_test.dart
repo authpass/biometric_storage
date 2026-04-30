@@ -89,6 +89,7 @@ void main() {
     );
 
     expect(storage.name, 'secret-name');
+    expect(await storage.exists(), isTrue);
     expect(await storage.read(), 'stored value');
     await storage.write('next value');
     await storage.delete();
@@ -103,6 +104,8 @@ void main() {
       platform.readCalls.single.promptInfo.macOsPromptInfo.saveTitle,
       'Save title',
     );
+
+    expect(platform.existsCalls.single.name, 'secret-name');
 
     expect(platform.writeCalls.single.name, 'secret-name');
     expect(platform.writeCalls.single.content, 'next value');
@@ -235,9 +238,11 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   CanAuthenticateResponse canAuthenticateResponse =
       CanAuthenticateResponse.unsupported;
   bool linuxCheckAppArmorErrorResponse = false;
+  bool existsResponse = true;
   String? readResponse;
 
   final List<InitCall> initCalls = <InitCall>[];
+  final List<ExistsCall> existsCalls = <ExistsCall>[];
   final List<ReadCall> readCalls = <ReadCall>[];
   final List<WriteCall> writeCalls = <WriteCall>[];
   final List<DeleteCall> deleteCalls = <DeleteCall>[];
@@ -261,6 +266,12 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   @override
   Future<bool> linuxCheckAppArmorError() async =>
       linuxCheckAppArmorErrorResponse;
+
+  @override
+  Future<bool> exists(String name, PromptInfo promptInfo) async {
+    existsCalls.add(ExistsCall(name, promptInfo));
+    return existsResponse;
+  }
 
   @override
   Future<String?> read(
@@ -308,6 +319,12 @@ class ReadCall {
   final String name;
   final PromptInfo promptInfo;
   final bool forceBiometricAuthentication;
+}
+
+class ExistsCall {
+  ExistsCall(this.name, this.promptInfo);
+  final String name;
+  final PromptInfo promptInfo;
 }
 
 class WriteCall {
