@@ -10,6 +10,8 @@
 
 * Android: sanitize unsafe storage names before using them as filenames to avoid `ENOENT` failures for names containing path separators.
 
+* Android: move keystore cipher initialization and non-prompt storage work off the UI thread to reduce ANR risk during biometric operations.
+
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
 
 ## 5.1.0

@@ -172,41 +172,48 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             ) {
                 if (!options.authenticationRequired) {
-                    return cb(null)
-                }
-
-                fun cipherForMode() = when (mode) {
-                    CipherMode.Encrypt -> cipherForEncrypt()
-                    CipherMode.Decrypt -> cipherForDecrypt()
-                }
-
-                val cipher = if (options.androidAuthenticationValidityDuration != null) {
-                    null
-                } else try {
-                    cipherForMode()
-                } catch (e: KeyPermanentlyInvalidatedException) {
-                    // TODO should we communicate this to the caller?
-                    logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
-                    deleteFile()
-                    // if deleting fails, simply throw the second time around.
-                    cipherForMode()
-                }
-
-                // if forceBiometricAuthentication is true, show prompt in any case.
-                if (cipher == null && !forceBiometricAuthentication) {
-                    // if we have no cipher, just try the callback and see if the
-                    // user requires authentication.
-                    try {
-                        return cb(null)
-                    } catch (e: UserNotAuthenticatedException) {
-                        logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
-                    }
+                    worker(resultError) { cb(null) }
+                    return
                 }
 
                 val promptInfo = getAndroidPromptInfo()
-                authenticate(cipher, promptInfo, options, {
-                    cb(cipher)
-                }, onError = resultError)
+
+                worker(resultError) {
+                    fun cipherForMode() = when (mode) {
+                        CipherMode.Encrypt -> cipherForEncrypt()
+                        CipherMode.Decrypt -> cipherForDecrypt()
+                    }
+
+                    val cipher = if (options.androidAuthenticationValidityDuration != null) {
+                        null
+                    } else try {
+                        cipherForMode()
+                    } catch (e: KeyPermanentlyInvalidatedException) {
+                        // TODO should we communicate this to the caller?
+                        logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
+                        deleteFile()
+                        // if deleting fails, simply throw the second time around.
+                        cipherForMode()
+                    }
+
+                    // if forceBiometricAuthentication is true, show prompt in any case.
+                    if (cipher == null && !forceBiometricAuthentication) {
+                        // if we have no cipher, just try the callback and see if the
+                        // user requires authentication.
+                        try {
+                            cb(null)
+                            return@worker
+                        } catch (e: UserNotAuthenticatedException) {
+                            logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                        }
+                    }
+
+                    ui(resultError) {
+                        authenticate(cipher, promptInfo, options, {
+                            cb(cipher)
+                        }, onError = resultError)
+                    }
+                }
             }
 
             fun parseInitOptions() = call.argument<Map<String, Any>>("options")?.let {
