@@ -66,8 +66,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   @override
   Future<String?> read(
     String name,
-    PromptInfo promptInfo,
-  ) async {
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) async {
     _logger.finer('read($name)');
     final credPointer = calloc<Pointer<CREDENTIAL>>();
     final namePointer = PCWSTR(name.toNativeUtf16(allocator: calloc));
@@ -111,8 +112,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   Future<void> write(
     String name,
     String content,
-    PromptInfo promptInfo,
-  ) async {
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) async {
     _logger.fine('write()');
     final passwordBytes = Uint8List.fromList(utf8.encode(content));
     final blob = passwordBytes.isEmpty

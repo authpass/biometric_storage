@@ -170,6 +170,7 @@ void main() {
       });
       expect(methodCalls[1].arguments, <String, dynamic>{
         'name': 'secret-name',
+        'forceBiometricAuthentication': false,
         'iosPromptInfo': <String, dynamic>{
           'saveTitle': 'Save title',
           'accessTitle': 'Access title',
@@ -178,6 +179,7 @@ void main() {
       expect(methodCalls[2].arguments, <String, dynamic>{
         'name': 'secret-name',
         'content': 'next value',
+        'forceBiometricAuthentication': false,
         'iosPromptInfo': <String, dynamic>{
           'saveTitle': 'Save title',
           'accessTitle': 'Access title',
