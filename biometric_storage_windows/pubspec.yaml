@@ -1,0 +1,30 @@
+name: biometric_storage_windows
+description: Windows implementation of the biometric_storage federated plugin.
+version: 5.1.1-dev.2
+homepage: https://github.com/authpass/biometric_storage/
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: ">=3.4.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  biometric_storage_platform_interface:
+    path: ../biometric_storage_platform_interface
+  ffi: '>=1.0.0 <3.0.0'
+  logging: '>=1.0.0 <2.0.0'
+  win32: '>=2.0.0 <7.0.0'
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: '>=5.0.0 <7.0.0'
+
+flutter:
+  plugin:
+    implements: biometric_storage
+    platforms:
+      windows:
+        dartPluginClass: BiometricStorageWindows

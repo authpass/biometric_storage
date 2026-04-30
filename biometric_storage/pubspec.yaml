@@ -1,0 +1,46 @@
+name: biometric_storage
+description: App-facing package for the biometric_storage federated plugin.
+version: 5.1.1-dev.2
+homepage: https://github.com/authpass/biometric_storage/
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: ">=3.4.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  biometric_storage_android:
+    path: ../biometric_storage_android
+  biometric_storage_darwin:
+    path: ../biometric_storage_darwin
+  biometric_storage_linux:
+    path: ../biometric_storage_linux
+  biometric_storage_platform_interface:
+    path: ../biometric_storage_platform_interface
+  biometric_storage_web:
+    path: ../biometric_storage_web
+  biometric_storage_windows:
+    path: ../biometric_storage_windows
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: '>=5.0.0 <7.0.0'
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        default_package: biometric_storage_android
+      ios:
+        default_package: biometric_storage_darwin
+      macos:
+        default_package: biometric_storage_darwin
+      linux:
+        default_package: biometric_storage_linux
+      windows:
+        default_package: biometric_storage_windows
+      web:
+        default_package: biometric_storage_web

@@ -1,1 +1,0 @@
-class Win32BiometricStoragePlugin {}

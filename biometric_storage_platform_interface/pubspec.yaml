@@ -1,0 +1,19 @@
+name: biometric_storage_platform_interface
+description: Platform interface for the biometric_storage federated plugin.
+version: 5.1.1-dev.2
+homepage: https://github.com/authpass/biometric_storage/
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: ">=3.4.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  logging: ">=1.0.0 <2.0.0"
+  plugin_platform_interface: ">=2.0.0 <3.0.0"
+
+flutter:
+  plugin:
+    platforms: {}
