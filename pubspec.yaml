@@ -18,13 +18,13 @@ dependencies:
   plugin_platform_interface: ">=2.0.0 <3.0.0"
 
   ffi: '>=1.0.0 <3.0.0'
-  win32: '>=2.0.0 <6.0.0'
+  win32: '>=2.0.0 <7.0.0'
   web: ">=0.5.0 <2.0.0"
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: '>=5.0.0 <7.0.0'
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
