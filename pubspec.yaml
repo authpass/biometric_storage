@@ -7,7 +7,7 @@ homepage: https://github.com/authpass/biometric_storage/
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
-  flutter: ">=2.8.0"
+  flutter: ">=3.4.0"
 
 dependencies:
   flutter:
