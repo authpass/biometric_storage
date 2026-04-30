@@ -15,7 +15,6 @@ dependencies:
     path: ../biometric_storage_platform_interface
   ffi: '>=1.0.0 <3.0.0'
   logging: '>=1.0.0 <2.0.0'
-  win32: '>=2.0.0 <7.0.0'
 
 dev_dependencies:
   flutter_test:

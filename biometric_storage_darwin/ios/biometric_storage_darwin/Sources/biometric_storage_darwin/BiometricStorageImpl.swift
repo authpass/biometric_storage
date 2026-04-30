@@ -232,7 +232,7 @@ class BiometricStorageFile {
     
 	private func accessControl(_ result: @escaping StorageCallback) -> SecAccessControl? {
 		let accessControlFlags: SecAccessControlCreateFlags
-        
+		
 		if initOptions.darwinBiometricOnly {
 			if #available(iOS 11.3, *) {
 				accessControlFlags =  .biometryCurrentSet
@@ -242,7 +242,7 @@ class BiometricStorageFile {
 		} else {
 			accessControlFlags = .userPresence
 		}
-        
+		
 		var error: Unmanaged<CFError>?
 		guard let access = SecAccessControlCreateWithFlags(
 			nil,
@@ -253,7 +253,7 @@ class BiometricStorageFile {
 			result(storageError("writing data", "error writing data", "\(String(describing: error))"));
 			return nil
 		}
-        
+		
 		return access
 	}
     
@@ -261,7 +261,7 @@ class BiometricStorageFile {
 		if(forceBiometricAuthentication){
 			_context = nil
 		}
-        
+		
 		guard var query = baseQuery(result) else {
 			return;
 		}
@@ -270,9 +270,9 @@ class BiometricStorageFile {
 		query[kSecReturnAttributes as String] = true
 		query[kSecReturnData as String] = true
 		query[kSecUseAuthenticationContext as String] = context
-        
+		
 		var item: CFTypeRef?
-        
+		
 		let status = SecItemCopyMatching(query as CFDictionary, &item)
 		guard status != errSecItemNotFound else {
 			result(nil)
@@ -313,11 +313,11 @@ class BiometricStorageFile {
 		if(forceBiometricAuthentication){
 			_context = nil
 		}
-        
+		
 		guard var query = baseQuery(result) else {
 			return;
 		}
-        
+		
 		if (initOptions.authenticationRequired) {
 			query.merge([
 				kSecUseAuthenticationContext as String: context,
@@ -354,10 +354,12 @@ class BiometricStorageFile {
 		switch status {
 		case errSecUserCanceled:
 			code = "AuthError:UserCanceled"
+		case errSecAuthFailed:
+			code = "AuthError:BiometricsChanged"
 		default:
 			code = "SecurityError"
 		}
         
-		result(storageError(code, "Error while \(message): \(status): \(errorMessage ?? \"Unknown\")", nil))
+		result(storageError(code, "Error while \(message): \(status): \(errorMessage ?? "Unknown")", nil))
 	}
 }

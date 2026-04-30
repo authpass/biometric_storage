@@ -1,15 +1,13 @@
-import FlutterMacOS
-import Cocoa
+import Flutter
 
-public class BiometricStorageMacOSPlugin: NSObject, FlutterPlugin {
-  
+public class BiometricStoragePlugin: NSObject, FlutterPlugin {
   private let impl = BiometricStorageImpl(storageError: { (code, message, details) -> Any in
     FlutterError(code: code, message: message, details: details)
   }, storageMethodNotImplemented: FlutterMethodNotImplemented)
-  
+
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(name: "biometric_storage", binaryMessenger: registrar.messenger)
-    let instance = BiometricStorageMacOSPlugin()
+    let channel = FlutterMethodChannel(name: "biometric_storage", binaryMessenger: registrar.messenger())
+    let instance = BiometricStoragePlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
   

@@ -7,6 +7,7 @@ import android.security.keystore.KeyProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.io.IOException
+import java.security.ProviderException
 import javax.crypto.Cipher
 import kotlin.time.Duration
 
@@ -33,15 +34,35 @@ class BiometricStorageFile(
     private val masterKeyName = "${baseName}_master_key"
     private val fileNameV2 = "$baseName$FILE_SUFFIX_V2"
     private val fileV2: File
+    private val strongBoxSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+        options.androidUseStrongBox &&
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
+    private var useStrongBoxBackedKeystore = strongBoxSupported
 
-    private val cryptographyManager = CryptographyManager {
+    private var cryptographyManager = createCryptographyManager()
+
+    init {
+        val baseDir = File(context.filesDir, DIRECTORY_NAME)
+        if (!baseDir.exists()) {
+            baseDir.mkdirs()
+        }
+        fileV2 = File(baseDir, fileNameV2)
+
+        logger.trace { "Initialized $this with $options" }
+
+        validateOptions()
+    }
+
+    private fun validateOptions() {
+        if (options.androidAuthenticationValidityDuration == null && !options.androidBiometricOnly) {
+            throw IllegalArgumentException("when androidAuthenticationValidityDuration is null, androidBiometricOnly must be true")
+        }
+    }
+
+    private fun createCryptographyManager() = CryptographyManager {
         setUserAuthenticationRequired(options.authenticationRequired)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val useStrongBox = options.androidUseStrongBox &&
-                context.packageManager.hasSystemFeature(
-                    PackageManager.FEATURE_STRONGBOX_KEYSTORE
-                )
-            setIsStrongBoxBacked(useStrongBox)
+            setIsStrongBoxBacked(useStrongBoxBackedKeystore)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (options.androidAuthenticationValidityDuration == null) {
@@ -63,28 +84,26 @@ class BiometricStorageFile(
         }
     }
 
-    init {
-        val baseDir = File(context.filesDir, DIRECTORY_NAME)
-        if (!baseDir.exists()) {
-            baseDir.mkdirs()
-        }
-        fileV2 = File(baseDir, fileNameV2)
+    private inline fun <T> retryWithoutStrongBoxIfNeeded(operation: () -> T): T =
+        retryWithoutStrongBoxIfNeeded(
+            useStrongBoxBackedKeystore = useStrongBoxBackedKeystore,
+            deleteKey = { cryptographyManager.deleteKey(masterKeyName) },
+            disableStrongBox = {
+                useStrongBoxBackedKeystore = false
+                cryptographyManager = createCryptographyManager()
+            },
+            operation = operation,
+        )
 
-        logger.trace { "Initialized $this with $options" }
-
-        validateOptions()
+    fun cipherForEncrypt() = retryWithoutStrongBoxIfNeeded {
+        cryptographyManager.getInitializedCipherForEncryption(masterKeyName)
     }
 
-    private fun validateOptions() {
-        if (options.androidAuthenticationValidityDuration == null && !options.androidBiometricOnly) {
-            throw IllegalArgumentException("when androidAuthenticationValidityDuration is null, androidBiometricOnly must be true")
-        }
-    }
-
-    fun cipherForEncrypt() = cryptographyManager.getInitializedCipherForEncryption(masterKeyName)
     fun cipherForDecrypt(): Cipher? {
         if (fileV2.exists()) {
-            return cryptographyManager.getInitializedCipherForDecryption(masterKeyName, fileV2)
+            return retryWithoutStrongBoxIfNeeded {
+                cryptographyManager.getInitializedCipherForDecryption(masterKeyName, fileV2)
+            }
         }
         logger.debug { "No file exists, no IV found. null cipher." }
         return null
@@ -136,5 +155,26 @@ class BiometricStorageFile(
 
     fun dispose() {
         logger.trace { "dispose" }
+    }
+}
+
+internal inline fun <T> retryWithoutStrongBoxIfNeeded(
+    useStrongBoxBackedKeystore: Boolean,
+    deleteKey: () -> Unit,
+    disableStrongBox: () -> Unit,
+    operation: () -> T,
+): T {
+    try {
+        return operation()
+    } catch (error: ProviderException) {
+        if (!useStrongBoxBackedKeystore) {
+            throw error
+        }
+        logger.warn(error) {
+            "StrongBox-backed key generation failed. Retrying without StrongBox support."
+        }
+        deleteKey()
+        disableStrongBox()
+        return operation()
     }
 }

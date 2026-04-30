@@ -9,10 +9,9 @@ Darwin implementation for biometric_storage.
   s.license          = { :file => '../../LICENSE' }
   s.author           = { 'AuthPass' => 'support@authpass.app' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
-  s.public_header_files = 'Classes/**/*.h'
+  s.source_files = 'biometric_storage_darwin/Sources/biometric_storage_darwin/**/*.swift'
   s.dependency 'Flutter'
-  s.platform = :ios, '9.0'
+  s.platform = :ios, '13.0'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'VALID_ARCHS[sdk=iphonesimulator*]' => 'x86_64' }
   s.swift_version = '5.0'
 end

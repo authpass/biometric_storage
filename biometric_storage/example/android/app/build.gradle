@@ -27,12 +27,12 @@ kotlin {
 }
 
 android {
-    compileSdk 35
-    ndkVersion "21.1.6352462"
+    compileSdk 36
+    ndkVersion "28.2.13676358"
 
     compileOptions {
-        sourceCompatibility = 17
-        targetCompatibility = 17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     sourceSets {
@@ -43,7 +43,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "design.codeux.biometric_storage_example"
-        minSdkVersion 23
+        minSdkVersion flutter.minSdkVersion
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

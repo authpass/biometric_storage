@@ -2,6 +2,10 @@
 
 * Add flag `forceBiometricAuthentication` for `BiometricStorage.read` and `BiometricStorage.write` to enforce a biometric prompt in any case on iOS and Android.
 
+* Android: target Java 11 bytecode again for the plugin library so apps are not forced onto a Java 17-only configuration.
+
+* Android: retry key generation without StrongBox when devices falsely advertise StrongBox support but fail during Android Keystore key creation.
+
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
 
 ## 5.1.0
@@ -14,7 +18,7 @@
 
 ## 5.1.0-rc.4
 
-* enable building on jdk 17 and up https://github.com/authpass/biometric_storage/issues/117 thanks @connyduck
+* enable building on jdk 17 and up <https://github.com/authpass/biometric_storage/issues/117> thanks @connyduck
 
 ## 5.1.0-rc.3
 
@@ -27,7 +31,7 @@
 ## 5.0.1
 
 * Add option for iOS/MacOS to allow non-biometric authentication (`darwinBiometricOnly`) #101
-  * Improve [canAuthenticate] to differentiate between no available biometry and no available 
+  * Improve [canAuthenticate] to differentiate between no available biometry and no available
     user code.
 * Bump dart sdk requirement to `3.2`.
 
@@ -47,8 +51,8 @@
 ## 5.0.0
 
 * Allow overriding of `promptInfo` during `read`/`write` thanks @luckyrat
-* Android: (POTENTIALLY BREAKING): Completely removed deprecated old file backend 
-  based on `androidx.security`. This was deprecated since version 3.0.0 and users 
+* Android: (POTENTIALLY BREAKING): Completely removed deprecated old file backend
+  based on `androidx.security`. This was deprecated since version 3.0.0 and users
   should have been migrated on every read or write. (this is only internally, does not change
   anything of the API).
 * Update dependencies.
@@ -61,7 +65,7 @@
 ## 4.1.2
 
 * Android: Move File I/O and encryption to background thread. (Previously used UI Thread)
-     https://github.com/authpass/biometric_storage/pull/64   
+     <https://github.com/authpass/biometric_storage/pull/64>
 
 ## 4.1.1
 
@@ -73,7 +77,7 @@
 
 ## 4.0.1
 
-* Update to Moshi 1.13 for Kotlin 1.6.0 compatibility. #53 
+* Update to Moshi 1.13 for Kotlin 1.6.0 compatibility. #53
 
 ## 4.0.0
 
@@ -86,7 +90,7 @@
 * Android: if `authenticationValidityDurationSeconds` is `> 0` only show authentication prompt when
   necessary. (It will simply try to use the key, and show the auth prompt only when a
   `UserNotAuthenticatedException` is thrown).
-* Android: When biometric key is invalidated (e.g. because biometric security is changed on the 
+* Android: When biometric key is invalidated (e.g. because biometric security is changed on the
   device), we simply delete the old key and data! (KeyPermanentlyInvalidatedException)
 
 ## 3.0.0
@@ -99,7 +103,7 @@
 * Android: Fix a few bugs with `authenticationValidityDurationSeconds` == -1
 * iOS/MacOS: Don't set timeout for `authenticationValidityDurationSeconds` == -1
 * iOS/MacOS: Don't raise an error on `delete` if item was not found.
-* Android: Fix user cancel code. 
+* Android: Fix user cancel code.
   (Previously an `unknown` exception was thrown instead of `userCanceled`)
 * Android: Ignore `androidBiometricOnly` prior to Android R (30).
 * Introduce `AuthExceptionCode.canceled`
@@ -195,12 +199,12 @@
 ## 0.3.4+6
 
 * Android: androidx.security 1.0.0-rc02 needs another proguard rule.
-  https://github.com/google/tink/issues/361
+  <https://github.com/google/tink/issues/361>
 
 ## 0.3.4+5
 
 * Android: Upgrade to androidx.security 1.0.0-rc02 which should fix protobuf incompatibilities
-  #6 https://developer.android.com/jetpack/androidx/releases/security#security-crypto-1.0.0-rc02
+  #6 <https://developer.android.com/jetpack/androidx/releases/security#security-crypto-1.0.0-rc02>
 
 ## 0.3.4+4
 
@@ -223,7 +227,7 @@
 ## 0.3.3
 
 * ios: added swift 5 dependency to podspec to fix compile errors
-       https://github.com/authpass/biometric_storage/issues/3
+       <https://github.com/authpass/biometric_storage/issues/3>
 
 ## 0.3.2
 
@@ -244,7 +248,7 @@
 
 ## 0.2.2+1
 
-* fixed home page link, updated example README. 
+* fixed home page link, updated example README.
 
 ## 0.2.2
 
@@ -264,7 +268,7 @@
 ## 0.1.0
 
 * iOS Support
-* Support for non-authenticated storage (ie. secure/encrypted storage, 
+* Support for non-authenticated storage (ie. secure/encrypted storage,
   without extra biometric authenticatiton prompts)
 * delete()'ing files.
 

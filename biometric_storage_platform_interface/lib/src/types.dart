@@ -39,6 +39,11 @@ enum AuthExceptionCode {
   /// (like when biometric sensor becamse unavailable like when
   /// user switches between apps, logsout, etc).
   canceled,
+
+  /// The protected key material is no longer accessible because the enrolled
+  /// biometric set changed or biometric access was revoked.
+  biometricsChanged,
+
   unknown,
   timeout,
   linuxAppArmorDenied,
@@ -47,6 +52,7 @@ enum AuthExceptionCode {
 const authErrorCodeMapping = <String, AuthExceptionCode>{
   'AuthError:UserCanceled': AuthExceptionCode.userCanceled,
   'AuthError:Canceled': AuthExceptionCode.canceled,
+  'AuthError:BiometricsChanged': AuthExceptionCode.biometricsChanged,
   'AuthError:Timeout': AuthExceptionCode.timeout,
 };
 

@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:biometric_storage/biometric_storage.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -15,10 +16,12 @@ void main() {
     test('serializes configured durations and flags', () {
       final options = StorageFileInitOptions(
         androidAuthenticationValidityDuration: const Duration(seconds: 11),
-        darwinTouchIDAuthenticationAllowableReuseDuration:
-            const Duration(seconds: 22),
-        darwinTouchIDAuthenticationForceReuseContextDuration:
-            const Duration(seconds: 33),
+        darwinTouchIDAuthenticationAllowableReuseDuration: const Duration(
+          seconds: 22,
+        ),
+        darwinTouchIDAuthenticationForceReuseContextDuration: const Duration(
+          seconds: 33,
+        ),
         authenticationRequired: false,
         androidUseStrongBox: false,
         androidBiometricOnly: false,
@@ -96,8 +99,10 @@ void main() {
 
     expect(platform.readCalls.single.name, 'secret-name');
     expect(platform.readCalls.single.forceBiometricAuthentication, isFalse);
-    expect(platform.readCalls.single.promptInfo.macOsPromptInfo.saveTitle,
-        'Save title');
+    expect(
+      platform.readCalls.single.promptInfo.macOsPromptInfo.saveTitle,
+      'Save title',
+    );
 
     expect(platform.writeCalls.single.name, 'secret-name');
     expect(platform.writeCalls.single.content, 'next value');
@@ -129,12 +134,18 @@ void main() {
     await storage.write('content', promptInfo: overridePromptInfo);
     await storage.delete(promptInfo: overridePromptInfo);
 
-    expect(platform.readCalls.single.promptInfo.macOsPromptInfo.saveTitle,
-        'Override save');
-    expect(platform.writeCalls.single.promptInfo.macOsPromptInfo.saveTitle,
-        'Override save');
-    expect(platform.deleteCalls.single.promptInfo.macOsPromptInfo.saveTitle,
-        'Override save');
+    expect(
+      platform.readCalls.single.promptInfo.macOsPromptInfo.saveTitle,
+      'Override save',
+    );
+    expect(
+      platform.writeCalls.single.promptInfo.macOsPromptInfo.saveTitle,
+      'Override save',
+    );
+    expect(
+      platform.deleteCalls.single.promptInfo.macOsPromptInfo.saveTitle,
+      'Override save',
+    );
   });
 
   test('deleteAndDispose forwards delete then dispose', () async {
@@ -145,6 +156,79 @@ void main() {
     expect(platform.deleteCalls.single.name, 'dispose-secret');
     expect(platform.disposeCalls.single.name, 'dispose-secret');
   });
+
+  test('maps changed biometrics auth errors to AuthException', () async {
+    final errorPlatform = ErrorTransformingBiometricStoragePlatform();
+
+    await expectLater(
+      errorPlatform.transformErrors(
+        Future<String?>.error(
+          PlatformException(
+            code: 'AuthError:BiometricsChanged',
+            message: 'Biometric set changed',
+          ),
+        ),
+      ),
+      throwsA(
+        isA<AuthException>()
+            .having(
+              (exception) => exception.code,
+              'code',
+              AuthExceptionCode.biometricsChanged,
+            )
+            .having(
+              (exception) => exception.message,
+              'message',
+              'Biometric set changed',
+            ),
+      ),
+    );
+  });
+}
+
+class ErrorTransformingBiometricStoragePlatform
+    extends MethodChannelBiometricStoragePlatform {
+  @override
+  Map<String, dynamic> buildPromptInfoArguments(PromptInfo promptInfo) =>
+      <String, dynamic>{};
+
+  @override
+  Future<CanAuthenticateResponse> canAuthenticate({
+    StorageFileInitOptions? options,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<bool?> delete(String name, PromptInfo promptInfo) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> dispose(String name, PromptInfo promptInfo) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool?> init(
+    String name, {
+    StorageFileInitOptions? options,
+    bool forceInit = false,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<bool> linuxCheckAppArmorError() => throw UnimplementedError();
+
+  @override
+  Future<String?> read(
+    String name,
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> write(
+    String name,
+    String content,
+    PromptInfo promptInfo, {
+    bool forceBiometricAuthentication = false,
+  }) => throw UnimplementedError();
 }
 
 class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
@@ -162,8 +246,7 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   @override
   Future<CanAuthenticateResponse> canAuthenticate({
     StorageFileInitOptions? options,
-  }) async =>
-      canAuthenticateResponse;
+  }) async => canAuthenticateResponse;
 
   @override
   Future<bool?> init(
@@ -190,10 +273,7 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   }
 
   @override
-  Future<bool?> delete(
-    String name,
-    PromptInfo promptInfo,
-  ) async {
+  Future<bool?> delete(String name, PromptInfo promptInfo) async {
     deleteCalls.add(DeleteCall(name, promptInfo));
     return true;
   }
@@ -211,10 +291,7 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   }
 
   @override
-  Future<void> dispose(
-    String name,
-    PromptInfo promptInfo,
-  ) async {
+  Future<void> dispose(String name, PromptInfo promptInfo) async {
     disposeCalls.add(DisposeCall(name, promptInfo));
   }
 }
