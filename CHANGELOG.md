@@ -12,6 +12,8 @@
 
 * Android: move keystore cipher initialization and non-prompt storage work off the UI thread to reduce ANR risk during biometric operations.
 
+* Web: remove the `flutter_secure_storage` dependency and intentionally fail closed for secret storage on web, documenting that web should use a different authentication/session design for high-value secrets.
+
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
 
 ## 5.1.0

@@ -67,6 +67,40 @@ void main() {
     expect(await BiometricStorage().linuxCheckAppArmorError(), isTrue);
   });
 
+  test('exposes support helpers for login fallback flows', () async {
+    platform.canAuthenticateResponse = CanAuthenticateResponse.success;
+
+    expect(await BiometricStorage().isSupported(), isTrue);
+    expect(await BiometricStorage().canAuthenticateWithBiometrics(), isTrue);
+
+    platform.canAuthenticateResponse =
+        CanAuthenticateResponse.errorNoBiometricEnrolled;
+
+    expect(await BiometricStorage().isSupported(), isTrue);
+    expect(await BiometricStorage().canAuthenticateWithBiometrics(), isFalse);
+    expect(
+      platform.canAuthenticateResponse.shouldFallbackToRegularLogin,
+      isTrue,
+    );
+
+    platform.canAuthenticateResponse = CanAuthenticateResponse.unsupported;
+
+    expect(await BiometricStorage().isSupported(), isFalse);
+    expect(await BiometricStorage().canAuthenticateWithBiometrics(), isFalse);
+  });
+
+  test(
+    'returns null instead of throwing when storage is unsupported',
+    () async {
+      platform.canAuthenticateResponse = CanAuthenticateResponse.unsupported;
+
+      final storage = await BiometricStorage().getStorageIfSupported('secret');
+
+      expect(storage, isNull);
+      expect(platform.initCalls, isEmpty);
+    },
+  );
+
   test('initializes storage and forwards read write delete calls', () async {
     const promptInfo = PromptInfo(
       macOsPromptInfo: IosPromptInfo(
@@ -238,6 +272,7 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   CanAuthenticateResponse canAuthenticateResponse =
       CanAuthenticateResponse.unsupported;
   bool linuxCheckAppArmorErrorResponse = false;
+  bool? isSupportedResponse;
   bool existsResponse = true;
   String? readResponse;
 
@@ -252,6 +287,10 @@ class RecordingBiometricStoragePlatform extends BiometricStoragePlatform {
   Future<CanAuthenticateResponse> canAuthenticate({
     StorageFileInitOptions? options,
   }) async => canAuthenticateResponse;
+
+  @override
+  Future<bool> isSupported({StorageFileInitOptions? options}) async =>
+      isSupportedResponse ?? (await super.isSupported(options: options));
 
   @override
   Future<bool?> init(

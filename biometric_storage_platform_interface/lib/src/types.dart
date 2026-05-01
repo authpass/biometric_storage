@@ -21,6 +21,20 @@ enum CanAuthenticateResponse {
   unsupported,
 }
 
+extension CanAuthenticateResponseX on CanAuthenticateResponse {
+  /// Whether this platform can use the package surface without throwing for
+  /// lack of platform support.
+  bool get isStorageSupported => this != CanAuthenticateResponse.unsupported;
+
+  /// Whether biometric authentication can be attempted right now.
+  bool get canAuthenticateWithBiometrics =>
+      this == CanAuthenticateResponse.success ||
+      this == CanAuthenticateResponse.statusUnknown;
+
+  /// Whether the caller should fall back to regular login for now.
+  bool get shouldFallbackToRegularLogin => !canAuthenticateWithBiometrics;
+}
+
 const canAuthenticateMapping = <String, CanAuthenticateResponse>{
   'Success': CanAuthenticateResponse.success,
   'ErrorHwUnavailable': CanAuthenticateResponse.errorHwUnavailable,

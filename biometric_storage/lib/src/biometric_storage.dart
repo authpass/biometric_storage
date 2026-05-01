@@ -9,8 +9,15 @@ class BiometricStorage {
 
   Future<CanAuthenticateResponse> canAuthenticate({
     StorageFileInitOptions? options,
-  }) =>
-      BiometricStoragePlatform.instance.canAuthenticate(options: options);
+  }) => BiometricStoragePlatform.instance.canAuthenticate(options: options);
+
+  Future<bool> isSupported({StorageFileInitOptions? options}) =>
+      BiometricStoragePlatform.instance.isSupported(options: options);
+
+  Future<bool> canAuthenticateWithBiometrics({
+    StorageFileInitOptions? options,
+  }) async =>
+      (await canAuthenticate(options: options)).canAuthenticateWithBiometrics;
 
   Future<bool> linuxCheckAppArmorError() =>
       BiometricStoragePlatform.instance.linuxCheckAppArmorError();
@@ -28,6 +35,24 @@ class BiometricStorage {
     );
     return BiometricStorageFile(name, promptInfo);
   }
+
+  Future<BiometricStorageFile?> getStorageIfSupported(
+    String name, {
+    StorageFileInitOptions? options,
+    bool forceInit = false,
+    PromptInfo promptInfo = PromptInfo.defaultValues,
+  }) async {
+    if (!await isSupported(options: options)) {
+      return null;
+    }
+
+    return getStorage(
+      name,
+      options: options,
+      forceInit: forceInit,
+      promptInfo: promptInfo,
+    );
+  }
 }
 
 class BiometricStorageFile {
@@ -39,24 +64,22 @@ class BiometricStorageFile {
   Future<String?> read({
     PromptInfo? promptInfo,
     bool forceBiometricAuthentication = false,
-  }) =>
-      BiometricStoragePlatform.instance.read(
-        name,
-        promptInfo ?? defaultPromptInfo,
-        forceBiometricAuthentication: forceBiometricAuthentication,
-      );
+  }) => BiometricStoragePlatform.instance.read(
+    name,
+    promptInfo ?? defaultPromptInfo,
+    forceBiometricAuthentication: forceBiometricAuthentication,
+  );
 
   Future<void> write(
     String content, {
     PromptInfo? promptInfo,
     bool forceBiometricAuthentication = false,
-  }) =>
-      BiometricStoragePlatform.instance.write(
-        name,
-        content,
-        promptInfo ?? defaultPromptInfo,
-        forceBiometricAuthentication: forceBiometricAuthentication,
-      );
+  }) => BiometricStoragePlatform.instance.write(
+    name,
+    content,
+    promptInfo ?? defaultPromptInfo,
+    forceBiometricAuthentication: forceBiometricAuthentication,
+  );
 
   Future<void> delete({PromptInfo? promptInfo}) async {
     await BiometricStoragePlatform.instance.delete(
@@ -65,11 +88,9 @@ class BiometricStorageFile {
     );
   }
 
-  Future<bool> exists({PromptInfo? promptInfo}) =>
-      BiometricStoragePlatform.instance.exists(
-        name,
-        promptInfo ?? defaultPromptInfo,
-      );
+  Future<bool> exists({PromptInfo? promptInfo}) => BiometricStoragePlatform
+      .instance
+      .exists(name, promptInfo ?? defaultPromptInfo);
 
   Future<void> deleteAndDispose({PromptInfo? promptInfo}) async {
     final resolvedPromptInfo = promptInfo ?? defaultPromptInfo;

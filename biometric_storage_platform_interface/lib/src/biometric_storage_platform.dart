@@ -21,6 +21,11 @@ abstract class BiometricStoragePlatform extends PlatformInterface {
     StorageFileInitOptions? options,
   });
 
+  Future<bool> isSupported({
+    StorageFileInitOptions? options,
+  }) async =>
+      (await canAuthenticate(options: options)).isStorageSupported;
+
   Future<bool> linuxCheckAppArmorError();
 
   Future<bool?> init(
@@ -70,6 +75,12 @@ class UnsupportedBiometricStoragePlatform extends BiometricStoragePlatform {
     String name, {
     StorageFileInitOptions? options,
     bool forceInit = false,
+  }) async =>
+      false;
+
+  @override
+  Future<bool> isSupported({
+    StorageFileInitOptions? options,
   }) async =>
       false;
 
