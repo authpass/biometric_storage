@@ -1,5 +1,6 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import 'passkey_types.dart';
 import 'types.dart';
 
 abstract class BiometricStoragePlatform extends PlatformInterface {
@@ -20,6 +21,31 @@ abstract class BiometricStoragePlatform extends PlatformInterface {
   Future<CanAuthenticateResponse> canAuthenticate({
     StorageFileInitOptions? options,
   });
+
+  Future<PasskeyAvailability> getPasskeyAvailability() async =>
+      const PasskeyAvailability.unsupported();
+
+  Future<bool> isPasskeySupported() async =>
+      (await getPasskeyAvailability()).isSupported;
+
+  Future<bool> isPasskeyAvailable() async =>
+      (await getPasskeyAvailability()).isAvailable;
+
+  Future<PublicKeyCredentialAttestationJson> registerPasskey(
+    PublicKeyCredentialCreationOptionsJson options,
+  ) async {
+    throw UnsupportedError(
+      'No biometric_storage passkey implementation registered.',
+    );
+  }
+
+  Future<PublicKeyCredentialAssertionJson> authenticateWithPasskey(
+    PublicKeyCredentialRequestOptionsJson options,
+  ) async {
+    throw UnsupportedError(
+      'No biometric_storage passkey implementation registered.',
+    );
+  }
 
   Future<bool> isSupported({
     StorageFileInitOptions? options,
@@ -69,6 +95,10 @@ class UnsupportedBiometricStoragePlatform extends BiometricStoragePlatform {
     StorageFileInitOptions? options,
   }) async =>
       CanAuthenticateResponse.unsupported;
+
+  @override
+  Future<PasskeyAvailability> getPasskeyAvailability() async =>
+      const PasskeyAvailability.unsupported();
 
   @override
   Future<bool?> init(

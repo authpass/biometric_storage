@@ -2,6 +2,13 @@
 
 Federated Flutter plugin repository for `biometric_storage`.
 
+The app-facing package now includes:
+
+- biometric-gated secure storage APIs
+- standards-based WebAuthn / passkey DTOs for server challenge-response loops
+- combinable secure-access capability reporting for biometric storage,
+  passkey authentication, and passkey PRF-backed storage
+
 ## Layout
 
 - `biometric_storage/` — app-facing package, including the example app

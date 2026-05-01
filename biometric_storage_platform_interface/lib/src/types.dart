@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'passkey_types.dart';
+
 /// Reason for not supporting authentication.
 /// **As long as this is NOT [unsupported] you can still use the secure
 /// storage without biometric storage** (By setting
@@ -203,4 +205,96 @@ CanAuthenticateResponse mapCanAuthenticateResponse(String? response) {
     throw StateError('Invalid response from native platform. {$response}');
   }
   return ret;
+}
+
+enum SecureAccessCapability {
+  biometricStorage(1 << 0),
+  passkeyAuthentication(1 << 1),
+  passkeyPrfStorage(1 << 2);
+
+  const SecureAccessCapability(this.bit);
+
+  final int bit;
+}
+
+class SecureAccessCapabilitySet {
+  const SecureAccessCapabilitySet(this.mask);
+
+  const SecureAccessCapabilitySet.none() : mask = 0;
+
+  factory SecureAccessCapabilitySet.fromValues(
+    Iterable<SecureAccessCapability> capabilities,
+  ) {
+    var resolvedMask = 0;
+    for (final capability in capabilities) {
+      resolvedMask |= capability.bit;
+    }
+    return SecureAccessCapabilitySet(resolvedMask);
+  }
+
+  final int mask;
+
+  bool contains(SecureAccessCapability capability) =>
+      (mask & capability.bit) == capability.bit;
+
+  Set<SecureAccessCapability> toSet() =>
+      SecureAccessCapability.values.where(contains).toSet();
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'mask': mask,
+        'values': toSet().map((capability) => capability.name).toList(),
+      };
+}
+
+class BiometricStorageCapabilities {
+  const BiometricStorageCapabilities({
+    required this.passkeys,
+    required this.biometricStorage,
+  });
+
+  final PasskeyAvailability passkeys;
+  final CanAuthenticateResponse biometricStorage;
+
+  SecureAccessCapabilitySet get supportedCapabilities =>
+      SecureAccessCapabilitySet.fromValues(_supportedCapabilities());
+
+  SecureAccessCapabilitySet get availableCapabilities =>
+      SecureAccessCapabilitySet.fromValues(_availableCapabilities());
+
+  bool isCapabilitySupported(SecureAccessCapability capability) =>
+      supportedCapabilities.contains(capability);
+
+  bool isCapabilityAvailable(SecureAccessCapability capability) =>
+      availableCapabilities.contains(capability);
+
+  bool get isBiometricStorageSupported => biometricStorage.isStorageSupported;
+
+  bool get isBiometricStorageAvailable =>
+      biometricStorage.canAuthenticateWithBiometrics;
+
+  bool get prefersPasskeys => passkeys.isAvailable;
+
+  Iterable<SecureAccessCapability> _supportedCapabilities() sync* {
+    if (biometricStorage.isStorageSupported) {
+      yield SecureAccessCapability.biometricStorage;
+    }
+    if (passkeys.isSupported) {
+      yield SecureAccessCapability.passkeyAuthentication;
+    }
+    if (passkeys.supportsPrfStorage) {
+      yield SecureAccessCapability.passkeyPrfStorage;
+    }
+  }
+
+  Iterable<SecureAccessCapability> _availableCapabilities() sync* {
+    if (biometricStorage.canAuthenticateWithBiometrics) {
+      yield SecureAccessCapability.biometricStorage;
+    }
+    if (passkeys.isAvailable) {
+      yield SecureAccessCapability.passkeyAuthentication;
+    }
+    if (passkeys.isPrfStorageAvailable) {
+      yield SecureAccessCapability.passkeyPrfStorage;
+    }
+  }
 }

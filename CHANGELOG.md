@@ -1,5 +1,17 @@
 ## 5.1.1-dev.2
 
+* Add standards-based WebAuthn / passkey DTOs and app-facing passkey APIs for
+  registration and authentication flows that round-trip cleanly with relying
+  party servers such as ASP.NET Core and Next.js-based implementations.
+
+* Add combinable secure-access capability reporting for `biometricStorage`,
+  `passkeyAuthentication`, and `passkeyPrfStorage`, while preserving the
+  existing biometric-focused compatibility helpers.
+
+* Web: add standards-based passkey authentication support, keep PRF-gated
+  secure storage for high-value local secret unlock, and report passkey
+  authentication separately from PRF-backed storage support.
+
 * Add flag `forceBiometricAuthentication` for `BiometricStorage.read` and `BiometricStorage.write` to enforce a biometric prompt in any case on iOS and Android.
 
 * Android: target Java 11 bytecode again for the plugin library so apps are not forced onto a Java 17-only configuration.
@@ -12,7 +24,7 @@
 
 * Android: move keystore cipher initialization and non-prompt storage work off the UI thread to reduce ANR risk during biometric operations.
 
-* Web: remove the `flutter_secure_storage` dependency and intentionally fail closed for secret storage on web, documenting that web should use a different authentication/session design for high-value secrets.
+* Web: remove the `flutter_secure_storage` dependency and fail closed for secret storage unless the browser can prove PRF-backed WebAuthn support.
 
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
 

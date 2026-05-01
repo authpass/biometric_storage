@@ -2,8 +2,9 @@
 
 [![Pub](https://img.shields.io/pub/v/biometric_storage?color=green)](https://pub.dev/packages/biometric_storage/)
 
-Encrypted file store, **optionally** secured by biometric lock
-for Android, iOS, MacOS and partial support for Linux and Windows.
+Encrypted file store, **optionally** secured by biometric lock,
+plus standards-based WebAuthn / passkey APIs for challenge-response
+authentication flows.
 
 Meant as a way to store small data in a hardware encrypted fashion. E.g. to
 store passwords, secret keys, etc. but not massive amounts
@@ -13,21 +14,80 @@ of data.
 - iOS and MacOS: LocalAuthentication with KeyChain.
 - Linux: Stores values in Keyring using libsecret. (No biometric authentication support).
 - Windows: Uses [wincreds.h to store into read/write into credential store](https://docs.microsoft.com/en-us/windows/win32/api/wincred/).
-- Web: Uses WebAuthn PRF when the browser can prove support for both PRF and a user-verifying platform authenticator at runtime. Unsupported browsers cleanly report `unsupported` instead of falling back to weaker storage.
+- Web: Uses WebAuthn for passkey authentication and WebAuthn PRF for local
+  secret storage only when the browser can prove PRF support at runtime.
+  Unsupported PRF browsers cleanly report storage support as unavailable
+  instead of falling back to weaker storage.
 
 ## Web support and security
 
-This package is intended to unlock secrets on-device using platform security primitives such as Android Keystore and Apple Keychain, optionally gated by biometrics.
+This package is intended to unlock secrets on-device using platform security
+primitives such as Android Keystore and Apple Keychain, optionally gated by
+biometrics.
+
+The app-facing API now has two related surfaces:
+
+- biometric / secure-storage APIs for local secret protection
+- standards-based WebAuthn / passkey DTO APIs for server-driven
+  registration/authentication flows
 
 On the web, the federated implementation is intentionally stricter than a plain `localStorage` wrapper:
 
+- passkey authentication only requires a secure context plus browser WebAuthn
+  support
 - it requires a secure context (`https:` or equivalent localhost secure context)
-- it requires WebAuthn support
-- it requires runtime-advertised support for the PRF extension
-- it requires a user-verifying platform authenticator (Touch ID, Face ID, Android device unlock, etc.)
-- it stores only encrypted ciphertext plus WebAuthn credential metadata in browser storage
+- secure local secret storage additionally requires runtime-advertised support
+  for the PRF extension
+- both flows require a user-verifying platform authenticator (Touch ID, Face ID, Android device unlock, etc.)
+- PRF-backed storage stores only encrypted ciphertext plus WebAuthn credential metadata in browser storage
 
-If the browser cannot honestly prove those capabilities — for example, many Windows/browser combinations today still do not expose PRF — `isSupported()` returns `false` and `canAuthenticate()` returns `unsupported`.
+If the browser cannot honestly prove PRF support — for example, many
+Windows/browser combinations today still do not expose it —
+`isSupported()` returns `false` and `canAuthenticate()` returns
+`unsupported` for the storage surface even though passkey authentication may
+still be available.
+
+## Passkeys and secure-access capabilities
+
+Use `BiometricStorage().getCapabilities()` or the newer capability helpers when
+you need to distinguish:
+
+- biometric-backed local secret storage
+- passkey authentication support
+- passkey PRF-backed local secret storage
+
+```dart
+final biometricStorage = BiometricStorage();
+final capabilities = await biometricStorage.getCapabilities();
+
+if (capabilities.isCapabilityAvailable(
+  SecureAccessCapability.passkeyAuthentication,
+)) {
+  // Offer passkey login.
+}
+
+if (capabilities.isCapabilityAvailable(
+  SecureAccessCapability.passkeyPrfStorage,
+)) {
+  // Offer passkey-backed local secret unlock.
+} else if (capabilities.isCapabilityAvailable(
+  SecureAccessCapability.biometricStorage,
+)) {
+  // Fall back to biometric local secret unlock.
+}
+```
+
+For passkey challenge-response flows, pass the standard server options straight
+through the package and post the results back to your server:
+
+```dart
+final registration = await biometricStorage.registerPasskey(serverOptions);
+final assertion = await biometricStorage.authenticateWithPasskey(requestOptions);
+```
+
+The DTOs are standards-based and designed to round-trip cleanly with server
+platforms such as ASP.NET Core or Next.js ecosystems without bespoke field
+mapping.
 
 ### What this means in practice
 
@@ -44,7 +104,10 @@ For web applications, prefer:
 - passkeys / WebAuthn for authentication
 - keeping the most sensitive bearer secrets off the browser when possible
 
-If you need a browser login flow, this package can participate when PRF is available. When it is not, the intended fallback remains your regular web login/session design.
+If you need a browser login flow, this package can participate through the
+passkey APIs when WebAuthn is available. For local secret storage or unlock,
+PRF support is still required. When PRF is not available, the intended fallback
+remains your regular web login/session design or a non-PRF secure access path.
 
 Check out [AuthPass Password Manager](https://authpass.app/) for a app which
 makes heavy use of this plugin.
