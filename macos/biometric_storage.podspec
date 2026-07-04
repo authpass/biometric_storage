@@ -13,7 +13,9 @@ A new flutter plugin project.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'email@example.com' }
   s.source           = { :path => '.' }
-  s.source_files     = 'Classes/**/*'
+  # Sources live under the SwiftPM layout (Sources/<name>/) so SPM and CocoaPods
+  # share one source tree; see macos/biometric_storage/Package.swift.
+  s.source_files     = 'biometric_storage/Sources/biometric_storage/**/*.swift'
   s.dependency 'FlutterMacOS'
 
   s.platform = :osx, '10.11'
