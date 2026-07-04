@@ -13,8 +13,11 @@ A new flutter plugin project.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'email@example.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*' #, '../macos/Classes/BiometricStorageImpl.swift'
-  s.public_header_files = 'Classes/**/*.h'
+  # Sources live under the SwiftPM layout (Sources/<name>/) so SPM and CocoaPods
+  # share one source tree; see ios/biometric_storage/Package.swift. The plugin is
+  # now pure Swift (the ObjC registration shim was folded into the Swift class),
+  # so there are no public ObjC headers to expose.
+  s.source_files = 'biometric_storage/Sources/biometric_storage/**/*.swift'
   s.dependency 'Flutter'
   s.platform = :ios, '9.0'
 
