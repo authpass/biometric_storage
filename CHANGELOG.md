@@ -1,4 +1,4 @@
-## 5.1.2-dev.1
+## 5.2.0-dev.1
 
 * iOS/macOS: `StorageFileInitOptions.darwinKeychainAccessGroup` to store items
   in a shared keychain access group (`kSecAttrAccessGroup`), so an app
