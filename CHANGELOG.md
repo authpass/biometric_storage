@@ -1,3 +1,10 @@
+## 5.1.2-dev.1
+
+* iOS/macOS: `StorageFileInitOptions.darwinKeychainAccessGroup` to store items
+  in a shared keychain access group (`kSecAttrAccessGroup`), so an app
+  extension can read them. Note that the access group is part of an item's
+  identity — existing items are not migrated automatically.
+
 ## 5.1.1-dev.2
 
 * Improve `canAuthenticate` to include `InitOptions` to decide for which authenticaiton type to check.
