@@ -26,4 +26,23 @@ void main() {
     final result = await BiometricStorage().canAuthenticate();
     expect(result, CanAuthenticateResponse.unsupported);
   });
+
+  group('StorageFileInitOptions', () {
+    test('omits the keychain access group by default', () {
+      expect(
+        StorageFileInitOptions().toJson()['darwinKeychainAccessGroup'],
+        isNull,
+      );
+    });
+
+    test('passes the keychain access group to the platform', () {
+      final options = StorageFileInitOptions(
+        darwinKeychainAccessGroup: 'ABCDE12345.com.example.app',
+      );
+      expect(
+        options.toJson()['darwinKeychainAccessGroup'],
+        'ABCDE12345.com.example.app',
+      );
+    });
+  });
 }

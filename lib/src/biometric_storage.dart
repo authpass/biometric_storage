@@ -93,6 +93,7 @@ class StorageFileInitOptions {
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
     this.darwinBiometricOnly = true,
+    this.darwinKeychainAccessGroup,
   })  : androidAuthenticationValidityDuration =
             androidAuthenticationValidityDuration ??
                 (authenticationValidityDurationSeconds <= 0
@@ -145,6 +146,22 @@ class StorageFileInitOptions {
   /// https://developer.apple.com/documentation/security/secaccesscontrolcreateflags/1392879-userpresence
   final bool darwinBiometricOnly;
 
+  /// Only for iOS and macOS: the keychain access group to store the item in,
+  /// so an app extension of the same app can read it
+  /// (`kSecAttrAccessGroup`).
+  ///
+  /// Must be one of the `keychain-access-groups` entitlements of *both* the
+  /// app and the extension, and is prefixed by the team id, so the usual value
+  /// looks like `ABCDE12345.com.example.app`. On macOS the app also has to be
+  /// signed for the entitlement to take effect.
+  ///
+  /// The access group is part of an item's identity: an item written without
+  /// one cannot be read back with one, and vice versa. Changing this for an
+  /// existing file makes its contents unreadable rather than raising an error,
+  /// so treat a value here as a new, separate item — see
+  /// https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps
+  final String? darwinKeychainAccessGroup;
+
   Map<String, dynamic> toJson() => <String, dynamic>{
         'androidAuthenticationValidityDurationSeconds':
             androidAuthenticationValidityDuration?.inSeconds,
@@ -155,6 +172,7 @@ class StorageFileInitOptions {
         'authenticationRequired': authenticationRequired,
         'androidBiometricOnly': androidBiometricOnly,
         'darwinBiometricOnly': darwinBiometricOnly,
+        'darwinKeychainAccessGroup': darwinKeychainAccessGroup,
       };
 }
 

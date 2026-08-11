@@ -18,11 +18,15 @@ class InitOptions {
     darwinTouchIDAuthenticationForceReuseContextDuration = params["darwinTouchIDAuthenticationForceReuseContextDurationSeconds"] as? Int
     authenticationRequired = params["authenticationRequired"] as? Bool
     darwinBiometricOnly = params["darwinBiometricOnly"] as? Bool
+    darwinKeychainAccessGroup = params["darwinKeychainAccessGroup"] as? String
   }
   let darwinTouchIDAuthenticationAllowableReuseDuration: Int?
   let darwinTouchIDAuthenticationForceReuseContextDuration: Int?
   let authenticationRequired: Bool!
   let darwinBiometricOnly: Bool!
+  /// kSecAttrAccessGroup, so an app extension of the same app can read the
+  /// item. Part of the item's identity — see the dart side for the caveats.
+  let darwinKeychainAccessGroup: String?
 }
 
 class IOSPromptInfo {
@@ -207,6 +211,12 @@ class BiometricStorageFile {
       kSecAttrService as String: "flutter_biometric_storage",
       kSecAttrAccount as String: name,
     ] as [String : Any]
+    if let accessGroup = initOptions.darwinKeychainAccessGroup {
+      // Has to be on every query, not just the write: the access group is part
+      // of an item's identity, so a read without it will not find an item
+      // written with it.
+      query[kSecAttrAccessGroup as String] = accessGroup
+    }
     if initOptions.authenticationRequired {
       guard let access = accessControl(result) else {
         return nil
