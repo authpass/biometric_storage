@@ -59,4 +59,9 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   ) async {
     web.window.localStorage.setItem(name, content);
   }
+
+  @override
+  Future<void> dispose(String name, PromptInfo promptInfo) async {
+    // Nothing to dispose for web implementation
+  }
 }
