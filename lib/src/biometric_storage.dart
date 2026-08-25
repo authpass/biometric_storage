@@ -88,22 +88,23 @@ class StorageFileInitOptions {
     Duration? darwinTouchIDAuthenticationAllowableReuseDuration,
     this.darwinTouchIDAuthenticationForceReuseContextDuration,
     @Deprecated(
-        'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
+      'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead',
+    )
     int authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
     this.darwinBiometricOnly = true,
     this.darwinKeychainAccessGroup,
-  })  : androidAuthenticationValidityDuration =
-            androidAuthenticationValidityDuration ??
-                (authenticationValidityDurationSeconds <= 0
-                    ? null
-                    : Duration(seconds: authenticationValidityDurationSeconds)),
-        darwinTouchIDAuthenticationAllowableReuseDuration =
-            darwinTouchIDAuthenticationAllowableReuseDuration ??
-                (authenticationValidityDurationSeconds <= 0
-                    ? null
-                    : Duration(seconds: authenticationValidityDurationSeconds));
+  }) : androidAuthenticationValidityDuration =
+           androidAuthenticationValidityDuration ??
+           (authenticationValidityDurationSeconds <= 0
+               ? null
+               : Duration(seconds: authenticationValidityDurationSeconds)),
+       darwinTouchIDAuthenticationAllowableReuseDuration =
+           darwinTouchIDAuthenticationAllowableReuseDuration ??
+           (authenticationValidityDurationSeconds <= 0
+               ? null
+               : Duration(seconds: authenticationValidityDurationSeconds));
 
   /// see https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUserAuthenticationParameters(int,%20int)
   final Duration? androidAuthenticationValidityDuration;
@@ -163,17 +164,17 @@ class StorageFileInitOptions {
   final String? darwinKeychainAccessGroup;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'androidAuthenticationValidityDurationSeconds':
-            androidAuthenticationValidityDuration?.inSeconds,
-        'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
-            darwinTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
-        'darwinTouchIDAuthenticationForceReuseContextDurationSeconds':
-            darwinTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
-        'authenticationRequired': authenticationRequired,
-        'androidBiometricOnly': androidBiometricOnly,
-        'darwinBiometricOnly': darwinBiometricOnly,
-        'darwinKeychainAccessGroup': darwinKeychainAccessGroup,
-      };
+    'androidAuthenticationValidityDurationSeconds':
+        androidAuthenticationValidityDuration?.inSeconds,
+    'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
+        darwinTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
+    'darwinTouchIDAuthenticationForceReuseContextDurationSeconds':
+        darwinTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
+    'authenticationRequired': authenticationRequired,
+    'androidBiometricOnly': androidBiometricOnly,
+    'darwinBiometricOnly': darwinBiometricOnly,
+    'darwinKeychainAccessGroup': darwinKeychainAccessGroup,
+  };
 }
 
 /// Android specific configuration of the prompt displayed for biometry.
@@ -195,12 +196,12 @@ class AndroidPromptInfo {
   static const defaultValues = AndroidPromptInfo();
 
   Map<String, dynamic> _toJson() => <String, dynamic>{
-        'title': title,
-        'subtitle': subtitle,
-        'description': description,
-        'negativeButton': negativeButton,
-        'confirmationRequired': confirmationRequired,
-      };
+    'title': title,
+    'subtitle': subtitle,
+    'description': description,
+    'negativeButton': negativeButton,
+    'confirmationRequired': confirmationRequired,
+  };
 }
 
 /// iOS **and MacOS** specific configuration of the prompt displayed for biometry.
@@ -216,9 +217,9 @@ class IosPromptInfo {
   static const defaultValues = IosPromptInfo();
 
   Map<String, dynamic> _toJson() => <String, dynamic>{
-        'saveTitle': saveTitle,
-        'accessTitle': accessTitle,
-      };
+    'saveTitle': saveTitle,
+    'accessTitle': accessTitle,
+  };
 }
 
 /// Wrapper for platform specific prompt infos.
@@ -291,23 +292,13 @@ abstract class BiometricStorage extends PlatformInterface {
   });
 
   @protected
-  Future<String?> read(
-    String name,
-    PromptInfo promptInfo,
-  );
+  Future<String?> read(String name, PromptInfo promptInfo);
 
   @protected
-  Future<bool?> delete(
-    String name,
-    PromptInfo promptInfo,
-  );
+  Future<bool?> delete(String name, PromptInfo promptInfo);
 
   @protected
-  Future<void> write(
-    String name,
-    String content,
-    PromptInfo promptInfo,
-  );
+  Future<void> write(String name, String content, PromptInfo promptInfo);
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
@@ -326,12 +317,9 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         Platform.isIOS ||
         Platform.isMacOS ||
         Platform.isLinux) {
-      final response = await _channel.invokeMethod<String>(
-        'canAuthenticate',
-        {
-          'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
-        },
-      );
+      final response = await _channel.invokeMethod<String>('canAuthenticate', {
+        'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
+      });
       final ret = _canAuthenticateMapping[response];
       if (ret == null) {
         throw StateError('Invalid response from native platform. {$response}');
@@ -359,8 +347,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
     if (!Platform.isLinux) {
       return false;
     }
-    final tmpStorage = await getStorage('appArmorCheck',
-        options: StorageFileInitOptions(authenticationRequired: false));
+    final tmpStorage = await getStorage(
+      'appArmorCheck',
+      options: StorageFileInitOptions(authenticationRequired: false),
+    );
     _logger.finer('Checking app armor');
     try {
       await tmpStorage.read();
@@ -371,7 +361,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         return true;
       }
       _logger.warning(
-          'Unknown error while checking for app armor.', e, stackTrace);
+        'Unknown error while checking for app armor.',
+        e,
+        stackTrace,
+      );
       // some other weird error?
       rethrow;
     }
@@ -390,74 +383,64 @@ class MethodChannelBiometricStorage extends BiometricStorage {
     PromptInfo promptInfo = PromptInfo.defaultValues,
   }) async {
     try {
-      final result = await _channel.invokeMethod<bool>(
-        'init',
-        {
-          'name': name,
-          'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
-          'forceInit': forceInit,
-        },
-      );
+      final result = await _channel.invokeMethod<bool>('init', {
+        'name': name,
+        'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
+        'forceInit': forceInit,
+      });
       _logger.finest('getting storage. was created: $result');
-      return BiometricStorageFile(
-        this,
-        name,
-        promptInfo,
-      );
+      return BiometricStorageFile(this, name, promptInfo);
     } catch (e, stackTrace) {
       _logger.warning(
-          'Error while initializing biometric storage.', e, stackTrace);
+        'Error while initializing biometric storage.',
+        e,
+        stackTrace,
+      );
       rethrow;
     }
   }
 
   @override
-  Future<String?> read(
-    String name,
-    PromptInfo promptInfo,
-  ) =>
-      _transformErrors(_channel.invokeMethod<String>('read', <String, dynamic>{
-        'name': name,
-        ..._promptInfoForCurrentPlatform(promptInfo),
-      }));
+  Future<String?> read(String name, PromptInfo promptInfo) => _transformErrors(
+    _channel.invokeMethod<String>('read', <String, dynamic>{
+      'name': name,
+      ..._promptInfoForCurrentPlatform(promptInfo),
+    }),
+  );
 
   @override
-  Future<bool?> delete(
-    String name,
-    PromptInfo promptInfo,
-  ) =>
-      _transformErrors(_channel.invokeMethod<bool>('delete', <String, dynamic>{
-        'name': name,
-        ..._promptInfoForCurrentPlatform(promptInfo),
-      }));
+  Future<bool?> delete(String name, PromptInfo promptInfo) => _transformErrors(
+    _channel.invokeMethod<bool>('delete', <String, dynamic>{
+      'name': name,
+      ..._promptInfoForCurrentPlatform(promptInfo),
+    }),
+  );
 
   @override
-  Future<void> write(
-    String name,
-    String content,
-    PromptInfo promptInfo,
-  ) =>
-      _transformErrors(_channel.invokeMethod('write', <String, dynamic>{
-        'name': name,
-        'content': content,
-        ..._promptInfoForCurrentPlatform(promptInfo),
-      }));
+  Future<void> write(String name, String content, PromptInfo promptInfo) =>
+      _transformErrors(
+        _channel.invokeMethod('write', <String, dynamic>{
+          'name': name,
+          'content': content,
+          ..._promptInfoForCurrentPlatform(promptInfo),
+        }),
+      );
 
   Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) {
     // Don't expose Android configurations to other platforms
     if (Platform.isAndroid) {
       return <String, dynamic>{
-        'androidPromptInfo': promptInfo.androidPromptInfo._toJson()
+        'androidPromptInfo': promptInfo.androidPromptInfo._toJson(),
       };
     } else if (Platform.isIOS) {
       return <String, dynamic>{
-        'iosPromptInfo': promptInfo.iosPromptInfo._toJson()
+        'iosPromptInfo': promptInfo.iosPromptInfo._toJson(),
       };
     } else if (Platform.isMacOS) {
       return <String, dynamic>{
         // This is no typo, we use the same implementation on iOS and MacOS,
         // so we use the same parameter.
-        'iosPromptInfo': promptInfo.macOsPromptInfo._toJson()
+        'iosPromptInfo': promptInfo.macOsPromptInfo._toJson(),
       };
     } else if (Platform.isLinux) {
       return <String, dynamic>{};
@@ -472,9 +455,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       future.catchError((Object error, StackTrace stackTrace) {
         if (error is PlatformException) {
           _logger.finest(
-              'Error during plugin operation (details: ${error.details})',
-              error,
-              stackTrace);
+            'Error during plugin operation (details: ${error.details})',
+            error,
+            stackTrace,
+          );
           if (error.code.startsWith('AuthError:')) {
             return Future<T>.error(
               AuthException(
@@ -490,9 +474,12 @@ class MethodChannelBiometricStorage extends BiometricStorage {
                 message.contains('AppArmor')) {
               _logger.fine('Got app armor error.');
               return Future<T>.error(
-                  AuthException(
-                      AuthExceptionCode.linuxAppArmorDenied, error.message!),
-                  stackTrace);
+                AuthException(
+                  AuthExceptionCode.linuxAppArmorDenied,
+                  error.message!,
+                ),
+                stackTrace,
+              );
             }
           }
         }

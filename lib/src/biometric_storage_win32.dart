@@ -40,10 +40,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   Future<bool> linuxCheckAppArmorError() async => false;
 
   @override
-  Future<bool> delete(
-    String name,
-    PromptInfo promptInfo,
-  ) async {
+  Future<bool> delete(String name, PromptInfo promptInfo) async {
     final namePointer = TEXT(name);
     try {
       final result = CredDelete(namePointer, CRED_TYPE.CRED_TYPE_GENERIC, 0);
@@ -63,10 +60,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<String?> read(
-    String name,
-    PromptInfo promptInfo,
-  ) async {
+  Future<String?> read(String name, PromptInfo promptInfo) async {
     _logger.finer('read($name)');
     final credPointer = calloc<Pointer<CREDENTIAL>>();
     final namePointer = TEXT(name);
@@ -77,8 +71,10 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         if (errorCode == WIN32_ERROR.ERROR_NOT_FOUND) {
           _logger.fine('Unable to find credential of name $name');
         } else {
-          _logger.warning('Error: $errorCode ',
-              WindowsException(HRESULT_FROM_WIN32(errorCode)));
+          _logger.warning(
+            'Error: $errorCode ',
+            WindowsException(HRESULT_FROM_WIN32(errorCode)),
+          );
         }
         return null;
       }
@@ -99,11 +95,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
   }
 
   @override
-  Future<void> write(
-    String name,
-    String content,
-    PromptInfo promptInfo,
-  ) async {
+  Future<void> write(String name, String content, PromptInfo promptInfo) async {
     _logger.fine('write()');
     final examplePassword = utf8.encode(content);
     final blob = examplePassword.allocatePointer();
@@ -122,7 +114,8 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       if (result != TRUE) {
         final errorCode = GetLastError();
         throw BiometricStorageException(
-            'Error writing credential $name ($result): $errorCode');
+          'Error writing credential $name ($result): $errorCode',
+        );
       }
     } finally {
       _logger.fine('free');

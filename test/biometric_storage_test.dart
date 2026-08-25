@@ -10,11 +10,11 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      if (methodCall.method == 'canAuthenticate') {
-        return 'ErrorUnknown';
-      }
-      throw PlatformException(code: 'NotImplemented');
-    });
+          if (methodCall.method == 'canAuthenticate') {
+            return 'ErrorUnknown';
+          }
+          throw PlatformException(code: 'NotImplemented');
+        });
   });
 
   tearDown(() {

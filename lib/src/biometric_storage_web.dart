@@ -17,8 +17,7 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   @override
   Future<CanAuthenticateResponse> canAuthenticate({
     StorageFileInitOptions? options,
-  }) async =>
-      CanAuthenticateResponse.errorHwUnavailable;
+  }) async => CanAuthenticateResponse.errorHwUnavailable;
 
   @override
   Future<BiometricStorageFile> getStorage(
@@ -31,10 +30,7 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   }
 
   @override
-  Future<bool> delete(
-    String name,
-    PromptInfo promptInfo,
-  ) async {
+  Future<bool> delete(String name, PromptInfo promptInfo) async {
     final oldValue = web.window.localStorage.getItem(name);
     web.window.localStorage.removeItem(name);
     return oldValue != null;
@@ -44,19 +40,12 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   Future<bool> linuxCheckAppArmorError() async => false;
 
   @override
-  Future<String?> read(
-    String name,
-    PromptInfo promptInfo,
-  ) async {
+  Future<String?> read(String name, PromptInfo promptInfo) async {
     return web.window.localStorage.getItem(name);
   }
 
   @override
-  Future<void> write(
-    String name,
-    String content,
-    PromptInfo promptInfo,
-  ) async {
+  Future<void> write(String name, String content, PromptInfo promptInfo) async {
     web.window.localStorage.setItem(name, content);
   }
 }
