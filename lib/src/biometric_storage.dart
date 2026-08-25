@@ -205,6 +205,17 @@ class AndroidPromptInfo {
 }
 
 /// iOS **and MacOS** specific configuration of the prompt displayed for biometry.
+///
+/// **These strings are not shown on a Face ID device.** They are passed to the
+/// system as `LAContext.localizedReason`, and Face ID authenticates against a
+/// HUD that has no room for a reason: the panel shows the Face ID glyph and the
+/// words "Face ID", and the "not recognized" alert that follows a failure offers
+/// only retry and cancel. Verified on an iPhone Xr running iOS 18.7.9, against
+/// both `localizedReason` and the deprecated `kSecUseOperationPrompt` set at the
+/// same time — neither was rendered.
+///
+/// They are still worth setting: Touch ID devices draw the reason in the
+/// authentication alert, and macOS shows it too.
 class IosPromptInfo {
   const IosPromptInfo({
     this.saveTitle = 'Unlock to save data',

@@ -91,6 +91,13 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
 **Known Issue**: since iOS 15 the simulator seem to no longer support local authentication:
     https://developer.apple.com/forums/thread/685773
 
+**`IosPromptInfo.saveTitle` / `accessTitle` are invisible on Face ID devices.**
+Face ID authenticates against a HUD that shows its glyph and the words "Face ID"
+and nothing else, and the "not recognized" alert after a failure offers only
+retry and cancel. The strings do reach the system — they are set as
+`LAContext.localizedReason` — but iOS does not draw them. Touch ID devices and
+macOS do show them, so they are still worth setting.
+
 #### Mac OS
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
