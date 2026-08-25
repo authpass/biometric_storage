@@ -11,7 +11,8 @@
 * windows: writing an empty value no longer throws.
 * windows: fix a use-after-free in `read()`. `CredentialBlob.asTypedList()` is a
   view onto memory owned by the credential, and it was decoded *after* `CredFree`
-  had released it. The bytes are now copied out first. Present in every 5.x.
+  had released it. The bytes are now copied out first. Present since 1.1.0,
+  where a9e3944 moved the `CredFree` call in between the two.
 * windows: the bindings now have runtime coverage, not just compile coverage —
   `test/biometric_storage_win32_test.dart` exercises write/read/delete against
   the real credential store, and runs on the Windows CI job.

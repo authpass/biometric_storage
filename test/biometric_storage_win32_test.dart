@@ -57,6 +57,15 @@ void main() {
     expect(await file.read(), 'second');
   });
 
+  test('the credential name keeps its historical prefix', () async {
+    // Every other test here writes and reads through the same prefix, so all of
+    // them would stay green if it changed — while every existing user's stored
+    // value was orphaned. This pins the on-disk contract. `getStorage` only
+    // builds the name; it does not touch the credential store.
+    final file = await plugin.getStorage('example');
+    expect(file.name, 'design.codeux.authpass.example');
+  });
+
   test('reading an unknown name returns null rather than throwing', () async {
     final file = await plugin.getStorage(
       'test_absent_${DateTime.now().microsecondsSinceEpoch}',
