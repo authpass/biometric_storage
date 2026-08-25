@@ -1,3 +1,15 @@
+## 6.0.0-dev.1
+
+**Breaking**: requires Dart 3.10 / Flutter 3.44 or newer.
+
+* Support `package:win32` 6.x, and drop 5.x and older. Every 5.x release of this
+  plugin pinned `win32 >=2.0.0 <6.0.0`, which made it unresolvable alongside
+  `package_info_plus >=10.1.0` and anything else on win32 6. The Windows
+  implementation is compiled on every `dart.library.io` platform, so win32 6
+  removing `TEXT()` also broke iOS and macOS builds — the test suite now imports
+  the public barrel so `flutter test` compiles the win32 bindings on any host.
+* windows: writing an empty value no longer throws.
+
 ## 5.2.0-dev.1
 
 * iOS/macOS: `StorageFileInitOptions.darwinKeychainAccessGroup` to store items

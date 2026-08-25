@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
@@ -14,7 +15,9 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   static const namePrefix = 'design.codeux.authpass.';
 
-  /// Registers this class as the default instance of [PathProviderPlatform]
+  static const _userName = 'flutter.biometric_storage';
+
+  /// Registers this class as the default instance of [BiometricStorage].
   static void registerWith() {
     BiometricStorage.instance = Win32BiometricStoragePlugin();
   }
@@ -41,89 +44,85 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   @override
   Future<bool> delete(String name, PromptInfo promptInfo) async {
-    final namePointer = TEXT(name);
-    try {
-      final result = CredDelete(namePointer, CRED_TYPE.CRED_TYPE_GENERIC, 0);
-      if (result != TRUE) {
-        final errorCode = GetLastError();
-        if (errorCode == WIN32_ERROR.ERROR_NOT_FOUND) {
-          _logger.fine('Unable to find credential of name $name');
-        } else {
-          _logger.warning('Error ($result): $errorCode');
-        }
+    return using((arena) {
+      final result = CredDelete(
+        name.toPcwstr(allocator: arena),
+        CRED_TYPE_GENERIC,
+      );
+      if (!result.value) {
+        _logFailure('deleting', name, result.error);
         return false;
       }
-    } finally {
-      calloc.free(namePointer);
-    }
-    return true;
+      return true;
+    });
   }
 
   @override
   Future<String?> read(String name, PromptInfo promptInfo) async {
     _logger.finer('read($name)');
-    final credPointer = calloc<Pointer<CREDENTIAL>>();
-    final namePointer = TEXT(name);
-    try {
-      if (CredRead(namePointer, CRED_TYPE.CRED_TYPE_GENERIC, 0, credPointer) !=
-          TRUE) {
-        final errorCode = GetLastError();
-        if (errorCode == WIN32_ERROR.ERROR_NOT_FOUND) {
-          _logger.fine('Unable to find credential of name $name');
-        } else {
-          _logger.warning(
-            'Error: $errorCode ',
-            WindowsException(HRESULT_FROM_WIN32(errorCode)),
-          );
-        }
+    return using((arena) {
+      final credentialPointer = arena<Pointer<CREDENTIAL>>();
+      final result = CredRead(
+        name.toPcwstr(allocator: arena),
+        CRED_TYPE_GENERIC,
+        credentialPointer,
+      );
+      if (!result.value) {
+        _logFailure('reading', name, result.error);
         return null;
       }
-      final cred = credPointer.value.ref;
-      final blob = cred.CredentialBlob.asTypedList(cred.CredentialBlobSize);
-
-      _logger.fine('CredFree()');
-      CredFree(credPointer.value);
-
-      return utf8.decode(blob);
-    } finally {
-      _logger.fine('free(credPointer)');
-      calloc.free(credPointer);
-      _logger.fine('free(namePointer)');
-      calloc.free(namePointer);
-      _logger.fine('read($name) done.');
-    }
+      final credential = credentialPointer.value;
+      try {
+        // asTypedList is a view onto memory owned by the credential, so the
+        // bytes have to be copied out before CredFree invalidates them.
+        final blob = Uint8List.fromList(
+          credential.ref.CredentialBlob.asTypedList(
+            credential.ref.CredentialBlobSize,
+          ),
+        );
+        return utf8.decode(blob);
+      } finally {
+        CredFree(credential);
+      }
+    });
   }
 
   @override
   Future<void> write(String name, String content, PromptInfo promptInfo) async {
-    _logger.fine('write()');
-    final examplePassword = utf8.encode(content);
-    final blob = examplePassword.allocatePointer();
-    final namePointer = TEXT(name);
-    final userNamePointer = TEXT('flutter.biometric_storage');
+    _logger.finer('write($name)');
+    using((arena) {
+      final blob = utf8.encode(content);
+      // toNative rejects an empty list, but an empty value is a legitimate
+      // thing to store: a zero-length blob needs a valid pointer all the same.
+      final blobPointer = blob.isEmpty
+          ? arena<Uint8>()
+          : blob.toNative(allocator: arena);
+      final credential = arena<CREDENTIAL>()
+        ..ref.Type = CRED_TYPE_GENERIC
+        ..ref.TargetName = name.toPwstr(allocator: arena)
+        ..ref.Persist = CRED_PERSIST_LOCAL_MACHINE
+        ..ref.UserName = _userName.toPwstr(allocator: arena)
+        ..ref.CredentialBlob = blobPointer
+        ..ref.CredentialBlobSize = blob.length;
 
-    final credential = calloc<CREDENTIAL>()
-      ..ref.Type = CRED_TYPE.CRED_TYPE_GENERIC
-      ..ref.TargetName = namePointer
-      ..ref.Persist = CRED_PERSIST.CRED_PERSIST_LOCAL_MACHINE
-      ..ref.UserName = userNamePointer
-      ..ref.CredentialBlob = blob
-      ..ref.CredentialBlobSize = examplePassword.length;
-    try {
       final result = CredWrite(credential, 0);
-      if (result != TRUE) {
-        final errorCode = GetLastError();
+      if (!result.value) {
         throw BiometricStorageException(
-          'Error writing credential $name ($result): $errorCode',
+          'Error writing credential $name: ${result.error} '
+          '(${WindowsException(HRESULT_FROM_WIN32(result.error))})',
         );
       }
-    } finally {
-      _logger.fine('free');
-      calloc.free(blob);
-      calloc.free(credential);
-      calloc.free(namePointer);
-      calloc.free(userNamePointer);
-      _logger.fine('free done');
+    });
+  }
+
+  void _logFailure(String action, String name, WIN32_ERROR error) {
+    if (error == ERROR_NOT_FOUND) {
+      _logger.fine('Unable to find credential of name $name');
+    } else {
+      _logger.warning(
+        'Error $action credential $name: $error',
+        WindowsException(HRESULT_FROM_WIN32(error)),
+      );
     }
   }
 }
