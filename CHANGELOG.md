@@ -22,6 +22,14 @@
   success at every step. Both are fixed, and the store's content is deliberately
   left alone on every platform.
 
+  A disposed `BiometricStorageFile` now refuses `read`, `write` and `delete`
+  with a `StateError` — not `dispose` itself, which stays idempotent. The
+  backends do not agree on their own: Android and iOS/macOS resolve those calls
+  against a registry and fail once the entry is gone, while Linux, Windows and
+  web answer from the name alone and would carry on working. The guard sits in
+  Dart so the answer is the same everywhere, rather than being a mistake you
+  make on one platform and discover on another.
+
 * **Breaking for platform implementations only.** `dispose` is a new member on
   the `BiometricStorage` platform interface, so a third-party implementation
   that extends it must add one. No change for callers of the package.
