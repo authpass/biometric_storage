@@ -42,9 +42,9 @@ the following applies to it:
 * **The activity theme must descend from `Theme.AppCompat`** — but only for
   devices where `androidx.biometric` falls back to drawing its own fingerprint
   dialog, which it builds with `androidx.appcompat.app.AlertDialog`. That
-  fallback is used on **API 28 and below**, on API 28 devices without a
-  fingerprint sensor, and on a short manufacturer allow-list where a crypto
-  object forces it. On API 29+ the system `BiometricPrompt` is used and the theme
+  fallback is used **below API 28**, on API 28 devices without a fingerprint
+  sensor, and on a short manufacturer allow-list where a crypto object forces
+  it. From API 28 onwards the system `BiometricPrompt` is used and the theme
   does not matter.
 
   If you do need it:

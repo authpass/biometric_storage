@@ -130,7 +130,7 @@ README drifted for years: it presented `FlutterFragmentActivity` and a
 `Theme.AppCompat` theme as unconditional, when both only apply to storage that
 actually shows a prompt — `withAuth` returns immediately when
 `authenticationRequired` is false, and `androidx.biometric` only draws its own
-AppCompat dialog on API 28 and below.
+AppCompat dialog below API 28.
 
 **Write American English** — documentation, code comments, commit messages and
 identifiers alike. The audience is pub.dev.

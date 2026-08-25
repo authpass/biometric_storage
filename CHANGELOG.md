@@ -31,7 +31,7 @@
 * Document the Android `FlutterFragmentActivity` and `Theme.AppCompat`
   requirements as what they actually are: both only apply to storage that shows
   an authentication prompt, and the theme only where `androidx.biometric` falls
-  back to its own dialog (API 28 and below).
+  back to its own dialog, which is below API 28 rather than below API 29.
 
 ## 5.2.0-dev.1
 
