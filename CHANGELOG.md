@@ -1,3 +1,20 @@
+## 6.0.0-dev.3
+
+* linux: fix a memory leak on every method call.
+  `fl_method_success_response_new` takes its own reference to the `FlValue`
+  rather than adopting the caller's, so the inline
+  `fl_method_success_response_new(fl_value_new_*(…))` form leaked one value per
+  call. Present since the Linux implementation landed in 3.0.0. The worst of the six is
+  `read()`, which leaked a **plaintext-secret-bearing allocation on every
+  successful read** — so a long-running app both grew without bound and kept
+  copies of every secret it had read alive in the process.
+* **Breaking**: linux honours `forceInit`, closing the gap 6.0.0-dev.2 documented.
+  It throws `AlreadyInitialized`, which the Dart layer already translates to
+  `BiometricStorageException`, so the exception is the same one every other
+  platform raises. A repeat `getStorage()` without the flag now reports `false`
+  rather than `true` — libsecret keeps no handle, so the names handed out during
+  a run are tracked by the plugin instance and reset when it is disposed.
+
 ## 6.0.0-dev.2
 
 Six pre-existing bugs, all found while reviewing 6.0.0-dev.1 and none introduced
