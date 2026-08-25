@@ -1,3 +1,26 @@
+## 6.0.0-dev.4
+
+* `BiometricStorageException` carries a `code`. It previously held only a
+  message, so telling "you called `getStorage` twice" from "the credential store
+  failed" meant matching English text — and 6.0.0-dev.2 took the number of
+  places it is raised from one to six. `BiometricStorageExceptionCode` is
+  `alreadyInitialized`, `storageFailure` or `unknown`, and every site that
+  raises `BiometricStorageException` classifies itself, including the
+  `AlreadyInitialized` the method-channel platforms raise. Additive: the
+  positional constructor is unchanged and defaults to `unknown`, so existing
+  `catch` blocks keep working. Switch over it with a `default` — members may be
+  added in a minor release.
+
+  Note the boundary: `storageFailure` today reaches only Windows. A failing
+  keychain, keystore or libsecret still surfaces as a raw `PlatformException`
+  (`SecurityError`, `Unexpected Error` and `Security Access Error` among
+  others), because those are not translated. So a single cross-platform "the store failed" branch is
+  not yet writable; that is a later change.
+* `AuthExceptionCode` is documented as an open enum, matching the above. No
+  behaviour change — but it means the members that Android currently collapses
+  into `unknown`, lockout among them, can be split out in a minor release rather
+  than waiting for 7.0.
+
 ## 6.0.0-dev.3
 
 * linux: fix a memory leak on every method call.

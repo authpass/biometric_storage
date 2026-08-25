@@ -75,9 +75,37 @@ void main() {
     await plugin.getStorage(name);
     await plugin.getStorage(name);
 
+    // The code, not just the type: swapping the classification at this site for
+    // `storageFailure` would otherwise leave every test green.
     expect(
       () => plugin.getStorage(name, forceInit: true),
-      throwsA(isA<BiometricStorageException>()),
+      throwsA(
+        isA<BiometricStorageException>().having(
+          (e) => e.code,
+          'code',
+          BiometricStorageExceptionCode.alreadyInitialized,
+        ),
+      ),
+    );
+  });
+
+  test('a failing store is reported as storageFailure', () async {
+    // The only classification the suite could not otherwise reach: every other
+    // test exercises a store that works. A target name past
+    // CRED_MAX_GENERIC_TARGET_NAME_LENGTH (32767) is rejected by the credential
+    // store itself, so this reaches the failure path without mocking anything.
+    // Nothing is ever written, so there is nothing to clean up.
+    final file = await plugin.getStorage('x' * 40000);
+
+    await expectLater(
+      file.write('value'),
+      throwsA(
+        isA<BiometricStorageException>().having(
+          (e) => e.code,
+          'code',
+          BiometricStorageExceptionCode.storageFailure,
+        ),
+      ),
     );
   });
 

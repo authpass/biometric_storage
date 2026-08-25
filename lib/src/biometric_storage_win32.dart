@@ -46,6 +46,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     if (!_initialized.add(name) && forceInit) {
       throw BiometricStorageException(
         "A storage file with the name '$name' was already initialized.",
+        code: BiometricStorageExceptionCode.alreadyInitialized,
       );
     }
     return BiometricStorageFile(this, namePrefix + name, promptInfo);
@@ -68,6 +69,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         if (result.error != ERROR_NOT_FOUND) {
           throw BiometricStorageException(
             'Error deleting credential $name: ${result.error}',
+            code: BiometricStorageExceptionCode.storageFailure,
           );
         }
         return false;
@@ -94,6 +96,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         if (result.error != ERROR_NOT_FOUND) {
           throw BiometricStorageException(
             'Error reading credential $name: ${result.error}',
+            code: BiometricStorageExceptionCode.storageFailure,
           );
         }
         return null;
@@ -137,6 +140,7 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
         throw BiometricStorageException(
           'Error writing credential $name: ${result.error} '
           '(${WindowsException(HRESULT_FROM_WIN32(result.error))})',
+          code: BiometricStorageExceptionCode.storageFailure,
         );
       }
     });

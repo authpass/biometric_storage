@@ -33,6 +33,7 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     if (!_initialized.add(name) && forceInit) {
       throw BiometricStorageException(
         "A storage file with the name '$name' was already initialized.",
+        code: BiometricStorageExceptionCode.alreadyInitialized,
       );
     }
     return BiometricStorageFile(this, namePrefix + name, promptInfo);

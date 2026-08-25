@@ -44,6 +44,13 @@ const _canAuthenticateMapping = {
   'ErrorStatusUnknown': CanAuthenticateResponse.statusUnknown,
 };
 
+/// Why an [AuthException] was raised.
+///
+/// New members may be added in a minor release, so a `switch` over this should
+/// carry a `default` rather than being exhaustive. Several platform conditions
+/// still arrive as [unknown] — Android reports every `BiometricPrompt` error
+/// beyond cancel and timeout that way, lockout included — and narrowing them is
+/// only a minor-version change while this contract holds.
 enum AuthExceptionCode {
   /// User taps the cancel/negative button or presses `back`.
   userCanceled,
@@ -63,13 +70,42 @@ const _authErrorCodeMapping = {
   'AuthError:Timeout': AuthExceptionCode.timeout,
 };
 
+/// Why a [BiometricStorageException] was raised.
+///
+/// New members may be added in a minor release, so a `switch` over this should
+/// carry a `default` rather than being exhaustive.
+enum BiometricStorageExceptionCode {
+  /// [BiometricStorage.getStorage] was called for a name already opened in this
+  /// runtime, with `forceInit: true`. A caller's own mistake: pick a different
+  /// name, or drop the flag.
+  alreadyInitialized,
+
+  /// The platform's credential store refused the operation — as opposed to
+  /// simply not holding a value, which is reported as `null` from
+  /// [BiometricStorageFile.read] and `false` from a delete. Worth surfacing to
+  /// the user or retrying; not a programming error.
+  storageFailure,
+
+  /// Raised before this enum existed, or by a path that has not been
+  /// classified. Treat as [storageFailure] for handling purposes.
+  unknown,
+}
+
 class BiometricStorageException implements Exception {
-  BiometricStorageException(this.message);
+  BiometricStorageException(
+    this.message, {
+    this.code = BiometricStorageExceptionCode.unknown,
+  });
+
   final String message;
+
+  /// Defaults to [BiometricStorageExceptionCode.unknown] so that constructing
+  /// one positionally — as every caller did before 6.0.0-dev.4 — still works.
+  final BiometricStorageExceptionCode code;
 
   @override
   String toString() {
-    return 'BiometricStorageException{message: $message}';
+    return 'BiometricStorageException{code: $code, message: $message}';
   }
 }
 
@@ -416,7 +452,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         // Not a plain `throw`: that would restart the trace here and lose the
         // frames showing which call re-initialized the store.
         Error.throwWithStackTrace(
-          BiometricStorageException(e.message ?? e.code),
+          BiometricStorageException(
+            e.message ?? e.code,
+            code: BiometricStorageExceptionCode.alreadyInitialized,
+          ),
           stackTrace,
         );
       }
