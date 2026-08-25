@@ -13,8 +13,8 @@
 
   Note the boundary: `storageFailure` today reaches only Windows. A failing
   keychain, keystore or libsecret still surfaces as a raw `PlatformException`
-  (`SecurityError`, `Unexpected Error`, `Security Access Error`), because those
-  are not translated. So a single cross-platform "the store failed" branch is
+  (`SecurityError`, `Unexpected Error` and `Security Access Error` among
+  others), because those are not translated. So a single cross-platform "the store failed" branch is
   not yet writable; that is a later change.
 * `AuthExceptionCode` is documented as an open enum, matching the above. No
   behaviour change — but it means the members that Android currently collapses

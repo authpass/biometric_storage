@@ -105,9 +105,12 @@ void main() {
         // plain `throw` also originates in this package. The channel frames are
         // what only a preserved trace has; a restarted one begins at
         // getStorage.
+        // The file name rather than the private method: it has been stable far
+        // longer, and is equally discriminating — a restarted trace carries no
+        // platform-channel frames at all, since that await already completed.
         expect(
           stackTrace.toString(),
-          contains('MethodChannel._invokeMethod'),
+          contains('platform_channel.dart'),
           reason: 'the trace should still start at the failing channel call',
         );
       }
