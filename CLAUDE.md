@@ -12,27 +12,33 @@ else is a platform implementation behind it.
 ## The one thing that is not obvious
 
 **The Windows implementation is compiled on every platform that has
-`dart.library.io`** — iOS, macOS, Android and Linux included. Two separate
-mechanisms put it there, and removing either one does not help:
+`dart.library.io`** — iOS, macOS, Android and Linux included. Two things put it
+there, and they are not independent:
 
 1. `lib/biometric_storage.dart` re-exports `src/biometric_storage_win32.dart`
    under `if (dart.library.io)`.
 2. Flutter generates `.dart_tool/flutter_build/dart_plugin_registrant.dart` for
-   *all* platforms at once, not per build target. On an iOS release build it
-   still contains `import 'package:biometric_storage/biometric_storage.dart'`
-   and a `Platform.isWindows` branch calling
+   *all* platforms at once, not per build target. An iOS release build's copy
+   contains `import 'package:biometric_storage/biometric_storage.dart'` and a
+   `Platform.isWindows` branch calling
    `Win32BiometricStoragePlugin.registerWith()`.
 
 So a breaking change in `package:win32` breaks an **iOS** build. That is how
 5.x ended up unusable: `win32` 6 removed `TEXT()`, and the error surfaced as a
 failing `flutter test` on macOS.
 
-Splitting Windows into a federated `biometric_storage_windows` package does
-**not** fix this — the generated registrant would simply import that package
-instead, on every platform. The defence is a compile, not a split:
+Dropping the export in (1) is not an escape: the registrant needs
+`Win32BiometricStoragePlugin` to be *on* the barrel, so removing it breaks the
+compile everywhere instead. Naming the file with `dartFileName:` would make the
+registrant import `src/biometric_storage_win32.dart` directly — on every
+platform, so nothing is gained. Nor does splitting Windows out into a federated
+`biometric_storage_windows` package: the registrant would import that package
+instead, on every platform, exactly as before.
+
+The defence is therefore a compile, not a restructuring.
 `test/biometric_storage_test.dart` imports the public barrel rather than `src/`
-precisely so that `flutter test` on any host compiles the win32 bindings. Do
-not "tidy" that import.
+precisely so that `flutter test` on any host compiles the win32 bindings, and CI
+runs the suite on Windows too. Do not "tidy" that import.
 
 Related: the `windows:` block in `pubspec.yaml` has no `dartFileName`, so the
 registrant imports the barrel. `fileName:` is a **web-only** key — it sat under
