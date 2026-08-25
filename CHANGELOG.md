@@ -21,13 +21,29 @@ by it.
   recoverable `biometryLockout` was telling callers to give up entirely. Callers
   that treat `statusUnknown` as usable will now attempt authentication where
   they previously did not.
+* **Breaking**: iOS/macOS, a repeat `getStorage()` for a name that is already
+  open no longer rebuilds the store. It used to replace it outright, which threw
+  away the cached `LAContext` — so any
+  `darwinTouchIDAuthenticationForceReuseContextDuration` in progress — and
+  quietly adopted whatever options the second call passed. The first call now
+  wins, as on Android. If you relied on re-initializing to change options, close
+  the old store first; passing different options to a repeat call has never been
+  reported back to Dart and now definitively does nothing.
 * **Breaking**: `forceInit` now does what it documents on Windows, web, iOS and
   macOS. It was implemented on Android only; the others accepted the flag and
-  dropped it.
-* **Breaking**: windows `read()` throws `BiometricStorageException` when the
-  credential store fails, instead of returning `null`. `null` still means "no
-  value stored" — previously the two were indistinguishable, so a failure read
+  dropped it. It throws `BiometricStorageException` on every platform — the
+  `PlatformException(code: 'AlreadyInitialized')` that the method-channel
+  platforms raise is translated, so one catch clause covers all of them.
+  **Linux still ignores the flag**: its `init` keeps no per-store state at all,
+  so implementing it there is a separate change.
+* **Breaking**: windows `read()` and `delete()` throw `BiometricStorageException`
+  when the credential store fails, instead of returning `null` and `false`.
+  Those values still mean "no value stored" and "there was nothing to delete" —
+  previously they doubled as the answer for a failing store, so a failure read
   as data loss.
+* iOS/macOS: `canAuthenticate()` names `biometryLockout` explicitly rather than
+  letting it fall through the unmapped-code path, and the nil-error branch
+  reports `statusUnknown` too rather than `unsupported`.
 
 ## 6.0.0-dev.1
 

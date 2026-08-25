@@ -63,6 +63,13 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       );
       if (!result.value) {
         _logFailure('deleting', name, result.error);
+        // Same distinction read() makes: `false` means there was nothing to
+        // delete, so a store that is failing must not borrow that answer.
+        if (result.error != ERROR_NOT_FOUND) {
+          throw BiometricStorageException(
+            'Error deleting credential $name: ${result.error}',
+          );
+        }
         return false;
       }
       return true;

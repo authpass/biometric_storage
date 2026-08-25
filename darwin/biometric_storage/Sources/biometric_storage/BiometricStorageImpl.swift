@@ -159,7 +159,9 @@ class BiometricStorageImpl {
       return
     }
     guard let err = error else {
-      result("ErrorUnknown")
+      // Same reasoning as the default arm below: "cannot tell" is not
+      // "this plugin does not work on this platform".
+      result("ErrorStatusUnknown")
       return
     }
     let laError = LAError(_nsError: err)
@@ -173,6 +175,16 @@ class BiometricStorageImpl {
       break;
     case .touchIDNotEnrolled:
       result("ErrorNoBiometricEnrolled")
+      break;
+    case .biometryLockout:
+      // Recoverable — too many failed attempts, and the user can retry later or
+      // fall back to the device credential. Named explicitly rather than left
+      // to the default arm so that the "unmapped" log there keeps meaning
+      // "something we have not seen", instead of firing on the common case.
+      // androidx's BiometricManager has no lockout status at all, so Android
+      // callers already get Success here and discover the lockout at the
+      // prompt; reporting "cannot tell, try it" converges the two platforms.
+      result("ErrorStatusUnknown")
       break;
     case .invalidContext: fallthrough
     default:
