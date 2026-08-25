@@ -45,3 +45,7 @@ example/android/app/_debug-full-r8-config.txt
 
 .gradletasknamecache
 
+# Swift Package Manager leaves per-user Xcode state beside Package.swift.
+.swiftpm/
+Package.resolved
+
