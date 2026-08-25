@@ -3,6 +3,8 @@
 // what makes `flutter test` on macOS or Linux compile the win32 bindings. A
 // breaking change in package:win32 shows up as a failing test run rather than
 // as a broken iOS build in somebody else's app.
+import 'dart:io';
+
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,6 +118,56 @@ void main() {
       }
     });
   });
+
+  group(
+    'dispose',
+    () {
+      /// Records what reaches the native side, and replies with [reply].
+      List<MethodCall> mockDispose(Object? reply) {
+        final calls = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (methodCall) async {
+              calls.add(methodCall);
+              if (methodCall.method == 'init') {
+                return true;
+              }
+              if (methodCall.method == 'dispose') {
+                return reply;
+              }
+              throw PlatformException(code: 'NotImplemented');
+            });
+        return calls;
+      }
+
+      test(
+        'reaches the platform as a dispose call carrying the name',
+        () async {
+          final calls = mockDispose(true);
+
+          final file = await BiometricStorage().getStorage('x');
+          expect(await file.dispose(), isTrue);
+
+          final dispose = calls.singleWhere((c) => c.method == 'dispose');
+          expect((dispose.arguments as Map)['name'], 'x');
+        },
+      );
+
+      // There was a second test here asserting that a null channel reply is
+      // reported as `false`. It was vacuous: no deployable combination replies
+      // null — the pre-6.0.0-dev.5 handlers answer true, or throw, or are
+      // missing entirely, which surfaces as MissingPluginException — and the
+      // `?? false` it claimed to guard is already enforced by the compiler,
+      // since invokeMethod<bool> is typed Future<bool?> and the method returns
+      // Future<bool>.
+    },
+    skip: Platform.isWindows
+        ? 'MethodChannelBiometricStorage is unreachable on Windows: the plugin '
+              'registrant installs Win32BiometricStoragePlugin, and the channel '
+              'implementation of dispose asks _promptInfoForCurrentPlatform for '
+              'a prompt it has no case for. biometric_storage_win32_test.dart '
+              'covers dispose on this host.'
+        : null,
+  );
 
   group('BiometricStorageException', () {
     test('defaults to unknown, so the positional constructor still works', () {

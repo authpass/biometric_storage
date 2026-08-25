@@ -351,6 +351,13 @@ abstract class BiometricStorage extends PlatformInterface {
 
   @protected
   Future<void> write(String name, String content, PromptInfo promptInfo);
+
+  /// Forgets the initialization of [name], leaving its stored content alone.
+  ///
+  /// Returns `true` when there was an initialization to forget, and `false`
+  /// when there was not — disposing twice is not an error on any platform.
+  @protected
+  Future<bool> dispose(String name, PromptInfo promptInfo);
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
@@ -501,6 +508,21 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         }),
       );
 
+  @override
+  Future<bool> dispose(String name, PromptInfo promptInfo) async {
+    // The type argument is explicit because the `Future<bool>` return type
+    // otherwise infers it as non-nullable, and the channel reply is
+    // `bool?` — an older plugin build that predates this method replies null
+    // rather than a bool.
+    final disposed = await _transformErrors<bool?>(
+      _channel.invokeMethod<bool>('dispose', <String, dynamic>{
+        'name': name,
+        ..._promptInfoForCurrentPlatform(promptInfo),
+      }),
+    );
+    return disposed ?? false;
+  }
+
   Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) =>
       switch (operatingSystem) {
         // Don't expose Android configurations to other platforms.
@@ -564,16 +586,68 @@ class BiometricStorageFile {
   final String name;
   final PromptInfo defaultPromptInfo;
 
+  bool _disposed = false;
+
+  /// Enforces the one rule [dispose] documents, which the platforms disagree
+  /// about on their own: Android and darwin resolve these calls against a
+  /// registry and fail once the entry is gone, while Linux, Windows and web
+  /// keep working from the name alone. Left to the backends, the same mistake
+  /// would throw for some users and silently succeed for others — the shape of
+  /// bug that gets written on one platform and found on another.
+  void _checkNotDisposed(String operation) {
+    if (_disposed) {
+      throw StateError(
+        'Tried to $operation a disposed storage file ($name). Fetch a new one '
+        'from BiometricStorage.getStorage.',
+      );
+    }
+  }
+
   /// read from the secure file and returns the content.
   /// Will return `null` if file does not exist.
-  Future<String?> read({PromptInfo? promptInfo}) =>
-      _plugin.read(name, promptInfo ?? defaultPromptInfo);
+  Future<String?> read({PromptInfo? promptInfo}) {
+    _checkNotDisposed('read');
+    return _plugin.read(name, promptInfo ?? defaultPromptInfo);
+  }
 
   /// Write content of this file. Previous value will be overwritten.
-  Future<void> write(String content, {PromptInfo? promptInfo}) =>
-      _plugin.write(name, content, promptInfo ?? defaultPromptInfo);
+  Future<void> write(String content, {PromptInfo? promptInfo}) {
+    _checkNotDisposed('write');
+    return _plugin.write(name, content, promptInfo ?? defaultPromptInfo);
+  }
 
   /// Delete the content of this storage.
-  Future<void> delete({PromptInfo? promptInfo}) =>
-      _plugin.delete(name, promptInfo ?? defaultPromptInfo);
+  Future<void> delete({PromptInfo? promptInfo}) {
+    _checkNotDisposed('delete');
+    return _plugin.delete(name, promptInfo ?? defaultPromptInfo);
+  }
+
+  /// Forgets this storage's initialization, **without touching its content**.
+  ///
+  /// [BiometricStorage.getStorage] resolves the options for a name once and
+  /// then ignores them, so a store initialized with, say, a five second
+  /// `authenticationValidityDurationSeconds` keeps it for the lifetime of the
+  /// process however it is fetched again. Disposing is what makes the next
+  /// `getStorage` apply a fresh [StorageFileInitOptions] — reconfiguring, not
+  /// erasing. Use [delete] to remove the content, or call it first if you want
+  /// both.
+  ///
+  /// Returns `true` when there was an initialization to forget, and `false`
+  /// when there was not, so calling it twice is safe.
+  ///
+  /// **Scoped to the name, not to this object.** Every handle for a name is a
+  /// view onto one initialization, so disposing through any of them forgets it
+  /// — including an initialization created after this handle was disposed. Two
+  /// handles for the same name are not two stores.
+  ///
+  /// This instance must not be used afterwards; fetch a new one from
+  /// [BiometricStorage.getStorage]. [read], [write] and [delete] throw a
+  /// [StateError] once it has been disposed. Deliberately not this method
+  /// itself, so that disposing twice stays legal. The handle is spent as soon
+  /// as this is called, whether or not the call goes on to succeed — recovering
+  /// from a failed dispose means fetching a new one, not reusing this.
+  Future<bool> dispose({PromptInfo? promptInfo}) {
+    _disposed = true;
+    return _plugin.dispose(name, promptInfo ?? defaultPromptInfo);
+  }
 }

@@ -39,6 +39,22 @@ void main() {
     return file;
   }
 
+  /// A name for a test that disposes the store itself.
+  ///
+  /// [freshStore] cannot be used for those: it holds the file it handed out
+  /// and deletes through it, and a disposed handle refuses every operation.
+  /// Re-acquiring first is what makes the cleanup work whether or not the test
+  /// left the name disposed.
+  String disposableName(String label) {
+    final name =
+        'integration_${label}_${DateTime.now().microsecondsSinceEpoch}';
+    addTearDown(() async {
+      final file = await storage.getStorage(name, options: options);
+      await file.delete();
+    });
+    return name;
+  }
+
   testWidgets('a value written can be read back, and is gone after delete', (
     tester,
   ) async {
@@ -131,5 +147,95 @@ void main() {
         CanAuthenticateResponse.errorHwUnavailable,
       );
     }
+  });
+
+  testWidgets('dispose lets a later getStorage initialize the name again', (
+    tester,
+  ) async {
+    // The load-bearing test for dispose, and the one that fails against every
+    // backend as it stood before this change: Linux had no `dispose` handler
+    // at all, so the call raised MissingPluginException, and darwin replied
+    // `true` from a no-op that never cleared its `stores` entry.
+    //
+    // forceInit is what makes the effect observable through the public API.
+    // It means "assert this name is not initialized", so it succeeds only if
+    // dispose really did forget the name — a dispose that silently does
+    // nothing leaves this throwing alreadyInitialized.
+    final name = disposableName('dispose_reinit');
+    final file = await storage.getStorage(name, options: options);
+
+    expect(await file.dispose(), isTrue, reason: 'there was one to forget');
+
+    await expectLater(
+      storage.getStorage(name, options: options, forceInit: true),
+      completes,
+    );
+  });
+
+  testWidgets('dispose keeps the stored content', (tester) async {
+    // The contract that separates dispose from delete: it reconfigures, it
+    // does not erase. Worth pinning because every backend implements it by
+    // dropping a registry entry, and reaching one line further to remove the
+    // secret would be an easy and very expensive mistake.
+    final name = disposableName('dispose_keeps');
+    final file = await storage.getStorage(name, options: options);
+    await file.write('survives');
+
+    expect(await file.dispose(), isTrue);
+
+    final reopened = await storage.getStorage(name, options: options);
+    expect(await reopened.read(), 'survives');
+  });
+
+  testWidgets('disposing twice is not an error', (tester) async {
+    // Android used to throw NoSuchStorage on the second call, which made it
+    // the only backend where a repeat dispose failed. The bool distinguishes
+    // "forgot one" from "there was none" without anybody having to catch.
+    final name = disposableName('dispose_twice');
+    final file = await storage.getStorage(name, options: options);
+
+    expect(await file.dispose(), isTrue);
+    expect(await file.dispose(), isFalse, reason: 'nothing left to forget');
+  });
+
+  testWidgets('dispose is scoped to the name, not to the handle', (
+    tester,
+  ) async {
+    // Every handle is a view onto one name-keyed initialization, so a spent
+    // handle can still forget an initialization made after it. Pinned because
+    // the tempting optimization — short-circuiting a repeat dispose on the
+    // local flag instead of asking the platform — would quietly turn dispose
+    // from name-scoped into handle-scoped and make this return false.
+    final name = disposableName('dispose_scope');
+
+    final first = await storage.getStorage(name, options: options);
+    expect(await first.dispose(), isTrue);
+
+    // A fresh initialization of the same name, which `first` knows nothing of.
+    await storage.getStorage(name, options: options);
+
+    expect(
+      await first.dispose(),
+      isTrue,
+      reason: 'the spent handle still forgets the name it names',
+    );
+  });
+
+  testWidgets('a disposed file refuses to be used again', (tester) async {
+    // The backends do not agree on their own: Android and darwin resolve
+    // read/write/delete against a registry and fail once the entry is gone,
+    // while Linux answers from the name alone and would carry on. The guard
+    // is in Dart so the answer is the same everywhere — otherwise this is a
+    // mistake you make on one platform and discover on another.
+    final name = disposableName('dispose_spent');
+    final file = await storage.getStorage(name, options: options);
+
+    expect(await file.dispose(), isTrue);
+
+    expect(() => file.read(), throwsStateError);
+    expect(() => file.write('x'), throwsStateError);
+    expect(() => file.delete(), throwsStateError);
+    // Not dispose itself, which stays idempotent.
+    expect(await file.dispose(), isFalse);
   });
 }
