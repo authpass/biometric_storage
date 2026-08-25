@@ -1,3 +1,31 @@
+## 6.0.0-dev.5
+
+* `BiometricStorageFile.dispose()` forgets a store's initialization without
+  touching its content, so the next `getStorage` applies a fresh
+  `StorageFileInitOptions`. Until now the options for a name were resolved once
+  and then ignored for the lifetime of the process, so a store could not be
+  reconfigured at runtime — changing, say, an authentication validity duration
+  meant restarting the app. Thanks to @luckyrat, who identified the gap and
+  proposed an API for it in #138 (see also #75 and #137); this implements the
+  standalone `dispose()` rather than that PR's delete-coupled form, so
+  reconfiguring no longer costs you the stored value. Call `delete()` first if
+  you want both.
+
+  Returns `true` when there was an initialization to forget and `false` when
+  there was not, so disposing twice is safe. Android previously raised
+  `NoSuchStorage` on a repeat, the only backend where that was an error.
+
+  The method was reachable natively before this, and did not work: Linux had no
+  handler at all, so the call reached Dart as a `MissingPluginException`, and
+  iOS/macOS answered `true` from a no-op that never cleared the entry — so
+  re-initializing silently kept the original configuration while reporting
+  success at every step. Both are fixed, and the store's content is deliberately
+  left alone on every platform.
+
+* **Breaking for platform implementations only.** `dispose` is a new member on
+  the `BiometricStorage` platform interface, so a third-party implementation
+  that extends it must add one. No change for callers of the package.
+
 ## 6.0.0-dev.4
 
 * `BiometricStorageException` carries a `code`. It previously held only a

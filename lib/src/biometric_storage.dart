@@ -351,6 +351,13 @@ abstract class BiometricStorage extends PlatformInterface {
 
   @protected
   Future<void> write(String name, String content, PromptInfo promptInfo);
+
+  /// Forgets the initialization of [name], leaving its stored content alone.
+  ///
+  /// Returns `true` when there was an initialization to forget, and `false`
+  /// when there was not — disposing twice is not an error on any platform.
+  @protected
+  Future<bool> dispose(String name, PromptInfo promptInfo);
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
@@ -501,6 +508,21 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         }),
       );
 
+  @override
+  Future<bool> dispose(String name, PromptInfo promptInfo) async {
+    // The type argument is explicit because the `Future<bool>` return type
+    // otherwise infers it as non-nullable, and the channel reply is
+    // `bool?` — an older plugin build that predates this method replies null
+    // rather than a bool.
+    final disposed = await _transformErrors<bool?>(
+      _channel.invokeMethod<bool>('dispose', <String, dynamic>{
+        'name': name,
+        ..._promptInfoForCurrentPlatform(promptInfo),
+      }),
+    );
+    return disposed ?? false;
+  }
+
   Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) =>
       switch (operatingSystem) {
         // Don't expose Android configurations to other platforms.
@@ -576,4 +598,22 @@ class BiometricStorageFile {
   /// Delete the content of this storage.
   Future<void> delete({PromptInfo? promptInfo}) =>
       _plugin.delete(name, promptInfo ?? defaultPromptInfo);
+
+  /// Forgets this storage's initialization, **without touching its content**.
+  ///
+  /// [BiometricStorage.getStorage] resolves the options for a name once and
+  /// then ignores them, so a store initialized with, say, a five second
+  /// `authenticationValidityDurationSeconds` keeps it for the lifetime of the
+  /// process however it is fetched again. Disposing is what makes the next
+  /// `getStorage` apply a fresh [StorageFileInitOptions] — reconfiguring, not
+  /// erasing. Use [delete] to remove the content, or call it first if you want
+  /// both.
+  ///
+  /// Returns `true` when there was an initialization to forget, and `false`
+  /// when there was not, so calling it twice is safe.
+  ///
+  /// This instance must not be used afterwards; fetch a new one from
+  /// [BiometricStorage.getStorage].
+  Future<bool> dispose({PromptInfo? promptInfo}) =>
+      _plugin.dispose(name, promptInfo ?? defaultPromptInfo);
 }

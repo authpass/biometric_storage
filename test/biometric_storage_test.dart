@@ -117,6 +117,45 @@ void main() {
     });
   });
 
+  group('dispose', () {
+    /// Records what reaches the native side, and replies with [reply].
+    List<MethodCall> mockDispose(Object? reply) {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            calls.add(methodCall);
+            if (methodCall.method == 'init') {
+              return true;
+            }
+            if (methodCall.method == 'dispose') {
+              return reply;
+            }
+            throw PlatformException(code: 'NotImplemented');
+          });
+      return calls;
+    }
+
+    test('reaches the platform as a dispose call carrying the name', () async {
+      final calls = mockDispose(true);
+
+      final file = await BiometricStorage().getStorage('x');
+      expect(await file.dispose(), isTrue);
+
+      final dispose = calls.singleWhere((c) => c.method == 'dispose');
+      expect((dispose.arguments as Map)['name'], 'x');
+    });
+
+    test('a null reply is reported as nothing-to-forget', () async {
+      // A plugin build predating this method replies null rather than a bool.
+      // Returning that as `false` keeps the API non-nullable; without the
+      // coercion this throws a cast error instead.
+      mockDispose(null);
+
+      final file = await BiometricStorage().getStorage('x');
+      expect(await file.dispose(), isFalse);
+    });
+  });
+
   group('BiometricStorageException', () {
     test('defaults to unknown, so the positional constructor still works', () {
       final e = BiometricStorageException('boom');

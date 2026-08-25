@@ -116,8 +116,19 @@ class BiometricStorageImpl {
         }
       }
     } else if ("dispose" == call.method) {
-      // nothing to dispose
-      result(true)
+      // This used to be a no-op replying `true`, which made the whole feature
+      // silently useless here: `stores` kept the entry, so the next `init`
+      // took the short circuit above, discarded the freshly passed
+      // InitOptions and replied `false` — reporting success at every step
+      // while leaving the file on its original configuration. Removing the
+      // entry is what lets a later init apply new options.
+      //
+      // The keychain item itself is deliberately untouched; this reconfigures
+      // rather than erases. Replies whether there was anything to forget, so
+      // a repeat dispose is not an error.
+      requiredArg("name") { (name: String) in
+        result(stores.removeValue(forKey: name) != nil)
+      }
     } else if ("read" == call.method) {
       requiredArg("name") { name in
         requiredArg("iosPromptInfo") { promptInfo in

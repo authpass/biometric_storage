@@ -30,13 +30,17 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     bool forceInit = false,
     PromptInfo promptInfo = PromptInfo.defaultValues,
   }) async {
-    if (!_initialized.add(name) && forceInit) {
+    // Keyed by the prefixed name, which is what every other method on this
+    // class is handed — BiometricStorageFile carries the prefixed form, so
+    // tracking the bare one here would leave dispose() unable to find it.
+    final prefixedName = namePrefix + name;
+    if (!_initialized.add(prefixedName) && forceInit) {
       throw BiometricStorageException(
         "A storage file with the name '$name' was already initialized.",
         code: BiometricStorageExceptionCode.alreadyInitialized,
       );
     }
-    return BiometricStorageFile(this, namePrefix + name, promptInfo);
+    return BiometricStorageFile(this, prefixedName, promptInfo);
   }
 
   @override
@@ -58,4 +62,10 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   Future<void> write(String name, String content, PromptInfo promptInfo) async {
     web.window.localStorage.setItem(name, content);
   }
+
+  @override
+  Future<bool> dispose(String name, PromptInfo promptInfo) async =>
+      // [name] arrives prefixed, matching what getStorage recorded. The
+      // localStorage entry is deliberately left alone.
+      _initialized.remove(name);
 }

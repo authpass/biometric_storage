@@ -244,14 +244,17 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     result.success(true)
                 }
 
-                "dispose" -> storageFiles.remove(getName())?.apply {
-                    dispose()
-                    result.success(true)
-                } ?: throw MethodCallException(
-                    "NoSuchStorage",
-                    "Tried to dispose non existing storage.",
-                    null
-                )
+                // Reports whether there was an initialization to forget rather
+                // than throwing when there was not, so that disposing twice is
+                // safe and every platform answers alike. It used to raise
+                // NoSuchStorage, which made Android the only backend where a
+                // repeat dispose was an error. The stored content is left
+                // alone: this reconfigures, it does not erase.
+                "dispose" -> {
+                    val existing = storageFiles.remove(getName())
+                    existing?.dispose()
+                    result.success(existing != null)
+                }
 
                 "read" -> withStorage {
                     if (exists()) {
