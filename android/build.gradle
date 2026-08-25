@@ -51,6 +51,15 @@ android {
 // on our behalf. Either way it arrives after this file has been evaluated, so
 // the JVM target has to be configured once Kotlin actually shows up.
 // https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+//
+// Two things to know when that landscape moves:
+//  - AGP's own built-in Kotlin does not register this plugin id, so the block
+//    below will silently stop running once `android.builtInKotlin=true` becomes
+//    usable. It is unreachable today, because every AGP from 9.1 to 9.3 bundles
+//    KGP 2.2.10 and Flutter hard-errors below 2.2.20. Recheck the jvmTarget then.
+//  - Kotlin only reaches this project because Flutter applies KGP per-subproject
+//    for us. An app with no KGP visible anywhere gets a logged warning from
+//    Flutter and our .kt sources are then never compiled.
 pluginManager.withPlugin('org.jetbrains.kotlin.android') {
     kotlin {
         compilerOptions {

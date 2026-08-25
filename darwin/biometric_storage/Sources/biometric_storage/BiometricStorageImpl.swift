@@ -206,9 +206,12 @@ class BiometricStorageFile {
   /// on every call because `context` may return a context reused across calls.
   private func authenticationContext(reason: String?) -> LAContext {
     let context = self.context
-    if let reason = reason, !reason.isEmpty {
-      context.localizedReason = reason
-    }
+    // Assigned unconditionally, including when empty. `context` may be one
+    // reused across calls when darwinTouchIDAuthenticationForceReuseContextDuration
+    // is set, so skipping the assignment would leave the *previous* call's
+    // reason in place — a read showing the save prompt's wording. The query key
+    // this replaced was per-query and could not carry over like that.
+    context.localizedReason = reason ?? ""
     return context
   }
 

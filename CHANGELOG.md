@@ -9,6 +9,12 @@
   removing `TEXT()` also broke iOS and macOS builds — the test suite now imports
   the public barrel so `flutter test` compiles the win32 bindings on any host.
 * windows: writing an empty value no longer throws.
+* windows: fix a use-after-free in `read()`. `CredentialBlob.asTypedList()` is a
+  view onto memory owned by the credential, and it was decoded *after* `CredFree`
+  had released it. The bytes are now copied out first. Present in every 5.x.
+* windows: the bindings now have runtime coverage, not just compile coverage —
+  `test/biometric_storage_win32_test.dart` exercises write/read/delete against
+  the real credential store, and runs on the Windows CI job.
 * iOS/macOS: Swift Package Manager support. Adding this plugin to an app that has
   migrated to SwiftPM no longer regenerates a `Podfile`. CocoaPods keeps working;
   both a `Package.swift` and a podspec are shipped.
