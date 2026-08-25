@@ -52,6 +52,13 @@ jobs:
             os: windows-latest
           - buildcommand: linux
             os: ubuntu-latest
+          # Release, and that is the whole point: the example app has
+          # `minifyEnabled true`, so this is the only job where R8 runs.
+          # Everything else — flutter run, flutter test, an emulator check —
+          # builds debug or profile, where minification never happens. A
+          # dependency that references classes it does not ship fails here and
+          # nowhere else. It only works as a guard for as long as the example
+          # app stays a realistic consumer; see example/android/app/build.gradle.
           - buildcommand: appbundle
             os: ubuntu-latest
           - buildcommand: web

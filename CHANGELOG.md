@@ -1,3 +1,33 @@
+## 6.0.0-dev.5
+
+* android: fix `minifyReleaseWithR8` failing in every app that ships a release
+  build. The plugin depended on `kotlin-logging`, which names every backend it
+  can bind to, so R8 walked references to `ch.qos.logback.*` classes that were
+  genuinely absent and refused to complete:
+
+      Missing class ch.qos.logback.classic.Logger (referenced from: ...)
+      Execution failed for task ':app:minifyReleaseWithR8'
+
+  Minification runs in release and nowhere else, so nothing anyone does while
+  developing reaches it — `flutter run`, `flutter test` and an emulator check
+  all build debug or profile. The first thing to hit it is an attempt to ship
+  to Play, which is the worst possible moment. Present in 6.0.0-dev.4.
+
+  Fixed at both ends: `android/proguard.pro` is no longer empty and carries the
+  `-dontwarn` rules, and they travel inside the AAR so no consumer has to add
+  anything; and the dependencies that made them necessary are gone.
+* android: the plugin's logging now actually produces output. `slf4j-api` and
+  `kotlin-logging` are both facades and neither had a provider, so SLF4J
+  reported `No SLF4J providers were found` once and discarded every call after
+  that. Unless a consuming app happened to ship a binding of its own, this
+  package has logged nothing at all on Android. It now writes to
+  `android.util.Log` under the tag `BiometricStorage`, and both dependencies
+  are dropped.
+
+  Debug builds log everything. Release builds stay silent until asked:
+
+      adb shell setprop log.tag.BiometricStorage VERBOSE
+
 ## 6.0.0-dev.4
 
 * `BiometricStorageException` carries a `code`. It previously held only a
