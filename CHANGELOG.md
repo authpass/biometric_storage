@@ -17,6 +17,17 @@
   plugin class is now `BiometricStoragePlugin` (was
   `BiometricStorageMacOSPlugin`) and the Objective-C shim on iOS is gone. Neither
   is referenced from Dart, so this is only visible in a hand-written registrant.
+* android: AGP 8.13, Kotlin 2.2, compileSdk 36, `androidx.biometric`
+  1.4.0-alpha07, `core-ktx` 1.18.0, `fragment-ktx` 1.9.0, slf4j 2.0.18 and
+  kotlin-logging 8. The plugin no longer applies the Kotlin Gradle Plugin itself
+  — AGP 9 warns about that and future Flutter releases reject it.
+* android: `canAuthenticate()` no longer throws on a status code the plugin does
+  not know about — Android 16 added `BIOMETRIC_ERROR_NOT_ENABLED_FOR_APPS` (21)
+  and every call blew up. Unmapped codes are reported as
+  `CanAuthenticateResponse.statusUnknown` and logged.
+  https://github.com/authpass/biometric_storage/issues/148
+* android: the plugin no longer calls `jvmToolchain`, which failed to resolve in
+  some consumer builds. https://github.com/authpass/biometric_storage/issues/107
 
 ## 5.2.0-dev.1
 

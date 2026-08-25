@@ -2,19 +2,19 @@ group 'design.codeux.biometric_storage'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '2.0.21'
+    ext.kotlin_version = '2.2.20'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
+        classpath 'com.android.tools.build:gradle:8.13.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
-rootProject.allprojects {
+allprojects {
     repositories {
         google()
         mavenCentral()
@@ -22,24 +22,14 @@ rootProject.allprojects {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-kapt'
-
-kotlin {
-    jvmToolchain(17)
-}
 
 android {
     namespace "design.codeux.biometric_storage"
-    compileSdk 35
+    compileSdk 36
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
     }
 
     sourceSets {
@@ -50,18 +40,33 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'proguard.pro'
     }
-    lintOptions {
+    lint {
         disable 'InvalidPackage'
     }
 }
 
+// This plugin deliberately does not apply the Kotlin Gradle Plugin itself: AGP 9
+// brings its own Kotlin support and Flutter warns that plugins applying KGP will
+// stop building, while on AGP 8 Flutter's Gradle plugin applies `kotlin-android`
+// on our behalf. Either way it arrives after this file has been evaluated, so
+// the JVM target has to be configured once Kotlin actually shows up.
+// https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+pluginManager.withPlugin('org.jetbrains.kotlin.android') {
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
+    }
+}
+
 dependencies {
-    def biometric_version = "1.4.0-alpha02"
+    def biometric_version = "1.4.0-alpha07"
 
-    api "androidx.core:core-ktx:1.10.1"
-    api "androidx.fragment:fragment-ktx:1.6.1"
+    // 1.19.0 would require compileSdk 37, which AGP 9.1 does not support yet.
+    api "androidx.core:core-ktx:1.18.0"
+    api "androidx.fragment:fragment-ktx:1.9.0"
 
-    implementation "org.slf4j:slf4j-api:2.0.7"
+    implementation "org.slf4j:slf4j-api:2.0.18"
     implementation "androidx.biometric:biometric:$biometric_version"
-    implementation "io.github.oshai:kotlin-logging-jvm:5.0.1"
+    implementation "io.github.oshai:kotlin-logging-jvm:8.0.4"
 }
