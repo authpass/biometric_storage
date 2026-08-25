@@ -8,5 +8,5 @@ import Foundation
 import biometric_storage
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  BiometricStorageMacOSPlugin.register(with: registry.registrar(forPlugin: "BiometricStorageMacOSPlugin"))
+  BiometricStoragePlugin.register(with: registry.registrar(forPlugin: "BiometricStoragePlugin"))
 }

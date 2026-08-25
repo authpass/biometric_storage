@@ -42,8 +42,10 @@ flutter:
         pluginClass: BiometricStoragePlugin
       ios:
         pluginClass: BiometricStoragePlugin
+        sharedDarwinSource: true
       macos:
-        pluginClass: BiometricStorageMacOSPlugin
+        pluginClass: BiometricStoragePlugin
+        sharedDarwinSource: true
       linux:
         pluginClass: BiometricStoragePlugin
       windows:

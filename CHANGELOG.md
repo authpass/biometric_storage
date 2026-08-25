@@ -9,6 +9,14 @@
   removing `TEXT()` also broke iOS and macOS builds — the test suite now imports
   the public barrel so `flutter test` compiles the win32 bindings on any host.
 * windows: writing an empty value no longer throws.
+* iOS/macOS: Swift Package Manager support. Adding this plugin to an app that has
+  migrated to SwiftPM no longer regenerates a `Podfile`. CocoaPods keeps working;
+  both a `Package.swift` and a podspec are shipped.
+* iOS/macOS: the Swift sources moved to `darwin/` and are shared through
+  `sharedDarwinSource`, replacing the symlink from `ios/Classes`. The macOS
+  plugin class is now `BiometricStoragePlugin` (was
+  `BiometricStorageMacOSPlugin`) and the Objective-C shim on iOS is gone. Neither
+  is referenced from Dart, so this is only visible in a hand-written registrant.
 
 ## 5.2.0-dev.1
 
