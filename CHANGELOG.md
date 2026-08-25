@@ -28,6 +28,10 @@
   https://github.com/authpass/biometric_storage/issues/148
 * android: the plugin no longer calls `jvmToolchain`, which failed to resolve in
   some consumer builds. https://github.com/authpass/biometric_storage/issues/107
+* Document the Android `FlutterFragmentActivity` and `Theme.AppCompat`
+  requirements as what they actually are: both only apply to storage that shows
+  an authentication prompt, and the theme only where `androidx.biometric` falls
+  back to its own dialog (API 28 and below).
 
 ## 5.2.0-dev.1
 

@@ -24,40 +24,56 @@ makes heavy use of this plugin.
 ### Installation
 
 #### Android
-* Requirements:
-  * Android: API Level >= 23 (android/app/build.gradle `minSdkVersion 23`)
-  * Make sure to use the latest kotlin version: 
-    * `android/build.gradle`: `ext.kotlin_version = '1.4.31'`
-  * MainActivity must extend FlutterFragmentActivity
-  * Theme for the main activity must use `Theme.AppCompat` thme.
-    (Otherwise there will be crashes on Android < 29)
-    For example: 
-    
-    **android/app/src/main/AndroidManifest.xml**:
-    ```xml
-    <activity
-        android:name=".MainActivity"
-        android:launchMode="singleTop"
-        android:theme="@style/LaunchTheme">
-        [...]
-        <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
-    </activity>
-    ```
 
-    **android/app/src/main/res/values/styles.xml**:
-    ```xml
-    <resources>
-      <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
-        ...
-      </style>
-      <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
-        ...
-      </style>
-    </resources>
-    ```
+Always required:
+
+* API Level >= 23 (`android/app/build.gradle` `minSdkVersion 23`)
+
+**Required only if you actually prompt for authentication**, that is, if any
+storage uses the default `authenticationRequired: true`. Storage created with
+`authenticationRequired: false` never shows a `BiometricPrompt`, so neither of
+the following applies to it:
+
+* **MainActivity must extend `FlutterFragmentActivity`.** `BiometricPrompt`
+  needs a `FragmentActivity` to host its dialog. If the plugin is attached to a
+  plain `FlutterActivity` it logs an error and every authenticated read or write
+  fails with `AuthError:Failed` — unauthenticated storage keeps working.
+
+* **The activity theme must descend from `Theme.AppCompat`** — but only for
+  devices where `androidx.biometric` falls back to drawing its own fingerprint
+  dialog, which it builds with `androidx.appcompat.app.AlertDialog`. That
+  fallback is used on **API 28 and below**, on API 28 devices without a
+  fingerprint sensor, and on a short manufacturer allow-list where a crypto
+  object forces it. On API 29+ the system `BiometricPrompt` is used and the theme
+  does not matter.
+
+  If you do need it:
+
+  **android/app/src/main/AndroidManifest.xml**:
+  ```xml
+  <activity
+      android:name=".MainActivity"
+      android:launchMode="singleTop"
+      android:theme="@style/LaunchTheme">
+      [...]
+      <meta-data
+            android:name="io.flutter.embedding.android.NormalTheme"
+            android:resource="@style/NormalTheme"
+            />
+  </activity>
+  ```
+
+  **android/app/src/main/res/values/styles.xml**:
+  ```xml
+  <resources>
+    <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
+      ...
+    </style>
+    <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
+      ...
+    </style>
+  </resources>
+  ```
 
 ##### Resources
 
@@ -69,7 +85,8 @@ makes heavy use of this plugin.
 https://developer.apple.com/documentation/localauthentication/logging_a_user_into_your_app_with_face_id_or_touch_id
 
 * include the NSFaceIDUsageDescription key in your app’s Info.plist file
-* Supports all iOS versions supported by Flutter. (ie. iOS 12)
+* Deployment target >= iOS 13 (below whatever Flutter itself requires, so in
+  practice this never binds).
 
 **Known Issue**: since iOS 15 the simulator seem to no longer support local authentication:
     https://developer.apple.com/forums/thread/685773
@@ -80,7 +97,14 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
 * enable keychain sharing and signing. (not sure why this is required. but without it
     You will probably see an error like: 
     > SecurityError, Error while writing data: -34018: A required entitlement isn't present.
-* Supports all MacOS Versions supported by Flutter (ie. >= MacOS 10.14)
+* Deployment target >= macOS 10.15.
+
+#### Swift Package Manager (iOS and Mac OS)
+
+The iOS and macOS implementations ship both a `Package.swift` and a podspec, so
+they work with either dependency manager. Adding this plugin to an app that has
+[migrated to Swift Package Manager](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers)
+does **not** bring CocoaPods back — no `Podfile` is generated.
 
 ### Usage
 
@@ -98,7 +122,7 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
 2. Create the access object
 
 ```dart
-  final store = BiometricStorage().getStorage('mystorage');
+  final storageFile = await BiometricStorage().getStorage('mystorage');
 ```
 
 3. Read data
@@ -113,5 +137,16 @@ https://developer.apple.com/documentation/localauthentication/logging_a_user_int
   final myNewData = 'Hello World';
   await storageFile.write(myNewData);
 ```
+
+> Storing without a biometric prompt — for a value a background task has to be
+> able to refresh, for example — is `authenticationRequired: false`. The value is
+> still encrypted at rest; it is simply not gated behind an authentication.
+>
+> ```dart
+>   final storageFile = await BiometricStorage().getStorage(
+>     'mystorage',
+>     options: StorageFileInitOptions(authenticationRequired: false),
+>   );
+> ```
 
 See also the API documentation: https://pub.dev/documentation/biometric_storage/latest/biometric_storage/BiometricStorageFile-class.html#instance-methods
