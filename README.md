@@ -93,6 +93,7 @@ the plugin:
 ```kotlin
 import android.util.Log
 import design.codeux.biometric_storage.BiometricStorageLogging
+import org.slf4j.LoggerFactory
 
 BiometricStorageLogging.sink =
     BiometricStorageLogging.Sink { priority, tag, message, throwable ->
