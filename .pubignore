@@ -1,0 +1,35 @@
+# Consulted by `pub publish` INSTEAD OF .gitignore — and not just for this
+# directory: adding this file stopped every nested .gitignore being honoured
+# too, which silently pulled example/build/web artifacts into the archive. So
+# this has to restate the exclusions rather than only add to them.
+#
+# The check that matters: `flutter pub publish --dry-run` before and after must
+# differ by CLAUDE.md and nothing else.
+
+# The reason this file exists: maintainer-facing instructions, of no use to
+# anyone consuming the package.
+CLAUDE.md
+
+# Build output, unanchored so it also catches example/build.
+build/
+out/
+.dart_tool/
+.gradle/
+.gradletasknamecache
+.flutter-plugins-dependencies
+.packages
+.pub/
+node_modules/
+
+# Editor and OS noise.
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Swift Package Manager per-user state.
+.swiftpm/
+/darwin/biometric_storage/Package.resolved
+
+# Root only: the example's lockfile is committed on purpose.
+/pubspec.lock
