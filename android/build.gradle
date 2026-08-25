@@ -60,7 +60,10 @@ pluginManager.withPlugin('org.jetbrains.kotlin.android') {
 }
 
 dependencies {
-    def biometric_version = "1.4.0-alpha07"
+    // Not alpha06/07: those declare minCompileMinorSdk=1, which forces every
+    // consumer to compileSdk 36.1. AGP 9.1 silently ignores the minor, AGP 9.3
+    // enforces it. alpha05 is the newest that asks only for compileSdk 35.
+    def biometric_version = "1.4.0-alpha05"
 
     // 1.19.0 would require compileSdk 37, which AGP 9.1 does not support yet.
     api "androidx.core:core-ktx:1.18.0"
