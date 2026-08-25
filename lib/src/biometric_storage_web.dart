@@ -10,6 +10,10 @@ class BiometricStoragePluginWeb extends BiometricStorage {
 
   static const namePrefix = 'design.codeux.authpass.';
 
+  /// See the win32 implementation: [forceInit] has to be tracked here, because
+  /// there is no native side holding a per-store handle.
+  final _initialized = <String>{};
+
   static void registerWith(Registrar registrar) {
     BiometricStorage.instance = BiometricStoragePluginWeb();
   }
@@ -26,6 +30,11 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     bool forceInit = false,
     PromptInfo promptInfo = PromptInfo.defaultValues,
   }) async {
+    if (!_initialized.add(name) && forceInit) {
+      throw BiometricStorageException(
+        "A storage file with the name '$name' was already initialized.",
+      );
+    }
     return BiometricStorageFile(this, namePrefix + name, promptInfo);
   }
 

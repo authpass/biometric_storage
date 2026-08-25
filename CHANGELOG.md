@@ -1,3 +1,59 @@
+## 6.0.0-dev.2
+
+Six pre-existing bugs, all found while reviewing 6.0.0-dev.1 and none introduced
+by it.
+
+* android: an authentication requested while the activity cannot host a dialog
+  no longer hangs forever. `androidx.biometric` refuses to start after
+  `onSaveInstanceState` — logging `Unable to start authentication` — and returns
+  without invoking any callback, so the pending Flutter result never completed.
+  The state is checked up front and reported as
+  `AuthException(AuthExceptionCode.unknown)` instead. Reachable whenever the app
+  is backgrounded, independently of the configuration-change bug below.
+* android: the plugin kept using a destroyed `Activity` after a configuration
+  change. `onReattachedToActivityForConfigChanges` and
+  `onDetachedFromActivityForConfigChanges` were both empty, so after a rotation
+  every authenticated read or write handed `BiometricPrompt` a dead
+  `FragmentActivity`. `ActivityAware` documents that the old reference must be
+  cleared and the new binding adopted; now both happen.
+* android: a storage-not-initialized error delivered its message as the
+  `PlatformException.code` — the field callers match on. The code is now
+  `NotInitialized`.
+* iOS/macOS: `init` replied twice when an argument was missing or mistyped, so
+  the caller saw the error and then a success. The success reply now only
+  happens on the success path.
+* **Breaking**: iOS/macOS `canAuthenticate()` reports an unrecognised `LAError`
+  as `CanAuthenticateResponse.statusUnknown` rather than `unsupported`, matching
+  Android. `unsupported` means "the plugin does not support this platform", so a
+  recoverable `biometryLockout` was telling callers to give up entirely. Callers
+  that treat `statusUnknown` as usable will now attempt authentication where
+  they previously did not.
+* **Breaking**: iOS/macOS, a repeat `getStorage()` for a name that is already
+  open no longer rebuilds the store. It used to replace it outright, which threw
+  away the cached `LAContext` — so any
+  `darwinTouchIDAuthenticationForceReuseContextDuration` in progress — and
+  quietly adopted whatever options the second call passed. The first call now
+  wins, as on Android. If you relied on re-initializing to change options, give
+  each set of options its own store name, or restart — there is no API to close
+  a store, so none can be reopened differently within a run. Passing different
+  options to a repeat call was never reported back to Dart, and now definitively
+  does nothing.
+* **Breaking**: `forceInit` now does what it documents on Windows, web, iOS and
+  macOS. It was implemented on Android only; the others accepted the flag and
+  dropped it. It throws `BiometricStorageException` on every platform — the
+  `PlatformException(code: 'AlreadyInitialized')` that the method-channel
+  platforms raise is translated, so one catch clause covers all of them.
+  **Linux still ignores the flag**: its `init` keeps no per-store state at all,
+  so implementing it there is a separate change.
+* **Breaking**: windows `read()` and `delete()` throw `BiometricStorageException`
+  when the credential store fails, instead of returning `null` and `false`.
+  Those values still mean "no value stored" and "there was nothing to delete" —
+  previously they doubled as the answer for a failing store, so a failure read
+  as data loss.
+* iOS/macOS: `canAuthenticate()` names `biometryLockout` explicitly rather than
+  letting it fall through the unmapped-code path, and the nil-error branch
+  reports `statusUnknown` too rather than `unsupported`.
+
 ## 6.0.0-dev.1
 
 **Breaking**: requires Dart 3.10 / Flutter 3.44 or newer.

@@ -403,6 +403,29 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       });
       _logger.finest('getting storage. was created: $result');
       return BiometricStorageFile(this, name, promptInfo);
+    } on PlatformException catch (e, stackTrace) {
+      // The platforms implemented in Dart — Windows and web — raise this
+      // themselves, so without translating here the same failure would reach
+      // callers as two different types and need two catch clauses.
+      if (e.code == 'AlreadyInitialized') {
+        _logger.warning(
+          'Storage $name was already initialized.',
+          e,
+          stackTrace,
+        );
+        // Not a plain `throw`: that would restart the trace here and lose the
+        // frames showing which call re-initialized the store.
+        Error.throwWithStackTrace(
+          BiometricStorageException(e.message ?? e.code),
+          stackTrace,
+        );
+      }
+      _logger.warning(
+        'Error while initializing biometric storage.',
+        e,
+        stackTrace,
+      );
+      rethrow;
     } catch (e, stackTrace) {
       _logger.warning(
         'Error while initializing biometric storage.',

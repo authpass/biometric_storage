@@ -17,6 +17,11 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
 
   static const _userName = 'flutter.biometric_storage';
 
+  /// Names handed out by [getStorage] in this runtime, so that [forceInit] can
+  /// mean what the API documents. Windows has no per-store native handle to
+  /// hang this off, unlike the method-channel platforms.
+  final _initialized = <String>{};
+
   /// Registers this class as the default instance of [BiometricStorage].
   static void registerWith() {
     BiometricStorage.instance = Win32BiometricStoragePlugin();
@@ -36,6 +41,13 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     bool forceInit = false,
     PromptInfo promptInfo = PromptInfo.defaultValues,
   }) async {
+    // forceInit was accepted and dropped here, so the documented "will throw if
+    // the store was already created in this runtime" held on Android alone.
+    if (!_initialized.add(name) && forceInit) {
+      throw BiometricStorageException(
+        "A storage file with the name '$name' was already initialized.",
+      );
+    }
     return BiometricStorageFile(this, namePrefix + name, promptInfo);
   }
 
@@ -51,6 +63,13 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       );
       if (!result.value) {
         _logFailure('deleting', name, result.error);
+        // Same distinction read() makes: `false` means there was nothing to
+        // delete, so a store that is failing must not borrow that answer.
+        if (result.error != ERROR_NOT_FOUND) {
+          throw BiometricStorageException(
+            'Error deleting credential $name: ${result.error}',
+          );
+        }
         return false;
       }
       return true;
@@ -69,6 +88,14 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       );
       if (!result.value) {
         _logFailure('reading', name, result.error);
+        // `null` is the documented answer to "no value stored". Reporting a
+        // credential-store failure the same way left a caller unable to tell
+        // an empty store from a broken one, so it read as data loss.
+        if (result.error != ERROR_NOT_FOUND) {
+          throw BiometricStorageException(
+            'Error reading credential $name: ${result.error}',
+          );
+        }
         return null;
       }
       final credential = credentialPointer.value;

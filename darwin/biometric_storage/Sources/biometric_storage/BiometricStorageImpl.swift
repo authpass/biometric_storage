@@ -89,12 +89,32 @@ class BiometricStorageImpl {
         canAuthenticate(options: initOptions, result: result)
       }
     } else if ("init" == call.method) {
-      requiredArg("name") { name in
-        requiredArg("options") { options in
+      requiredArg("name") { (name: String) in
+        requiredArg("options") { (options: [String: Any]) in
+          // The success reply belongs on the success path. It used to sit after
+          // this block and ran unconditionally, so a missing or mistyped
+          // argument replied with the error and then replied `true` as well —
+          // Flutter discards the second reply and logs "Reply already
+          // submitted", leaving the caller believing init had succeeded.
+          if stores[name] != nil {
+            // Mirrors Android: forceInit means "assert this was not already
+            // initialised", and without it a repeat init is a no-op reporting
+            // false. Neither was implemented here at all before.
+            let args = call.arguments as? [String: Any]
+            if args?["forceInit"] as? Bool == true {
+              result(storageError(
+                code: "AlreadyInitialized",
+                message: "A storage file with the name '\(name)' was already initialized.",
+                details: nil))
+            } else {
+              result(false)
+            }
+            return
+          }
           stores[name] = BiometricStorageFile(name: name, initOptions: InitOptions(params: options), storageError: storageError)
+          result(true)
         }
       }
-      result(true)
     } else if ("dispose" == call.method) {
       // nothing to dispose
       result(true)
@@ -139,7 +159,9 @@ class BiometricStorageImpl {
       return
     }
     guard let err = error else {
-      result("ErrorUnknown")
+      // Same reasoning as the default arm below: "cannot tell" is not
+      // "this plugin does not work on this platform".
+      result("ErrorStatusUnknown")
       return
     }
     let laError = LAError(_nsError: err)
@@ -154,9 +176,26 @@ class BiometricStorageImpl {
     case .touchIDNotEnrolled:
       result("ErrorNoBiometricEnrolled")
       break;
+    case .biometryLockout:
+      // Recoverable — too many failed attempts, and the user can retry later or
+      // fall back to the device credential. Named explicitly rather than left
+      // to the default arm so that the "unmapped" log there keeps meaning
+      // "something we have not seen", instead of firing on the common case.
+      // androidx's BiometricManager has no lockout status at all, so Android
+      // callers already get Success here and discover the lockout at the
+      // prompt; reporting "cannot tell, try it" converges the two platforms.
+      result("ErrorStatusUnknown")
+      break;
     case .invalidContext: fallthrough
     default:
-      result("ErrorUnknown")
+      // Not "ErrorUnknown": the Dart side maps that to
+      // CanAuthenticateResponse.unsupported, whose own doc reads "Plugin does
+      // not support platform", so a biometryLockout — too many failed attempts,
+      // and recoverable — told callers the plugin did not work on iOS at all.
+      // ErrorStatusUnknown is what Android reports for a code it does not
+      // recognise, and it says what is actually true: we cannot tell.
+      NSLog("Unmapped LAError \(laError.code.rawValue), reporting status unknown");
+      result("ErrorStatusUnknown")
       break;
     }
   }

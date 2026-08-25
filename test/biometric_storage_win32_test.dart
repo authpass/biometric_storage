@@ -66,6 +66,21 @@ void main() {
     expect(file.name, 'design.codeux.authpass.example');
   });
 
+  test('forceInit rejects a second getStorage for the same name', () async {
+    final name = 'test_force_${DateTime.now().microsecondsSinceEpoch}';
+
+    // The first call establishes it; a plain second call is a no-op. Only
+    // forceInit turns "already initialized" into an error, which is what the
+    // API documents and what Android has always done.
+    await plugin.getStorage(name);
+    await plugin.getStorage(name);
+
+    expect(
+      () => plugin.getStorage(name, forceInit: true),
+      throwsA(isA<BiometricStorageException>()),
+    );
+  });
+
   test('reading an unknown name returns null rather than throwing', () async {
     final file = await plugin.getStorage(
       'test_absent_${DateTime.now().microsecondsSinceEpoch}',
