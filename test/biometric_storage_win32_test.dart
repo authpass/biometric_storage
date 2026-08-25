@@ -75,9 +75,17 @@ void main() {
     await plugin.getStorage(name);
     await plugin.getStorage(name);
 
+    // The code, not just the type: swapping the classification at this site for
+    // `storageFailure` would otherwise leave every test green.
     expect(
       () => plugin.getStorage(name, forceInit: true),
-      throwsA(isA<BiometricStorageException>()),
+      throwsA(
+        isA<BiometricStorageException>().having(
+          (e) => e.code,
+          'code',
+          BiometricStorageExceptionCode.alreadyInitialized,
+        ),
+      ),
     );
   });
 
