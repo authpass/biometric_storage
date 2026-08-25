@@ -4,7 +4,7 @@
   `fl_method_success_response_new` takes its own reference to the `FlValue`
   rather than adopting the caller's, so the inline
   `fl_method_success_response_new(fl_value_new_*(…))` form leaked one value per
-  call. Present since the Linux implementation landed. The worst of the six is
+  call. Present since the Linux implementation landed in 3.0.0. The worst of the six is
   `read()`, which leaked a **plaintext-secret-bearing allocation on every
   successful read** — so a long-running app both grew without bound and kept
   copies of every secret it had read alive in the process.

@@ -125,8 +125,8 @@ static void on_password_stored(GObject *source, GAsyncResult *result,
     response = _handle_error("Failed to store secret", error);
     g_error_free(error);
   } else {
-    g_autoptr(FlValue) result = fl_value_new_bool(true);
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+    g_autoptr(FlValue) value = fl_value_new_bool(true);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(value));
   }
 
   fl_method_call_respond(method_call, response, nullptr);
@@ -147,8 +147,8 @@ static void on_password_cleared(GObject *source, GAsyncResult *result,
     g_error_free(error);
 
   } else {
-    g_autoptr(FlValue) result = fl_value_new_bool(removed);
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+    g_autoptr(FlValue) value = fl_value_new_bool(removed);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(value));
   }
   fl_method_call_respond(method_call, response, nullptr);
   g_object_unref(method_call);
@@ -169,12 +169,12 @@ static void on_password_lookup(GObject *source, GAsyncResult *result,
   } else if (password == NULL) {
     /* password will be null, if no matching password found */
     g_warning("Failed to lookup password (not found).");
-    g_autoptr(FlValue) result = fl_value_new_null();
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+    g_autoptr(FlValue) value = fl_value_new_null();
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(value));
   } else {
     /* ... do something with the password */
-    g_autoptr(FlValue) result = fl_value_new_string(password);
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+    g_autoptr(FlValue) value = fl_value_new_string(password);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(value));
     secret_password_free(password);
   }
   fl_method_call_respond(method_call, response, nullptr);
