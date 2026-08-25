@@ -47,5 +47,9 @@ example/android/app/_debug-full-r8-config.txt
 
 # Swift Package Manager leaves per-user Xcode state beside Package.swift.
 .swiftpm/
-Package.resolved
+
+# A dependency's Package.resolved is never read — only the root package's is,
+# and here that is the app's FlutterGeneratedPluginSwiftPackage. Anchored, so
+# that an app-level one under example/*/Runner.xcodeproj stays committable.
+/darwin/biometric_storage/Package.resolved
 
