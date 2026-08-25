@@ -27,6 +27,21 @@
   Debug builds log everything. Release builds stay silent until asked:
 
       adb shell setprop log.tag.BiometricStorage VERBOSE
+* android: `BiometricStorageLogging` lets an app choose the level and the
+  destination. `level` overrides the default above — set it to `Log.VERBOSE` to
+  keep verbose logging in a release build without depending on a device
+  property. `sink` hands every record to your own logging framework instead of
+  `android.util.Log`, with the `Throwable` passed separately rather than
+  flattened into the message, so you can report the real exception:
+
+      BiometricStorageLogging.sink =
+          BiometricStorageLogging.Sink { priority, tag, message, throwable ->
+              // forward to slf4j, Timber, a file appender, a crash reporter
+          }
+
+  Installing a sink turns every level on unless `level` says otherwise. Both
+  are optional and the default is unchanged. See the README for the full
+  slf4j example.
 
 ## 6.0.0-dev.4
 

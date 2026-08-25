@@ -75,6 +75,51 @@ the following applies to it:
   </resources>
   ```
 
+##### Logging
+
+The plugin writes to `android.util.Log` under the tag `BiometricStorage`. A
+debug build logs everything; a release build logs nothing below INFO until you
+ask for it:
+
+```
+adb shell setprop log.tag.BiometricStorage VERBOSE
+```
+
+That suits reading logs off a device. If your app collects its own — a file
+appender, a crash reporter, slf4j, Timber — install a sink instead, from
+`Application.onCreate` or your `FlutterActivity`, before the first call into
+the plugin:
+
+```kotlin
+import android.util.Log
+import design.codeux.biometric_storage.BiometricStorageLogging
+
+BiometricStorageLogging.sink =
+    BiometricStorageLogging.Sink { priority, tag, message, throwable ->
+        val log = LoggerFactory.getLogger(tag)
+        when (priority) {
+            Log.VERBOSE -> log.trace(message, throwable)
+            Log.DEBUG -> log.debug(message, throwable)
+            Log.INFO -> log.info(message, throwable)
+            Log.WARN -> log.warn(message, throwable)
+            else -> log.error(message, throwable)
+        }
+    }
+```
+
+Installing a sink turns every level on, since it says something wants the
+records. To decide the level yourself — including keeping verbose logging in a
+release build without touching a device property — set it explicitly:
+
+```kotlin
+BiometricStorageLogging.level = Log.VERBOSE
+```
+
+`throwable` is passed separately rather than flattened into `message`, so you
+can hand the real exception to whatever you report to. The sink is called on
+whichever thread produced the record, so it must be safe to call from the main
+thread and from a background executor.
+
 ##### Resources
 
 * https://developer.android.com/topic/security/data

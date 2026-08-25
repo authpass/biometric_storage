@@ -20,22 +20,18 @@ import android.util.Log
  * calling [Log] directly: the lambda is only invoked once the level has been
  * found to be enabled, so `logger.debug { "expensive $x" }` builds no string
  * when debug logging is off. A bare `Log.d(TAG, "expensive $x")` would build it
- * every time and then throw it away.
+ * every time and then throw it away. That still holds with a
+ * [BiometricStorageLogging.Sink] installed,
+ * which is why the level is decided here rather than left to the framework on
+ * the other side of it.
+ *
+ * This is the internal half. [BiometricStorageLogging] is what a consuming app
+ * sees, and is where the level and the destination are configured.
  */
 internal object PluginLog {
 
-    /**
-     * One tag for the whole plugin, so a single command turns everything on:
-     *
-     *     adb shell setprop log.tag.BiometricStorage VERBOSE
-     *
-     * Not derived from the class or file name. `minSdk` is 23, and below API 24
-     * [Log.isLoggable] throws `IllegalArgumentException` for a tag longer than
-     * 23 characters — the derived name for the largest source file here would
-     * be `BiometricStoragePluginKt`, which is 24. Truncating to fit would also
-     * leave nobody able to guess what to pass to `setprop`.
-     */
-    const val TAG = "BiometricStorage"
+    /** @see BiometricStorageLogging.TAG */
+    const val TAG = BiometricStorageLogging.TAG
 
     inline fun trace(t: Throwable? = null, message: () -> String) =
         log(Log.VERBOSE, t, message)
@@ -57,7 +53,44 @@ internal object PluginLog {
         if (!isLoggable(level)) {
             return
         }
-        val text = message()
+        write(level, message(), t)
+    }
+
+    /**
+     * An explicit [BiometricStorageLogging.level] wins. Otherwise a sink is
+     * taken as a statement that something wants every record, since the
+     * automatic default below describes logcat rather than somebody else's
+     * framework.
+     *
+     * That default exists because [Log.isLoggable] answers `false` below INFO
+     * unless a `log.tag` property says otherwise, which would leave `trace` and
+     * `debug` — most of the call sites here — silent. Silent by default is the
+     * behaviour this class was written to fix, so a debug build logs
+     * everything and a release build stays quiet until somebody asks.
+     */
+    @PublishedApi
+    internal fun isLoggable(level: Int): Boolean {
+        BiometricStorageLogging.level?.let {
+            return level >= it
+        }
+        if (BiometricStorageLogging.sink != null) {
+            return true
+        }
+        return BuildConfig.DEBUG || Log.isLoggable(TAG, level)
+    }
+
+    /**
+     * Read [BiometricStorageLogging.sink] once: it is volatile, and reading it
+     * again after [isLoggable] could see a different value if another thread
+     * installed or cleared it in between. Falling back to logcat is better than
+     * dropping the record.
+     */
+    @PublishedApi
+    internal fun write(level: Int, text: String, t: Throwable?) {
+        BiometricStorageLogging.sink?.let {
+            it.log(level, TAG, text, t)
+            return
+        }
         Log.println(
             level,
             TAG,
@@ -68,16 +101,4 @@ internal object PluginLog {
             }
         )
     }
-
-    /**
-     * [Log.isLoggable] answers `false` below INFO unless a `log.tag` property
-     * says otherwise, which would leave `trace` and `debug` — most of the call
-     * sites here — silent by default. Silent by default is the behaviour being
-     * fixed, so a debug build logs everything, matching what the example app's
-     * `logback.xml` used to configure. A release build stays quiet until
-     * somebody asks for output with `setprop`.
-     */
-    @PublishedApi
-    internal fun isLoggable(level: Int) =
-        BuildConfig.DEBUG || Log.isLoggable(TAG, level)
 }
