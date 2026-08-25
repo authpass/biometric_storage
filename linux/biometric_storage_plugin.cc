@@ -100,6 +100,30 @@ static FlMethodResponse *handleInit(BiometricStoragePlugin *self, FlValue *args)
   return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
+// Forgets an initialization so that a later init can apply fresh options.
+// There was no handler here at all, so `dispose` fell through to
+// fl_method_not_implemented_response_new() and reached Dart as a
+// MissingPluginException.
+//
+// Keyed by the raw name, matching handleInit — the prefixed form that
+// METHOD_PARAM_NAME builds is what libsecret is queried by, and is not what
+// this table holds. The stored secret is deliberately left alone.
+static FlMethodResponse *handleDispose(BiometricStoragePlugin *self,
+                                       FlValue *args) {
+  FlValue* nameValue = fl_value_lookup_string(args, "name");
+  if (nameValue == nullptr ||
+      fl_value_get_type(nameValue) != FL_VALUE_TYPE_STRING) {
+    return FL_METHOD_RESPONSE(fl_method_error_response_new(
+        kBadArgumentsError, "Argument 'name' missing or malformed", nullptr));
+  }
+  const gchar* name = fl_value_get_string(nameValue);
+
+  // Reports whether there was anything to forget, so disposing twice is safe.
+  g_autoptr(FlValue) result =
+      fl_value_new_bool(g_hash_table_remove(self->initialized, name));
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+}
+
 const SecretSchema *
 biometric_get_schema (void)
 {
@@ -195,6 +219,8 @@ biometric_storage_plugin_handle_method_call(BiometricStoragePlugin *self,
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   } else if (strcmp(method, "init") == 0) {
     response = handleInit(self, args);
+  } else if (strcmp(method, "dispose") == 0) {
+    response = handleDispose(self, args);
   } else if (IS_METHOD(method, kMethodWrite)) {
     METHOD_PARAM_NAME(name, args);
     // const gchar *name =
