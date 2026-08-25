@@ -13,9 +13,9 @@
   all build debug or profile. The first thing to hit it is an attempt to ship
   to Play, which is the worst possible moment. Present in 6.0.0-dev.4.
 
-  Fixed at both ends: `android/proguard.pro` is no longer empty and carries the
-  `-dontwarn` rules, and they travel inside the AAR so no consumer has to add
-  anything; and the dependencies that made them necessary are gone.
+  Fixed by removing the dependencies, so nothing needs suppressing. If you
+  added `-dontwarn ch.qos.logback.**` to your own `proguard-rules.pro` to get
+  6.0.0-dev.4 to build, you can drop it.
 * android: the plugin's logging now actually produces output. `slf4j-api` and
   `kotlin-logging` are both facades and neither had a provider, so SLF4J
   reported `No SLF4J providers were found` once and discarded every call after
