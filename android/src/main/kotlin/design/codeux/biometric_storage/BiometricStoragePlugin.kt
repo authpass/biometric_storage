@@ -16,7 +16,6 @@ import io.flutter.embedding.engine.plugins.activity.*
 import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.ExecutorService
@@ -24,7 +23,7 @@ import java.util.concurrent.Executors
 import javax.crypto.Cipher
 import kotlin.time.Duration.Companion.seconds
 
-private val logger = KotlinLogging.logger {}
+private val logger = PluginLog
 
 enum class CipherMode {
     Encrypt,

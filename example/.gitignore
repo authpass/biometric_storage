@@ -32,6 +32,8 @@
 # Android related
 **/android/**/gradle-wrapper.jar
 **/android/.gradle
+# Kotlin 2.x writes a per-build session directory next to .gradle.
+**/android/.kotlin
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat

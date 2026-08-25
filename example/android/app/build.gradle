@@ -79,10 +79,12 @@ flutter {
     source '../..'
 }
 
+// Deliberately no logging framework. The example app used to carry slf4j-api,
+// logback-android and kotlin-logging, and that is precisely what hid the R8
+// failure this app is meant to catch: the plugin's own `minifyReleaseWithR8`
+// only breaks when nothing on the classpath supplies the classes the logging
+// facades name. A real consumer supplies nothing, so neither does this one.
 dependencies {
-    implementation 'org.slf4j:slf4j-api:2.0.18'
-    implementation 'com.github.tony19:logback-android:3.0.0'
-    implementation "io.github.oshai:kotlin-logging-jvm:8.0.4"
     implementation "androidx.appcompat:appcompat:1.8.0"
 
     testImplementation 'junit:junit:4.13.2'

@@ -35,10 +35,20 @@ android {
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
+    // No consumerProguardFiles: this plugin references nothing R8 cannot find,
+    // so it has no rules to hand its consumers. Declaring the mechanism against
+    // an empty file is what the previous state was, and an empty rules file
+    // reads as "considered, nothing needed" when in fact it had never been
+    // filled in. Add it back with the rule when there is a rule.
     defaultConfig {
         minSdkVersion 23
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles 'proguard.pro'
+    }
+    buildFeatures {
+        // PluginLog reads BuildConfig.DEBUG to decide whether debug and trace
+        // logging is on by default. AGP 8 stopped generating BuildConfig for
+        // library modules unless asked.
+        buildConfig true
     }
     lint {
         disable 'InvalidPackage'
@@ -78,7 +88,8 @@ dependencies {
     api "androidx.core:core-ktx:1.18.0"
     api "androidx.fragment:fragment-ktx:1.9.0"
 
-    implementation "org.slf4j:slf4j-api:2.0.18"
+    // No logging framework: see PluginLog.kt. slf4j-api and kotlin-logging were
+    // both here, both facades, and neither had a provider — so every call was
+    // discarded, and R8 failed on the logback classes kotlin-logging names.
     implementation "androidx.biometric:biometric:$biometric_version"
-    implementation "io.github.oshai:kotlin-logging-jvm:8.0.4"
 }

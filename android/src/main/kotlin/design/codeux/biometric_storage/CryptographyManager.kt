@@ -20,7 +20,6 @@ package design.codeux.biometric_storage
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.nio.charset.Charset
 import java.security.KeyStore
@@ -30,7 +29,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-private val logger = KotlinLogging.logger {}
+private val logger = PluginLog
 
 interface CryptographyManager {
 
