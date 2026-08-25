@@ -413,7 +413,12 @@ class MethodChannelBiometricStorage extends BiometricStorage {
           e,
           stackTrace,
         );
-        throw BiometricStorageException(e.message ?? e.code);
+        // Not a plain `throw`: that would restart the trace here and lose the
+        // frames showing which call re-initialized the store.
+        Error.throwWithStackTrace(
+          BiometricStorageException(e.message ?? e.code),
+          stackTrace,
+        );
       }
       _logger.warning(
         'Error while initializing biometric storage.',

@@ -377,6 +377,34 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 )
             )
         }
+        // Being attached is not the same as being able to show a dialog.
+        // androidx's BiometricPrompt refuses to start after onSaveInstanceState
+        // and — this is the part that hurts — returns without invoking any
+        // callback, logging "Unable to start authentication. Called after
+        // onSaveInstanceState()". The pending Flutter result would then never
+        // complete: not an error the caller can catch, a permanent silent hang.
+        // Reachable whenever the app is backgrounded, independently of whether
+        // the activity reference itself is stale.
+        if (activity.isFinishing ||
+            activity.isDestroyed ||
+            activity.supportFragmentManager.isStateSaved
+        ) {
+            return run {
+                logger.error {
+                    "Activity cannot host a prompt right now " +
+                            "(finishing=${activity.isFinishing} " +
+                            "destroyed=${activity.isDestroyed} " +
+                            "stateSaved=${activity.supportFragmentManager.isStateSaved})."
+                }
+                onError(
+                    AuthenticationErrorInfo(
+                        AuthenticationError.Failed,
+                        "Activity is not in a state where an authentication " +
+                                "prompt can be shown."
+                    )
+                )
+            }
+        }
         val prompt =
             BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {

@@ -3,6 +3,13 @@
 Six pre-existing bugs, all found while reviewing 6.0.0-dev.1 and none introduced
 by it.
 
+* android: an authentication requested while the activity cannot host a dialog
+  no longer hangs forever. `androidx.biometric` refuses to start after
+  `onSaveInstanceState` — logging `Unable to start authentication` — and returns
+  without invoking any callback, so the pending Flutter result never completed.
+  The state is checked up front and reported as
+  `AuthException(AuthExceptionCode.unknown)` instead. Reachable whenever the app
+  is backgrounded, independently of the configuration-change bug below.
 * android: the plugin kept using a destroyed `Activity` after a configuration
   change. `onReattachedToActivityForConfigChanges` and
   `onDetachedFromActivityForConfigChanges` were both empty, so after a rotation
@@ -26,9 +33,11 @@ by it.
   away the cached `LAContext` — so any
   `darwinTouchIDAuthenticationForceReuseContextDuration` in progress — and
   quietly adopted whatever options the second call passed. The first call now
-  wins, as on Android. If you relied on re-initializing to change options, close
-  the old store first; passing different options to a repeat call has never been
-  reported back to Dart and now definitively does nothing.
+  wins, as on Android. If you relied on re-initializing to change options, give
+  each set of options its own store name, or restart — there is no API to close
+  a store, so none can be reopened differently within a run. Passing different
+  options to a repeat call was never reported back to Dart, and now definitively
+  does nothing.
 * **Breaking**: `forceInit` now does what it documents on Windows, web, iOS and
   macOS. It was implemented on Android only; the others accepted the flag and
   dropped it. It throws `BiometricStorageException` on every platform — the
