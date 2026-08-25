@@ -28,6 +28,13 @@ jobs:
         run: flutter analyze --fatal-infos
       - name: Run tests
         run: flutter test
+      # The example is a separate package: neither analyze nor test reaches it
+      # from the repository root, which is how its widget test sat broken
+      # against a UI it had never matched.
+      - name: Analyze the example
+        run: cd example && flutter analyze --fatal-infos
+      - name: Test the example
+        run: cd example && flutter test
 
   build:
     runs-on: ${{ matrix.os }}
