@@ -81,3 +81,21 @@ jobs:
             echo "A Podfile was generated: the Swift Package Manager support regressed." >&2
             exit 1
           fi
+      # A plugin that never linked produces a perfectly successful build; the
+      # failure surfaces on a user's device as MissingPluginException. The build
+      # exiting 0 says the app compiled, not that this package is inside it, so
+      # ask the artifact instead of the exit code.
+      - name: Fail if the plugin did not link
+        if: matrix.buildcommand == 'ios'
+        run: |
+          binary="example/build/ios/iphoneos/Runner.app/Runner"
+          if [ ! -f "$binary" ]; then
+            echo "Expected a built binary at $binary; the check cannot run." >&2
+            exit 1
+          fi
+          count=$(nm "$binary" | grep -c biometric_storage || true)
+          echo "biometric_storage symbols in the binary: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "The plugin is absent from the linked binary." >&2
+            exit 1
+          fi
