@@ -91,12 +91,13 @@ static FlMethodResponse *handleInit(BiometricStoragePlugin *self, FlValue *args)
     }
     // As on every other platform: a repeat init without forceInit is a no-op
     // that reports it created nothing. This used to answer `true`.
-    return FL_METHOD_RESPONSE(
-        fl_method_success_response_new(fl_value_new_bool(false)));
+    g_autoptr(FlValue) result = fl_value_new_bool(false);
+    return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   }
 
   g_hash_table_add(self->initialized, g_strdup(name));
-  return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+  g_autoptr(FlValue) result = fl_value_new_bool(true);
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
 }
 
 const SecretSchema *
@@ -124,7 +125,8 @@ static void on_password_stored(GObject *source, GAsyncResult *result,
     response = _handle_error("Failed to store secret", error);
     g_error_free(error);
   } else {
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+    g_autoptr(FlValue) result = fl_value_new_bool(true);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   }
 
   fl_method_call_respond(method_call, response, nullptr);
@@ -145,7 +147,8 @@ static void on_password_cleared(GObject *source, GAsyncResult *result,
     g_error_free(error);
 
   } else {
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(removed)));
+    g_autoptr(FlValue) result = fl_value_new_bool(removed);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   }
   fl_method_call_respond(method_call, response, nullptr);
   g_object_unref(method_call);
@@ -166,10 +169,12 @@ static void on_password_lookup(GObject *source, GAsyncResult *result,
   } else if (password == NULL) {
     /* password will be null, if no matching password found */
     g_warning("Failed to lookup password (not found).");
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_null()));
+    g_autoptr(FlValue) result = fl_value_new_null();
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   } else {
     /* ... do something with the password */
-    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_string(password)));
+    g_autoptr(FlValue) result = fl_value_new_string(password);
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
     secret_password_free(password);
   }
   fl_method_call_respond(method_call, response, nullptr);
