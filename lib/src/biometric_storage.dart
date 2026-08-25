@@ -44,6 +44,13 @@ const _canAuthenticateMapping = {
   'ErrorStatusUnknown': CanAuthenticateResponse.statusUnknown,
 };
 
+/// Why an [AuthException] was raised.
+///
+/// New members may be added in a minor release, so a `switch` over this should
+/// carry a `default` rather than being exhaustive. Several platform conditions
+/// still arrive as [unknown] — Android reports every `BiometricPrompt` error
+/// beyond cancel and timeout that way, lockout included — and narrowing them is
+/// only a minor-version change while this contract holds.
 enum AuthExceptionCode {
   /// User taps the cancel/negative button or presses `back`.
   userCanceled,
