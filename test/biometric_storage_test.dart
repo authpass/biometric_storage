@@ -36,6 +36,23 @@ void main() {
     expect(Win32BiometricStoragePlugin, isNotNull);
   });
 
+  group('BiometricStorageException', () {
+    test('defaults to unknown, so the positional constructor still works', () {
+      final e = BiometricStorageException('boom');
+      expect(e.code, BiometricStorageExceptionCode.unknown);
+      expect(e.message, 'boom');
+    });
+
+    test('carries the code it was given, and shows it', () {
+      final e = BiometricStorageException(
+        'boom',
+        code: BiometricStorageExceptionCode.storageFailure,
+      );
+      expect(e.code, BiometricStorageExceptionCode.storageFailure);
+      expect(e.toString(), contains('storageFailure'));
+    });
+  });
+
   group('StorageFileInitOptions', () {
     test('omits the keychain access group by default', () {
       expect(

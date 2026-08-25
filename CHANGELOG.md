@@ -1,3 +1,15 @@
+## 6.0.0-dev.4
+
+* `BiometricStorageException` carries a `code`. It previously held only a
+  message, so telling "you called `getStorage` twice" from "the credential store
+  failed" meant matching English text — and 6.0.0-dev.2 took the number of
+  places it is raised from one to six. `BiometricStorageExceptionCode` is
+  `alreadyInitialized`, `storageFailure` or `unknown`, and every throw site in
+  the package classifies itself, including the `AlreadyInitialized` the
+  method-channel platforms raise. Additive: the positional constructor is
+  unchanged and defaults to `unknown`, so existing `catch` blocks keep working.
+  Switch over it with a `default` — members may be added in a minor release.
+
 ## 6.0.0-dev.3
 
 * linux: fix a memory leak on every method call.
