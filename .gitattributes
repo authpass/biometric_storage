@@ -1,0 +1,12 @@
+# CI checks `dart format --set-exit-if-changed` on a Windows runner as well as
+# on Linux. The formatter emits LF, so a checkout that converted line endings
+# would fail that step — and would give contributors on Windows with
+# core.autocrlf=true a working tree that never looks formatted.
+*.dart text eol=lf
+
+# Same reasoning for the files the build reads on more than one platform.
+*.gradle text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.swift text eol=lf
+*.podspec text eol=lf

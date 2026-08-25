@@ -1,3 +1,54 @@
+## 6.0.0-dev.1
+
+**Breaking**: requires Dart 3.10 / Flutter 3.44 or newer.
+
+* Support `package:win32` 6.x, and drop 5.x and older. Every 5.x release of this
+  plugin pinned `win32 >=2.0.0 <6.0.0`, which made it unresolvable alongside
+  `package_info_plus >=10.1.0` and anything else on win32 6. The Windows
+  implementation is compiled on every `dart.library.io` platform, so win32 6
+  removing `TEXT()` also broke iOS and macOS builds — the test suite now imports
+  the public barrel so `flutter test` compiles the win32 bindings on any host.
+* windows: writing an empty value no longer throws.
+* windows: fix a use-after-free in `read()`. `CredentialBlob.asTypedList()` is a
+  view onto memory owned by the credential, and it was decoded *after* `CredFree`
+  had released it. The bytes are now copied out first. Present since 1.1.0,
+  where a9e3944 moved the `CredFree` call in between the two.
+* windows: the bindings now have runtime coverage, not just compile coverage —
+  `test/biometric_storage_win32_test.dart` exercises write/read/delete against
+  the real credential store, and runs on the Windows CI job.
+* iOS/macOS: Swift Package Manager support. Adding this plugin to an app that has
+  migrated to SwiftPM no longer regenerates a `Podfile`. CocoaPods keeps working;
+  both a `Package.swift` and a podspec are shipped.
+* iOS/macOS: the Swift sources moved to `darwin/` and are shared through
+  `sharedDarwinSource`, replacing the symlink from `ios/Classes`. The macOS
+  plugin class is now `BiometricStoragePlugin` (was
+  `BiometricStorageMacOSPlugin`) and the Objective-C shim on iOS is gone. Neither
+  is referenced from Dart, so this is only visible in a hand-written registrant.
+* android: AGP 8.13, Kotlin 2.2, compileSdk 36, `androidx.biometric`
+  1.4.0-alpha05, `core-ktx` 1.18.0, `fragment-ktx` 1.9.0, slf4j 2.0.18 and
+  kotlin-logging 8. The plugin no longer applies the Kotlin Gradle Plugin itself
+  — AGP 9 warns about that and future Flutter releases reject it.
+* android: `canAuthenticate()` no longer throws on a status code the plugin does
+  not know about — Android 16 added `BIOMETRIC_ERROR_NOT_ENABLED_FOR_APPS` (21)
+  and every call blew up. Unmapped codes are reported as
+  `CanAuthenticateResponse.statusUnknown` and logged.
+  https://github.com/authpass/biometric_storage/issues/148
+* android: the plugin no longer calls `jvmToolchain`, which failed to resolve in
+  some consumer builds. https://github.com/authpass/biometric_storage/issues/107
+* Document the Android `FlutterFragmentActivity` and `Theme.AppCompat`
+  requirements as what they actually are: both only apply to storage that shows
+  an authentication prompt, and the theme only where `androidx.biometric` falls
+  back to its own dialog, which is below API 28 rather than below API 29.
+* web: the package is now WebAssembly-ready. `lib/src/biometric_storage.dart`
+  imported `dart:io` unconditionally for `Platform`, which marked the whole
+  package wasm-incompatible; the host OS now comes through a conditional import,
+  with `dart:io` still doing the work everywhere it exists. No behaviour change
+  on any platform. https://github.com/authpass/biometric_storage/issues/145
+* iOS/macOS: the prompt strings (`IosPromptInfo.saveTitle` / `accessTitle`) now
+  travel on the `LAContext` as `localizedReason` instead of through
+  `kSecUseOperationPrompt`, deprecated since iOS 14 / macOS 11. Same prompts, no
+  deprecation warnings on build.
+
 ## 5.2.0-dev.1
 
 * iOS/macOS: `StorageFileInitOptions.darwinKeychainAccessGroup` to store items

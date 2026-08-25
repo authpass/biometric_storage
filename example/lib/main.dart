@@ -34,14 +34,16 @@ class ShortFormatter extends LogRecordFormatter {
   @override
   StringBuffer formatToStringBuffer(LogRecord rec, StringBuffer sb) {
     sb.write(
-        '${rec.time.hour}:${rec.time.minute}:${rec.time.second} ${rec.level.name} '
-        '${rec.message}');
+      '${rec.time.hour}:${rec.time.minute}:${rec.time.second} ${rec.level.name} '
+      '${rec.message}',
+    );
 
     if (rec.error != null) {
       sb.write(rec.error);
     }
     // ignore: avoid_as
-    final stackTrace = rec.stackTrace ??
+    final stackTrace =
+        rec.stackTrace ??
         (rec.error is Error ? (rec.error as Error).stackTrace : null);
     if (stackTrace != null) {
       sb.write(stackTrace);
@@ -76,16 +78,18 @@ class MyAppState extends State<MyApp> {
     androidBiometricOnly: false,
     androidAuthenticationValidityDuration: const Duration(seconds: 5),
     darwinBiometricOnly: false,
-    darwinTouchIDAuthenticationForceReuseContextDuration:
-        const Duration(seconds: 5),
+    darwinTouchIDAuthenticationForceReuseContextDuration: const Duration(
+      seconds: 5,
+    ),
   );
 
   BiometricStorageFile? _authStorage;
   BiometricStorageFile? _storage;
   BiometricStorageFile? _customPrompt;
 
-  final TextEditingController _writeController =
-      TextEditingController(text: 'Lorem Ipsum');
+  final TextEditingController _writeController = TextEditingController(
+    text: 'Lorem Ipsum',
+  );
 
   @override
   void initState() {
@@ -114,9 +118,7 @@ class MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
+        appBar: AppBar(title: const Text('Plugin example app')),
         body: Column(
           children: [
             const Text('Methods:'),
@@ -124,15 +126,17 @@ class MyAppState extends State<MyApp> {
               child: const Text('init'),
               onPressed: () async {
                 _logger.finer('Initializing $baseName');
-                final authStorageSupport =
-                    await _checkAuthenticate(_authStorageInitOptions);
+                final authStorageSupport = await _checkAuthenticate(
+                  _authStorageInitOptions,
+                );
                 if (authStorageSupport == CanAuthenticateResponse.unsupported) {
                   _logger.severe(
-                      'Unable to use authenticate. Unable to get storage.');
+                    'Unable to use authenticate. Unable to get storage.',
+                  );
                   return;
                 }
-                final supportsAuthenticated = authStorageSupport ==
-                        CanAuthenticateResponse.success ||
+                final supportsAuthenticated =
+                    authStorageSupport == CanAuthenticateResponse.success ||
                     authStorageSupport == CanAuthenticateResponse.statusUnknown;
                 if (supportsAuthenticated) {
                   _authStorage = await BiometricStorage().getStorage(
@@ -140,29 +144,32 @@ class MyAppState extends State<MyApp> {
                     options: _authStorageInitOptions,
                   );
                 }
-                _storage = await BiometricStorage()
-                    .getStorage('${baseName}_unauthenticated',
-                        options: StorageFileInitOptions(
-                          authenticationRequired: false,
-                        ));
-                final supportsCustomPrompt =
-                    await _checkAuthenticate(_customPromptInitOptions);
+                _storage = await BiometricStorage().getStorage(
+                  '${baseName}_unauthenticated',
+                  options: StorageFileInitOptions(
+                    authenticationRequired: false,
+                  ),
+                );
+                final supportsCustomPrompt = await _checkAuthenticate(
+                  _customPromptInitOptions,
+                );
                 if (supportsCustomPrompt == CanAuthenticateResponse.success) {
-                  _customPrompt = await BiometricStorage()
-                      .getStorage('${baseName}_customPrompt',
-                          options: _customPromptInitOptions,
-                          promptInfo: const PromptInfo(
-                            iosPromptInfo: IosPromptInfo(
-                              saveTitle: 'Custom save title',
-                              accessTitle: 'Custom access title.',
-                            ),
-                            androidPromptInfo: AndroidPromptInfo(
-                              title: 'Custom title',
-                              subtitle: 'Custom subtitle',
-                              description: 'Custom description',
-                              negativeButton: 'Nope!',
-                            ),
-                          ));
+                  _customPrompt = await BiometricStorage().getStorage(
+                    '${baseName}_customPrompt',
+                    options: _customPromptInitOptions,
+                    promptInfo: const PromptInfo(
+                      iosPromptInfo: IosPromptInfo(
+                        saveTitle: 'Custom save title',
+                        accessTitle: 'Custom access title.',
+                      ),
+                      androidPromptInfo: AndroidPromptInfo(
+                        title: 'Custom title',
+                        subtitle: 'Custom subtitle',
+                        description: 'Custom description',
+                        negativeButton: 'Nope!',
+                      ),
+                    ),
+                  );
                 }
                 setState(() {});
                 _logger.info('initiailzed $baseName');
@@ -172,31 +179,40 @@ class MyAppState extends State<MyApp> {
             ...(_authStorage == null
                 ? []
                 : [
-                    const Text('Biometric Authentication',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Biometric Authentication',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     StorageActions(
-                        storageFile: _authStorage!,
-                        writeController: _writeController),
+                      storageFile: _authStorage!,
+                      writeController: _writeController,
+                    ),
                     const Divider(),
                   ]),
             ...?(_storage == null
                 ? null
                 : [
-                    const Text('Unauthenticated',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Unauthenticated',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     StorageActions(
-                        storageFile: _storage!,
-                        writeController: _writeController),
+                      storageFile: _storage!,
+                      writeController: _writeController,
+                    ),
                     const Divider(),
                   ]),
             ...?(_customPrompt == null
                 ? null
                 : [
-                    const Text('Custom Prompts w/ 5s auth validity',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Custom Prompts w/ 5s auth validity',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     StorageActions(
-                        storageFile: _customPrompt!,
-                        writeController: _writeController),
+                      storageFile: _customPrompt!,
+                      writeController: _writeController,
+                    ),
                     const Divider(),
                   ]),
             const Divider(),
@@ -214,9 +230,7 @@ class MyAppState extends State<MyApp> {
                   reverse: true,
                   child: Container(
                     padding: const EdgeInsets.all(16),
-                    child: Text(
-                      logMessages.log.toString(),
-                    ),
+                    child: Text(logMessages.log.toString()),
                   ),
                 ),
               ),
@@ -234,15 +248,18 @@ class MyAppState extends State<MyApp> {
             child: const Text('Check App Armor'),
             onPressed: () async {
               if (await BiometricStorage().linuxCheckAppArmorError()) {
-                _logger.info('Got an error! User has to authorize us to '
-                    'use secret service.');
                 _logger.info(
-                    'Run: `snap connect biometric-storage-example:password-manager-service`');
+                  'Got an error! User has to authorize us to '
+                  'use secret service.',
+                );
+                _logger.info(
+                  'Run: `snap connect biometric-storage-example:password-manager-service`',
+                );
               } else {
                 _logger.info('all good.');
               }
             },
-          )
+          ),
         ];
 }
 
@@ -282,8 +299,9 @@ class StorageActions extends StatelessWidget {
           onPressed: () async {
             _logger.fine('Going to write...');
             try {
-              await storageFile
-                  .write(' [${DateTime.now()}] ${writeController.text}');
+              await storageFile.write(
+                ' [${DateTime.now()}] ${writeController.text}',
+              );
               _logger.info('Written content.');
             } on AuthException catch (e) {
               if (e.code == AuthExceptionCode.userCanceled) {

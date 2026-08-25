@@ -1,10 +1,15 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+// Not `dart:io` directly: importing it here unconditionally is what made the
+// whole package report as WebAssembly-incompatible, since this library is
+// reachable from the web implementation. The io branch still uses `dart:io`.
+import 'platform_os_io.dart'
+    if (dart.library.js_interop) 'platform_os_web.dart';
 
 final _logger = Logger('biometric_storage');
 
@@ -88,22 +93,23 @@ class StorageFileInitOptions {
     Duration? darwinTouchIDAuthenticationAllowableReuseDuration,
     this.darwinTouchIDAuthenticationForceReuseContextDuration,
     @Deprecated(
-        'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead')
+      'use use androidAuthenticationValidityDuration, iosTouchIDAuthenticationAllowableReuseDuration or iosTouchIDAuthenticationForceReuseContextDuration instead',
+    )
     int authenticationValidityDurationSeconds = -1,
     this.authenticationRequired = true,
     this.androidBiometricOnly = true,
     this.darwinBiometricOnly = true,
     this.darwinKeychainAccessGroup,
-  })  : androidAuthenticationValidityDuration =
-            androidAuthenticationValidityDuration ??
-                (authenticationValidityDurationSeconds <= 0
-                    ? null
-                    : Duration(seconds: authenticationValidityDurationSeconds)),
-        darwinTouchIDAuthenticationAllowableReuseDuration =
-            darwinTouchIDAuthenticationAllowableReuseDuration ??
-                (authenticationValidityDurationSeconds <= 0
-                    ? null
-                    : Duration(seconds: authenticationValidityDurationSeconds));
+  }) : androidAuthenticationValidityDuration =
+           androidAuthenticationValidityDuration ??
+           (authenticationValidityDurationSeconds <= 0
+               ? null
+               : Duration(seconds: authenticationValidityDurationSeconds)),
+       darwinTouchIDAuthenticationAllowableReuseDuration =
+           darwinTouchIDAuthenticationAllowableReuseDuration ??
+           (authenticationValidityDurationSeconds <= 0
+               ? null
+               : Duration(seconds: authenticationValidityDurationSeconds));
 
   /// see https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder#setUserAuthenticationParameters(int,%20int)
   final Duration? androidAuthenticationValidityDuration;
@@ -163,17 +169,17 @@ class StorageFileInitOptions {
   final String? darwinKeychainAccessGroup;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'androidAuthenticationValidityDurationSeconds':
-            androidAuthenticationValidityDuration?.inSeconds,
-        'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
-            darwinTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
-        'darwinTouchIDAuthenticationForceReuseContextDurationSeconds':
-            darwinTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
-        'authenticationRequired': authenticationRequired,
-        'androidBiometricOnly': androidBiometricOnly,
-        'darwinBiometricOnly': darwinBiometricOnly,
-        'darwinKeychainAccessGroup': darwinKeychainAccessGroup,
-      };
+    'androidAuthenticationValidityDurationSeconds':
+        androidAuthenticationValidityDuration?.inSeconds,
+    'darwinTouchIDAuthenticationAllowableReuseDurationSeconds':
+        darwinTouchIDAuthenticationAllowableReuseDuration?.inSeconds,
+    'darwinTouchIDAuthenticationForceReuseContextDurationSeconds':
+        darwinTouchIDAuthenticationForceReuseContextDuration?.inSeconds,
+    'authenticationRequired': authenticationRequired,
+    'androidBiometricOnly': androidBiometricOnly,
+    'darwinBiometricOnly': darwinBiometricOnly,
+    'darwinKeychainAccessGroup': darwinKeychainAccessGroup,
+  };
 }
 
 /// Android specific configuration of the prompt displayed for biometry.
@@ -195,15 +201,26 @@ class AndroidPromptInfo {
   static const defaultValues = AndroidPromptInfo();
 
   Map<String, dynamic> _toJson() => <String, dynamic>{
-        'title': title,
-        'subtitle': subtitle,
-        'description': description,
-        'negativeButton': negativeButton,
-        'confirmationRequired': confirmationRequired,
-      };
+    'title': title,
+    'subtitle': subtitle,
+    'description': description,
+    'negativeButton': negativeButton,
+    'confirmationRequired': confirmationRequired,
+  };
 }
 
 /// iOS **and MacOS** specific configuration of the prompt displayed for biometry.
+///
+/// **These strings are not shown on a Face ID device.** They are passed to the
+/// system as `LAContext.localizedReason`, and Face ID authenticates against a
+/// HUD that has no room for a reason: the panel shows the Face ID glyph and the
+/// words "Face ID", and the "not recognized" alert that follows a failure offers
+/// only retry and cancel. Verified on an iPhone Xr running iOS 18.7.9, against
+/// both `localizedReason` and the deprecated `kSecUseOperationPrompt` set at the
+/// same time — neither was rendered.
+///
+/// They are still worth setting: Touch ID devices draw the reason in the
+/// authentication alert, and macOS shows it too.
 class IosPromptInfo {
   const IosPromptInfo({
     this.saveTitle = 'Unlock to save data',
@@ -216,9 +233,9 @@ class IosPromptInfo {
   static const defaultValues = IosPromptInfo();
 
   Map<String, dynamic> _toJson() => <String, dynamic>{
-        'saveTitle': saveTitle,
-        'accessTitle': accessTitle,
-      };
+    'saveTitle': saveTitle,
+    'accessTitle': accessTitle,
+  };
 }
 
 /// Wrapper for platform specific prompt infos.
@@ -291,23 +308,13 @@ abstract class BiometricStorage extends PlatformInterface {
   });
 
   @protected
-  Future<String?> read(
-    String name,
-    PromptInfo promptInfo,
-  );
+  Future<String?> read(String name, PromptInfo promptInfo);
 
   @protected
-  Future<bool?> delete(
-    String name,
-    PromptInfo promptInfo,
-  );
+  Future<bool?> delete(String name, PromptInfo promptInfo);
 
   @protected
-  Future<void> write(
-    String name,
-    String content,
-    PromptInfo promptInfo,
-  );
+  Future<void> write(String name, String content, PromptInfo promptInfo);
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
@@ -322,16 +329,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
     if (kIsWeb) {
       return CanAuthenticateResponse.unsupported;
     }
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isLinux) {
-      final response = await _channel.invokeMethod<String>(
-        'canAuthenticate',
-        {
-          'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
-        },
-      );
+    if (const {'android', 'ios', 'macos', 'linux'}.contains(operatingSystem)) {
+      final response = await _channel.invokeMethod<String>('canAuthenticate', {
+        'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
+      });
       final ret = _canAuthenticateMapping[response];
       if (ret == null) {
         throw StateError('Invalid response from native platform. {$response}');
@@ -356,11 +357,13 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   /// --daemonize --login " label="unconfined")
   @override
   Future<bool> linuxCheckAppArmorError() async {
-    if (!Platform.isLinux) {
+    if (operatingSystem != 'linux') {
       return false;
     }
-    final tmpStorage = await getStorage('appArmorCheck',
-        options: StorageFileInitOptions(authenticationRequired: false));
+    final tmpStorage = await getStorage(
+      'appArmorCheck',
+      options: StorageFileInitOptions(authenticationRequired: false),
+    );
     _logger.finer('Checking app armor');
     try {
       await tmpStorage.read();
@@ -371,7 +374,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         return true;
       }
       _logger.warning(
-          'Unknown error while checking for app armor.', e, stackTrace);
+        'Unknown error while checking for app armor.',
+        e,
+        stackTrace,
+      );
       // some other weird error?
       rethrow;
     }
@@ -390,91 +396,77 @@ class MethodChannelBiometricStorage extends BiometricStorage {
     PromptInfo promptInfo = PromptInfo.defaultValues,
   }) async {
     try {
-      final result = await _channel.invokeMethod<bool>(
-        'init',
-        {
-          'name': name,
-          'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
-          'forceInit': forceInit,
-        },
-      );
+      final result = await _channel.invokeMethod<bool>('init', {
+        'name': name,
+        'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
+        'forceInit': forceInit,
+      });
       _logger.finest('getting storage. was created: $result');
-      return BiometricStorageFile(
-        this,
-        name,
-        promptInfo,
-      );
+      return BiometricStorageFile(this, name, promptInfo);
     } catch (e, stackTrace) {
       _logger.warning(
-          'Error while initializing biometric storage.', e, stackTrace);
+        'Error while initializing biometric storage.',
+        e,
+        stackTrace,
+      );
       rethrow;
     }
   }
 
   @override
-  Future<String?> read(
-    String name,
-    PromptInfo promptInfo,
-  ) =>
-      _transformErrors(_channel.invokeMethod<String>('read', <String, dynamic>{
-        'name': name,
-        ..._promptInfoForCurrentPlatform(promptInfo),
-      }));
+  Future<String?> read(String name, PromptInfo promptInfo) => _transformErrors(
+    _channel.invokeMethod<String>('read', <String, dynamic>{
+      'name': name,
+      ..._promptInfoForCurrentPlatform(promptInfo),
+    }),
+  );
 
   @override
-  Future<bool?> delete(
-    String name,
-    PromptInfo promptInfo,
-  ) =>
-      _transformErrors(_channel.invokeMethod<bool>('delete', <String, dynamic>{
-        'name': name,
-        ..._promptInfoForCurrentPlatform(promptInfo),
-      }));
+  Future<bool?> delete(String name, PromptInfo promptInfo) => _transformErrors(
+    _channel.invokeMethod<bool>('delete', <String, dynamic>{
+      'name': name,
+      ..._promptInfoForCurrentPlatform(promptInfo),
+    }),
+  );
 
   @override
-  Future<void> write(
-    String name,
-    String content,
-    PromptInfo promptInfo,
-  ) =>
-      _transformErrors(_channel.invokeMethod('write', <String, dynamic>{
-        'name': name,
-        'content': content,
-        ..._promptInfoForCurrentPlatform(promptInfo),
-      }));
+  Future<void> write(String name, String content, PromptInfo promptInfo) =>
+      _transformErrors(
+        _channel.invokeMethod('write', <String, dynamic>{
+          'name': name,
+          'content': content,
+          ..._promptInfoForCurrentPlatform(promptInfo),
+        }),
+      );
 
-  Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) {
-    // Don't expose Android configurations to other platforms
-    if (Platform.isAndroid) {
-      return <String, dynamic>{
-        'androidPromptInfo': promptInfo.androidPromptInfo._toJson()
-      };
-    } else if (Platform.isIOS) {
-      return <String, dynamic>{
-        'iosPromptInfo': promptInfo.iosPromptInfo._toJson()
-      };
-    } else if (Platform.isMacOS) {
-      return <String, dynamic>{
+  Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) =>
+      switch (operatingSystem) {
+        // Don't expose Android configurations to other platforms.
+        'android' => <String, dynamic>{
+          'androidPromptInfo': promptInfo.androidPromptInfo._toJson(),
+        },
+        'ios' => <String, dynamic>{
+          'iosPromptInfo': promptInfo.iosPromptInfo._toJson(),
+        },
         // This is no typo, we use the same implementation on iOS and MacOS,
         // so we use the same parameter.
-        'iosPromptInfo': promptInfo.macOsPromptInfo._toJson()
+        'macos' => <String, dynamic>{
+          'iosPromptInfo': promptInfo.macOsPromptInfo._toJson(),
+        },
+        'linux' => <String, dynamic>{},
+        // Windows has no method channel implementation
+        // Web has a Noop implementation.
+        final os => throw StateError('Unsupported Platform $os'),
       };
-    } else if (Platform.isLinux) {
-      return <String, dynamic>{};
-    } else {
-      // Windows has no method channel implementation
-      // Web has a Noop implementation.
-      throw StateError('Unsupported Platform ${Platform.operatingSystem}');
-    }
-  }
 
   Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((Object error, StackTrace stackTrace) {
         if (error is PlatformException) {
           _logger.finest(
-              'Error during plugin operation (details: ${error.details})',
-              error,
-              stackTrace);
+            'Error during plugin operation (details: ${error.details})',
+            error,
+            stackTrace,
+          );
           if (error.code.startsWith('AuthError:')) {
             return Future<T>.error(
               AuthException(
@@ -490,9 +482,12 @@ class MethodChannelBiometricStorage extends BiometricStorage {
                 message.contains('AppArmor')) {
               _logger.fine('Got app armor error.');
               return Future<T>.error(
-                  AuthException(
-                      AuthExceptionCode.linuxAppArmorDenied, error.message!),
-                  stackTrace);
+                AuthException(
+                  AuthExceptionCode.linuxAppArmorDenied,
+                  error.message!,
+                ),
+                stackTrace,
+              );
             }
           }
         }

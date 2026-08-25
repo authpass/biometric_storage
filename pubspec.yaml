@@ -2,12 +2,12 @@ name: biometric_storage
 description: |
   Secure Storage: Encrypted data store optionally secured by biometric lock with support
   for iOS, Android, MacOS. Partial support for Linux, Windows and web (localStorage).
-version: 5.2.0-dev.1
+version: 6.0.0-dev.1
 homepage: https://github.com/authpass/biometric_storage/
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
-  flutter: ">=2.8.0"
+  sdk: ^3.10.0
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:
@@ -17,14 +17,14 @@ dependencies:
   logging: ">=1.0.0 <2.0.0"
   plugin_platform_interface: ">=2.0.0 <3.0.0"
 
-  ffi: '>=1.0.0 <3.0.0'
-  win32: '>=2.0.0 <6.0.0'
+  ffi: '>=2.1.0 <3.0.0'
+  win32: '>=6.0.1 <7.0.0'
   web: ">=0.5.0 <2.0.0"
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -42,13 +42,17 @@ flutter:
         pluginClass: BiometricStoragePlugin
       ios:
         pluginClass: BiometricStoragePlugin
+        sharedDarwinSource: true
       macos:
-        pluginClass: BiometricStorageMacOSPlugin
+        pluginClass: BiometricStoragePlugin
+        sharedDarwinSource: true
       linux:
         pluginClass: BiometricStoragePlugin
       windows:
+        # No dartFileName: the generated registrant imports the package's own
+        # barrel, which re-exports Win32BiometricStoragePlugin. (The `fileName`
+        # key that used to sit here is a web-only key and was never read.)
         dartPluginClass: Win32BiometricStoragePlugin
-        fileName: src/biometric_storage_win32.dart
       web:
         pluginClass: BiometricStoragePluginWeb
         fileName: src/biometric_storage_web.dart

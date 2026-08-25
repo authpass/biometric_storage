@@ -1,4 +1,9 @@
-import 'package:biometric_storage/src/biometric_storage.dart';
+// Deliberately the public barrel rather than `src/`: it re-exports the Windows
+// implementation on every `dart.library.io` platform, so importing it here is
+// what makes `flutter test` on macOS or Linux compile the win32 bindings. A
+// breaking change in package:win32 shows up as a failing test run rather than
+// as a broken iOS build in somebody else's app.
+import 'package:biometric_storage/biometric_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,11 +15,11 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      if (methodCall.method == 'canAuthenticate') {
-        return 'ErrorUnknown';
-      }
-      throw PlatformException(code: 'NotImplemented');
-    });
+          if (methodCall.method == 'canAuthenticate') {
+            return 'ErrorUnknown';
+          }
+          throw PlatformException(code: 'NotImplemented');
+        });
   });
 
   tearDown(() {
@@ -25,6 +30,10 @@ void main() {
   test('canAuthenticate', () async {
     final result = await BiometricStorage().canAuthenticate();
     expect(result, CanAuthenticateResponse.unsupported);
+  });
+
+  test('the windows implementation is part of the compiled library', () {
+    expect(Win32BiometricStoragePlugin, isNotNull);
   });
 
   group('StorageFileInitOptions', () {

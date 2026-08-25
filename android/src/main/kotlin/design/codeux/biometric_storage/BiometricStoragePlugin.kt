@@ -67,7 +67,7 @@ enum class AuthenticationError(vararg val code: Int) {
 
     companion object {
         fun forCode(code: Int) =
-            values().firstOrNull { it.code.contains(code) } ?: Unknown
+            entries.firstOrNull { it.code.contains(code) } ?: Unknown
     }
 }
 
@@ -338,14 +338,19 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 DEVICE_CREDENTIAL or BIOMETRIC_STRONG
             }
         )
-        return CanAuthenticateResponse.values().firstOrNull { it.code == response }
-            ?: throw Exception(
-                "Unknown response code {$response} (available: ${
-                    CanAuthenticateResponse
-                        .values()
-                        .contentToString()
-                }"
-            )
+        return CanAuthenticateResponse.entries.firstOrNull { it.code == response }
+            ?: run {
+                // androidx.biometric keeps adding status codes — Android 16 added
+                // BIOMETRIC_ERROR_NOT_ENABLED_FOR_APPS (21), for example. Reporting
+                // an unmapped one as "status unknown" is what that value is for;
+                // throwing here took the whole call down.
+                // https://github.com/authpass/biometric_storage/issues/148
+                logger.warn {
+                    "Unmapped canAuthenticate response code $response " +
+                            "(known: ${CanAuthenticateResponse.entries})"
+                }
+                CanAuthenticateResponse.ErrorStatusUnknown
+            }
     }
 
     @UiThread
