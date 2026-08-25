@@ -426,30 +426,25 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         }),
       );
 
-  Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) {
-    // Don't expose Android configurations to other platforms
-    if (Platform.isAndroid) {
-      return <String, dynamic>{
-        'androidPromptInfo': promptInfo.androidPromptInfo._toJson(),
-      };
-    } else if (Platform.isIOS) {
-      return <String, dynamic>{
-        'iosPromptInfo': promptInfo.iosPromptInfo._toJson(),
-      };
-    } else if (Platform.isMacOS) {
-      return <String, dynamic>{
+  Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) =>
+      switch (Platform.operatingSystem) {
+        // Don't expose Android configurations to other platforms.
+        'android' => <String, dynamic>{
+          'androidPromptInfo': promptInfo.androidPromptInfo._toJson(),
+        },
+        'ios' => <String, dynamic>{
+          'iosPromptInfo': promptInfo.iosPromptInfo._toJson(),
+        },
         // This is no typo, we use the same implementation on iOS and MacOS,
         // so we use the same parameter.
-        'iosPromptInfo': promptInfo.macOsPromptInfo._toJson(),
+        'macos' => <String, dynamic>{
+          'iosPromptInfo': promptInfo.macOsPromptInfo._toJson(),
+        },
+        'linux' => <String, dynamic>{},
+        // Windows has no method channel implementation
+        // Web has a Noop implementation.
+        final os => throw StateError('Unsupported Platform $os'),
       };
-    } else if (Platform.isLinux) {
-      return <String, dynamic>{};
-    } else {
-      // Windows has no method channel implementation
-      // Web has a Noop implementation.
-      throw StateError('Unsupported Platform ${Platform.operatingSystem}');
-    }
-  }
 
   Future<T> _transformErrors<T>(Future<T> future) =>
       future.catchError((Object error, StackTrace stackTrace) {
