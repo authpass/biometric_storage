@@ -1,10 +1,15 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+// Not `dart:io` directly: importing it here unconditionally is what made the
+// whole package report as WebAssembly-incompatible, since this library is
+// reachable from the web implementation. The io branch still uses `dart:io`.
+import 'platform_os_io.dart'
+    if (dart.library.js_interop) 'platform_os_web.dart';
 
 final _logger = Logger('biometric_storage');
 
@@ -324,10 +329,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
     if (kIsWeb) {
       return CanAuthenticateResponse.unsupported;
     }
-    if (Platform.isAndroid ||
-        Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isLinux) {
+    if (const {'android', 'ios', 'macos', 'linux'}.contains(operatingSystem)) {
       final response = await _channel.invokeMethod<String>('canAuthenticate', {
         'options': options?.toJson() ?? StorageFileInitOptions().toJson(),
       });
@@ -355,7 +357,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   /// --daemonize --login " label="unconfined")
   @override
   Future<bool> linuxCheckAppArmorError() async {
-    if (!Platform.isLinux) {
+    if (operatingSystem != 'linux') {
       return false;
     }
     final tmpStorage = await getStorage(
@@ -438,7 +440,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       );
 
   Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) =>
-      switch (Platform.operatingSystem) {
+      switch (operatingSystem) {
         // Don't expose Android configurations to other platforms.
         'android' => <String, dynamic>{
           'androidPromptInfo': promptInfo.androidPromptInfo._toJson(),

@@ -39,6 +39,11 @@
   requirements as what they actually are: both only apply to storage that shows
   an authentication prompt, and the theme only where `androidx.biometric` falls
   back to its own dialog, which is below API 28 rather than below API 29.
+* web: the package is now WebAssembly-ready. `lib/src/biometric_storage.dart`
+  imported `dart:io` unconditionally for `Platform`, which marked the whole
+  package wasm-incompatible; the host OS now comes through a conditional import,
+  with `dart:io` still doing the work everywhere it exists. No behaviour change
+  on any platform. https://github.com/authpass/biometric_storage/issues/145
 * iOS/macOS: the prompt strings (`IosPromptInfo.saveTitle` / `accessTitle`) now
   travel on the `LAContext` as `localizedReason` instead of through
   `kSecUseOperationPrompt`, deprecated since iOS 14 / macOS 11. Same prompts, no
