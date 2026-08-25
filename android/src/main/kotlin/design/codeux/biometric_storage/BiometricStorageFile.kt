@@ -4,13 +4,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyProperties
-import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.io.IOException
 import javax.crypto.Cipher
 import kotlin.time.Duration
 
-private val logger = KotlinLogging.logger {}
+private val logger = PluginLog
 
 data class InitOptions(
     val androidAuthenticationValidityDuration: Duration? = null,
