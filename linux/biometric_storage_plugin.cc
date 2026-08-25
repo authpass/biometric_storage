@@ -8,6 +8,9 @@
 #define BIOMETRIC_SCHEMA  biometric_get_schema ()
 
 const char kBadArgumentsError[] = "Bad Arguments";
+// Matches Android and darwin, so the Dart layer translates it to
+// BiometricStorageException the same way for every platform.
+const char kAlreadyInitializedError[] = "AlreadyInitialized";
 const char kSecurityAccessError[] = "Security Access Error";
 const char kMethodRead[] = "read";
 const char kMethodWrite[] = "write";
@@ -27,6 +30,12 @@ const char kNamePrefix[] = "design.codeux.authpass";
 
 struct _BiometricStoragePlugin {
   GObject parent_instance;
+
+  // Names handed out by init during this run, so that forceInit can mean what
+  // the Dart API documents. libsecret is queried by name and keeps no handle,
+  // so unlike the keystore and keychain backends there is nothing else to hang
+  // this off. Used as a set: keys owned, values unused.
+  GHashTable *initialized;
 };
 
 G_DEFINE_TYPE(BiometricStoragePlugin, biometric_storage_plugin, g_object_get_type())
@@ -45,7 +54,7 @@ static FlMethodResponse* _handle_error(const gchar* message, GError *error) {
                    kSecurityAccessError, error_message, error_details));
 }
 
-static FlMethodResponse *handleInit(FlValue *args) {
+static FlMethodResponse *handleInit(BiometricStoragePlugin *self, FlValue *args) {
   FlValue* options = fl_value_lookup_string(args, "options");
   if (fl_value_get_type(options) != FL_VALUE_TYPE_MAP) {
     return FL_METHOD_RESPONSE(fl_method_error_response_new(
@@ -56,6 +65,37 @@ static FlMethodResponse *handleInit(FlValue *args) {
     return FL_METHOD_RESPONSE(fl_method_error_response_new(
         kBadArgumentsError, "Linux plugin only supports non-authenticated secure storage", nullptr));
   }
+
+  // Deliberately after the capability rejection above, unlike Android, which
+  // checks the map first. A name only ever reaches the table by way of a
+  // non-authenticated init, so checking membership first would answer a later
+  // authenticationRequired:true call with a bland `false` instead of the hard
+  // error it has always received.
+  FlValue* nameValue = fl_value_lookup_string(args, "name");
+  if (nameValue == nullptr ||
+      fl_value_get_type(nameValue) != FL_VALUE_TYPE_STRING) {
+    return FL_METHOD_RESPONSE(fl_method_error_response_new(
+        kBadArgumentsError, "Argument 'name' missing or malformed", nullptr));
+  }
+  const gchar* name = fl_value_get_string(nameValue);
+
+  if (g_hash_table_contains(self->initialized, name)) {
+    FlValue* forceInit = fl_value_lookup_string(args, "forceInit");
+    if (forceInit != nullptr &&
+        fl_value_get_type(forceInit) == FL_VALUE_TYPE_BOOL &&
+        fl_value_get_bool(forceInit)) {
+      g_autofree gchar* message = g_strdup_printf(
+          "A storage file with the name '%s' was already initialized.", name);
+      return FL_METHOD_RESPONSE(fl_method_error_response_new(
+          kAlreadyInitializedError, message, nullptr));
+    }
+    // As on every other platform: a repeat init without forceInit is a no-op
+    // that reports it created nothing. This used to answer `true`.
+    return FL_METHOD_RESPONSE(
+        fl_method_success_response_new(fl_value_new_bool(false)));
+  }
+
+  g_hash_table_add(self->initialized, g_strdup(name));
   return FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
 }
 
@@ -149,7 +189,7 @@ biometric_storage_plugin_handle_method_call(BiometricStoragePlugin *self,
     g_autoptr(FlValue) result = fl_value_new_string("ErrorHwUnavailable");
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
   } else if (strcmp(method, "init") == 0) {
-    response = handleInit(args);
+    response = handleInit(self, args);
   } else if (IS_METHOD(method, kMethodWrite)) {
     METHOD_PARAM_NAME(name, args);
     // const gchar *name =
@@ -185,6 +225,8 @@ biometric_storage_plugin_handle_method_call(BiometricStoragePlugin *self,
 }
 
 static void biometric_storage_plugin_dispose(GObject* object) {
+  BiometricStoragePlugin* self = BIOMETRIC_STORAGE_PLUGIN(object);
+  g_clear_pointer(&self->initialized, g_hash_table_unref);
   G_OBJECT_CLASS(biometric_storage_plugin_parent_class)->dispose(object);
 }
 
@@ -192,7 +234,10 @@ static void biometric_storage_plugin_class_init(BiometricStoragePluginClass* kla
   G_OBJECT_CLASS(klass)->dispose = biometric_storage_plugin_dispose;
 }
 
-static void biometric_storage_plugin_init(BiometricStoragePlugin* self) {}
+static void biometric_storage_plugin_init(BiometricStoragePlugin* self) {
+  self->initialized =
+      g_hash_table_new_full(g_str_hash, g_str_equal, g_free, nullptr);
+}
 
 static void method_call_cb(FlMethodChannel* channel, FlMethodCall* method_call,
                            gpointer user_data) {

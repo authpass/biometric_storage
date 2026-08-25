@@ -1,3 +1,12 @@
+## 6.0.0-dev.3
+
+* **Breaking**: linux honours `forceInit`, closing the gap 6.0.0-dev.2 documented.
+  It throws `AlreadyInitialized`, which the Dart layer already translates to
+  `BiometricStorageException`, so the exception is the same one every other
+  platform raises. A repeat `getStorage()` without the flag now reports `false`
+  rather than `true` — libsecret keeps no handle, so the names handed out during
+  a run are tracked by the plugin instance and reset when it is disposed.
+
 ## 6.0.0-dev.2
 
 Six pre-existing bugs, all found while reviewing 6.0.0-dev.1 and none introduced
