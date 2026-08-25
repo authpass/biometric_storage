@@ -1,16 +1,19 @@
-# Consulted by `pub publish` INSTEAD OF .gitignore — and not just for this
-# directory: adding this file stopped every nested .gitignore being honoured
-# too, which silently pulled example/build/web artifacts into the archive. So
-# this has to restate the exclusions rather than only add to them.
+# Consulted by `pub publish` INSTEAD OF the .gitignore in THIS directory. Nested
+# .gitignore files are still honoured — example/ios/.gitignore and friends keep
+# working — so only the root .gitignore's rules have to be restated here, and
+# they are, below. Getting that wrong is not theoretical: a one-line version of
+# this file dropped the root rules and shipped .dart_tool artifacts.
 #
-# The check that matters: `flutter pub publish --dry-run` before and after must
-# differ by CLAUDE.md and nothing else.
+# The check that matters, and it has to be run against a DIRTY tree — after a
+# build, a pod install and a dartdoc run, not a clean checkout:
+#   flutter pub publish --dry-run
+# The archive must differ from the .gitignore-only one by CLAUDE.md alone.
 
 # The reason this file exists: maintainer-facing instructions, of no use to
 # anyone consuming the package.
 CLAUDE.md
 
-# Build output, unanchored so it also catches example/build.
+# Build output. Unanchored so it also catches example/build.
 build/
 out/
 .dart_tool/
@@ -20,6 +23,11 @@ out/
 .packages
 .pub/
 node_modules/
+example/android/app/_debug-full-r8-config.txt
+
+# dartdoc output. Not in .gitignore either, and it lands next to the committed
+# doc/screenshot_ios.png as thousands of files.
+doc/api/
 
 # Editor and OS noise.
 .idea/
@@ -30,6 +38,3 @@ node_modules/
 # Swift Package Manager per-user state.
 .swiftpm/
 /darwin/biometric_storage/Package.resolved
-
-# Root only: the example's lockfile is committed on purpose.
-/pubspec.lock

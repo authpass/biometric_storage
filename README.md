@@ -12,7 +12,7 @@ of data.
 * Android: Uses androidx with KeyStore.
 * iOS and MacOS: LocalAuthentication with KeyChain.
 * Linux: Stores values in Keyring using libsecret. (No biometric authentication support).
-* Windows: Uses [wincreds.h to store into read/write into credential store](https://docs.microsoft.com/en-us/windows/win32/api/wincred/).
+* Windows: Uses [wincred.h to read/write into the credential store](https://docs.microsoft.com/en-us/windows/win32/api/wincred/).
 * Web: **Warning** Uses unauthenticated, **unencrypted** storage in localStorage.
   If you have a better idea for secure storage on web platform, [please open an Issue](https://github.com/authpass/biometric_storage/issues).
 

@@ -5,3 +5,9 @@
 # Xcode-related
 **/dgph
 **/xcuserdata/
+
+# This example builds through Swift Package Manager. A Podfile only appears
+# when someone verifies the CocoaPods path still works, and it is generated —
+# it was untracked in the 6.0.0 SwiftPM migration.
+Podfile
+Podfile.lock

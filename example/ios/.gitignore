@@ -32,3 +32,9 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# This example builds through Swift Package Manager. A Podfile only appears
+# when someone verifies the CocoaPods path still works, and it is generated —
+# it was untracked in the 6.0.0 SwiftPM migration.
+Podfile
+Podfile.lock
