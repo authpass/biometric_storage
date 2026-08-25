@@ -1,3 +1,34 @@
+## 6.0.0-dev.2
+
+Six pre-existing bugs, all found while reviewing 6.0.0-dev.1 and none introduced
+by it.
+
+* android: the plugin kept using a destroyed `Activity` after a configuration
+  change. `onReattachedToActivityForConfigChanges` and
+  `onDetachedFromActivityForConfigChanges` were both empty, so after a rotation
+  every authenticated read or write handed `BiometricPrompt` a dead
+  `FragmentActivity`. `ActivityAware` documents that the old reference must be
+  cleared and the new binding adopted; now both happen.
+* android: a storage-not-initialized error delivered its message as the
+  `PlatformException.code` — the field callers match on. The code is now
+  `NotInitialized`.
+* iOS/macOS: `init` replied twice when an argument was missing or mistyped, so
+  the caller saw the error and then a success. The success reply now only
+  happens on the success path.
+* **Breaking**: iOS/macOS `canAuthenticate()` reports an unrecognised `LAError`
+  as `CanAuthenticateResponse.statusUnknown` rather than `unsupported`, matching
+  Android. `unsupported` means "the plugin does not support this platform", so a
+  recoverable `biometryLockout` was telling callers to give up entirely. Callers
+  that treat `statusUnknown` as usable will now attempt authentication where
+  they previously did not.
+* **Breaking**: `forceInit` now does what it documents on Windows, web, iOS and
+  macOS. It was implemented on Android only; the others accepted the flag and
+  dropped it.
+* **Breaking**: windows `read()` throws `BiometricStorageException` when the
+  credential store fails, instead of returning `null`. `null` still means "no
+  value stored" — previously the two were indistinguishable, so a failure read
+  as data loss.
+
 ## 6.0.0-dev.1
 
 **Breaking**: requires Dart 3.10 / Flutter 3.44 or newer.
