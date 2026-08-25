@@ -71,9 +71,29 @@ jobs:
         if: matrix.buildcommand == 'linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev
+          sudo apt-get install -y ninja-build libgtk-3-dev libsecret-1-dev \
+            gnome-keyring dbus-x11 xvfb
       - name: Build for ${{ matrix.buildcommand }}
         run: cd example && flutter build ${{ matrix.buildcommand }} ${{ matrix.buildargs }}
+      # The only place the Linux implementation is ever executed. Everything
+      # else about it — the forceInit bookkeeping, the GHashTable lifetime, the
+      # response sites — is verified by compiling and reading. libsecret needs a
+      # session bus and an unlocked keyring, and the desktop runner needs a
+      # display, hence dbus-run-session and xvfb.
+      - name: Run the integration tests against libsecret
+        if: matrix.buildcommand == 'linux'
+        run: |
+          # The daemon will not create a keyring for an empty password, and the
+          # graphical prompter it falls back to cannot open a display — so a
+          # first run has no collection to store into and every write fails with
+          # "Object does not exist at /org/freedesktop/secrets/collection/login".
+          # A non-empty password and an existing keyrings directory are what
+          # make the login keyring appear.
+          mkdir -p "$HOME/.local/share/keyrings"
+          cd example
+          dbus-run-session -- bash -c '
+            echo -n "ci" | gnome-keyring-daemon --unlock --components=secrets
+            xvfb-run -a flutter test integration_test -d linux'
       - name: Fail if CocoaPods was pulled back in
         if: matrix.buildcommand == 'ios'
         run: |
