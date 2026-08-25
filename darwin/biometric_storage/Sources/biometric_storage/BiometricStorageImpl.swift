@@ -197,6 +197,21 @@ class BiometricStorageFile {
       return context
     }
   }
+
+  /// The authentication context to hand to a keychain query, carrying the reason
+  /// the prompt should give for itself.
+  ///
+  /// This replaces `kSecUseOperationPrompt`, deprecated since iOS 14 / macOS 11:
+  /// the reason now travels on the context rather than in the query. It is set
+  /// on every call because `context` may return a context reused across calls.
+  private func authenticationContext(reason: String?) -> LAContext {
+    let context = self.context
+    if let reason = reason, !reason.isEmpty {
+      context.localizedReason = reason
+    }
+    return context
+  }
+
   private let storageError: StorageError
 
   init(name: String, initOptions: InitOptions, storageError: @escaping StorageError) {
@@ -266,10 +281,10 @@ class BiometricStorageFile {
       return;
     }
     query[kSecMatchLimit as String] = kSecMatchLimitOne
-    query[kSecUseOperationPrompt as String] = promptInfo.accessTitle
     query[kSecReturnAttributes as String] = true
     query[kSecReturnData as String] = true
-    query[kSecUseAuthenticationContext as String] = context
+    query[kSecUseAuthenticationContext as String] =
+      authenticationContext(reason: promptInfo.accessTitle)
     
     var item: CFTypeRef?
     
@@ -318,11 +333,9 @@ class BiometricStorageFile {
 
     if (initOptions.authenticationRequired) {
       query.merge([
-        kSecUseAuthenticationContext as String: context,
+        kSecUseAuthenticationContext as String:
+          authenticationContext(reason: promptInfo.saveTitle),
       ]) { (_, new) in new }
-      if let operationPrompt = promptInfo.saveTitle {
-        query[kSecUseOperationPrompt as String] = operationPrompt
-      }
     } else {
       hpdebug("No authentication required for \(name)")
     }

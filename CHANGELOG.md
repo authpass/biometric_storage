@@ -32,6 +32,10 @@
   requirements as what they actually are: both only apply to storage that shows
   an authentication prompt, and the theme only where `androidx.biometric` falls
   back to its own dialog, which is below API 28 rather than below API 29.
+* iOS/macOS: the prompt strings (`IosPromptInfo.saveTitle` / `accessTitle`) now
+  travel on the `LAContext` as `localizedReason` instead of through
+  `kSecUseOperationPrompt`, deprecated since iOS 14 / macOS 11. Same prompts, no
+  deprecation warnings on build.
 
 ## 5.2.0-dev.1
 
