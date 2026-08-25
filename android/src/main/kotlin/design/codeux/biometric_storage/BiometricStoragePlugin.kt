@@ -149,7 +149,13 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 val name = getName()
                 storageFiles[name]?.apply(cb) ?: run {
                     logger.warn { "User tried to access storage '$name', before initialization" }
-                    result.error("Storage $name was not initialized.", null, null)
+                    // error(code, message, details) — the sentence used to be
+                    // passed as the code, which is the field callers match on.
+                    result.error(
+                        "NotInitialized",
+                        "Storage $name was not initialized.",
+                        null
+                    )
                     return
                 }
             }
@@ -436,6 +442,8 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        logger.debug { "Reattached to activity after a configuration change." }
+        updateAttachedActivity(binding.activity)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -452,6 +460,12 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
+        logger.trace { "onDetachedFromActivityForConfigChanges" }
+        // ActivityAware's contract: "By the end of this method, the Activity ...
+        // is no longer valid. Any references ... should be cleared." Holding on
+        // to it meant every authenticated read or write after a rotation handed
+        // BiometricPrompt a destroyed FragmentActivity.
+        attachedActivity = null
     }
 }
 
