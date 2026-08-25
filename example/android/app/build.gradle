@@ -22,8 +22,13 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+// jvmTarget rather than jvmToolchain(17): the toolchain form demands a JDK 17
+// be present, which is what made this plugin unbuildable on newer JDKs (#117,
+// #140). This is what `flutter create` emits today.
 kotlin {
-    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
 }
 
 android {
