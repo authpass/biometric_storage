@@ -58,6 +58,21 @@ enum class AuthenticationError(vararg val code: Int) {
     Canceled(BiometricPrompt.ERROR_CANCELED),
     Timeout(BiometricPrompt.ERROR_TIMEOUT),
     UserCanceled(BiometricPrompt.ERROR_USER_CANCELED, BiometricPrompt.ERROR_NEGATIVE_BUTTON),
+
+    /** Temporary lockout (~30s) after too many failed attempts. Clears on its own. */
+    Lockout(BiometricPrompt.ERROR_LOCKOUT),
+
+    /** Hard lockout after continued failures. Only clears via device credential entry. */
+    LockoutPermanent(BiometricPrompt.ERROR_LOCKOUT_PERMANENT),
+
+    /**
+     * The Keystore key backing this storage can no longer be used because
+     * the device's enrolled biometrics changed since it was created. Not a
+     * [BiometricPrompt] error code — reported directly from a caught
+     * [KeyPermanentlyInvalidatedException] before any prompt is even shown,
+     * see [BiometricStoragePlugin.withAuth].
+     */
+    KeyInvalidated(-3),
     Unknown(-1),
 
     /** Authentication valid, but unknown */
@@ -188,11 +203,16 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 } else try {
                     cipherForMode()
                 } catch (e: KeyPermanentlyInvalidatedException) {
-                    // TODO should we communicate this to the caller?
-                    logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
+                    logger.warn(e) { "Key was invalidated. removing previous storage." }
                     deleteFile()
-                    // if deleting fails, simply throw the second time around.
-                    cipherForMode()
+                    // Report the failure to the caller instead of silently
+                    // regenerating a key and re-prompting for it — the app
+                    // gets to decide how to react, rather than transparently
+                    // eating the fact that its data was just wiped.
+                    resultError(
+                        AuthenticationErrorInfo(AuthenticationError.KeyInvalidated, "Key was invalidated", e)
+                    )
+                    return
                 }
 
                 if (cipher == null) {

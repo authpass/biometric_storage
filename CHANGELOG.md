@@ -1,3 +1,7 @@
+## Unreleased
+* Added reliable lockout detection (`AuthExceptionCode.lockout`/`.lockoutPermanent`) on both Android and iOS, instead of collapsing into `.unknown`.
+* Added reliable key-invalidation detection (`AuthExceptionCode.keyInvalidated`) on both platforms — previously Android silently self-healed with no signal, and iOS reported a generic `SecurityError`. 
+
 ## 6.0.0-dev.5
 
 * android: fix `minifyReleaseWithR8` failing in every app that ships a release
