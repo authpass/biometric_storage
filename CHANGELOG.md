@@ -1,3 +1,8 @@
+## 6.0.0-dev.8
+
+* Added reliable lockout detection (`AuthExceptionCode.lockout`/`.lockoutPermanent`) on both Android and iOS, instead of collapsing into `.unknown`.
+* Added reliable key-invalidation detection (`AuthExceptionCode.keyInvalidated`) on both platforms — previously Android silently self-healed with no signal, and iOS reported a generic `SecurityError`.
+
 ## 6.0.0-dev.7
 
 * android: a stored file that can no longer be decrypted — its keystore key

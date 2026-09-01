@@ -62,12 +62,44 @@ enum AuthExceptionCode {
   unknown,
   timeout,
   linuxAppArmorDenied,
+
+  /// Too many failed attempts. Temporary on Android (~30s, clears on its
+  /// own); iOS/macOS never report this value — see [lockoutPermanent].
+  lockout,
+
+  /// Locked out until the user enters their device credential (PIN/pattern/
+  /// password on Android, passcode on iOS/macOS). On Android this follows
+  /// continued failures after [lockout]. iOS/macOS only ever report this
+  /// value for a biometric lockout — Apple exposes no separate temporary
+  /// state, since `LAError.biometryLockout` always requires passcode entry
+  /// to clear, never just a wait.
+  lockoutPermanent,
+
+  /// The key backing this storage can no longer be used because the
+  /// device's enrolled biometrics changed since it was created (e.g. a
+  /// fingerprint/face was added or removed). The stored data is
+  /// unrecoverable; the caller should clear storage and have the user
+  /// re-write.
+  ///
+  /// Android detects this with certainty: `KeyPermanentlyInvalidatedException`
+  /// is a documented, unambiguous signal thrown when the Keystore cipher is
+  /// initialized, on both read and write.
+  ///
+  /// iOS/macOS have no equivalent dedicated signal — Keychain collapses this
+  /// into the same `errSecAuthFailed` used for other non-lockout auth failures,
+  /// so this is reported whenever that status occurs and [lockoutPermanent]
+  /// doesn't apply. That makes it the best available signal on iOS/macOS, not a
+  /// certainty the way the Android case is.
+  keyInvalidated,
 }
 
 const _authErrorCodeMapping = {
   'AuthError:UserCanceled': AuthExceptionCode.userCanceled,
   'AuthError:Canceled': AuthExceptionCode.canceled,
   'AuthError:Timeout': AuthExceptionCode.timeout,
+  'AuthError:Lockout': AuthExceptionCode.lockout,
+  'AuthError:LockoutPermanent': AuthExceptionCode.lockoutPermanent,
+  'AuthError:KeyInvalidated': AuthExceptionCode.keyInvalidated,
 };
 
 /// Why a [BiometricStorageException] was raised.
