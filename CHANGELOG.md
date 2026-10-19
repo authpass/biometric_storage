@@ -10,7 +10,10 @@
   882 ms of one second. The work now runs on the plugin's worker thread, as
   the authenticated path already did, and the result is delivered on the main
   thread as before. `delete`, which removes the key from the keystore too,
-  moved with it.
+  moved with it, and so did the one authenticated case that still ran inline:
+  a store with `androidAuthenticationValidityDuration` set, whose every read
+  and write inside the validity window went to the keystore on the main thread
+  to find out whether the window was still open.
 
 ## 6.0.0-dev.5
 

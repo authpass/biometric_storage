@@ -213,13 +213,25 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }
 
                 if (cipher == null) {
-                    // if we have no cipher, just try the callback and see if the
-                    // user requires authentication.
-                    try {
-                        return cb(null)
-                    } catch (e: UserNotAuthenticatedException) {
-                        logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                    // No CryptoObject to bind a prompt to, so the only way to
+                    // learn whether the key's validity window is still open is
+                    // to try: cipher.init throws UserNotAuthenticatedException
+                    // once it has closed. That try is a keystore round trip
+                    // like every other and runs on the worker; the prompt it
+                    // may lead to is posted back to the main thread.
+                    workerOrElse(resultUnexpected) {
+                        try {
+                            cb(null)
+                        } catch (e: UserNotAuthenticatedException) {
+                            logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                            ui(resultError) {
+                                authenticate(null, getAndroidPromptInfo(), options, {
+                                    cb(null)
+                                }, onError = resultError)
+                            }
+                        }
                     }
+                    return
                 }
 
                 val promptInfo = getAndroidPromptInfo()
