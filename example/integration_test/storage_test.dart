@@ -136,6 +136,23 @@ void main() {
   );
 
   testWidgets(
+    'delete removes a file set aside even when nothing was written since',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      final file = await freshStore('aside');
+      await file.write('to be set aside');
+      final onDisk = androidStoreFile(file);
+      await onDisk.writeAsBytes([]);
+      expect(await file.read(), isNull);
+      final aside = File('${onDisk.path}.unreadable');
+      expect(aside.existsSync(), isTrue);
+
+      await file.delete();
+      expect(aside.existsSync(), isFalse);
+    },
+  );
+
+  testWidgets(
     'a file too short to hold a tag reads as nothing, and the store works again',
     skip: !Platform.isAndroid,
     (tester) async {

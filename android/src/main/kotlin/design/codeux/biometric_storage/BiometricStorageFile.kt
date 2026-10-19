@@ -120,6 +120,9 @@ class BiometricStorageFile(
 
     fun exists() = fileV2.exists()
 
+    /** A partial write or a file set aside, which `delete` removes even with no file. */
+    fun hasLeftovers() = partialFile.exists() || unreadableFile.exists()
+
     @Synchronized
     fun writeFile(cipher: Cipher?, content: String) {
         // cipher will be null if user does not need authentication or valid period is > -1
