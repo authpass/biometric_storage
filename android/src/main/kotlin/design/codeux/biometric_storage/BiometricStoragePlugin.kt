@@ -309,8 +309,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     // deleteFile removes the key from the keystore too. exists()
                     // is asked on the worker so a delete queued behind a write
                     // sees the file that write produced.
+                    // A file set aside as unreadable goes too, even when nothing
+                    // has been written since; the answer is still whether a
+                    // stored value was deleted, which deleteFile reports.
                     workerOrElse(resultUnexpected) {
-                        val deleted = exists() && deleteFile()
+                        val deleted = (exists() || hasLeftovers()) && deleteFile()
                         ui(resultError) { result.success(deleted) }
                     }
                 }

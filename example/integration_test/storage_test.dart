@@ -96,6 +96,103 @@ void main() {
     },
   );
 
+  /// The Android backend's file for [file]: `<filesDir>/biometric_storage/`,
+  /// beside the cache directory `Directory.systemTemp` names.
+  File androidStoreFile(BiometricStorageFile file) => File(
+    '${Directory.systemTemp.parent.path}/files/biometric_storage/'
+    '${file.name}.v2.txt',
+  );
+
+  // Android only, both: they reach into the backend's own file.
+  testWidgets(
+    'a file whose key is gone reads as nothing, and the store works again',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      // A backup restored onto another device brings the file and never the
+      // keystore key. `delete` removes both; putting the bytes back is that.
+      final file = await freshStore('keyless');
+      await file.write('before the restore');
+      final onDisk = androidStoreFile(file);
+      final bytes = await onDisk.readAsBytes();
+      await file.delete();
+      await onDisk.writeAsBytes(bytes);
+
+      expect(await file.read(), isNull);
+      expect(onDisk.existsSync(), isFalse, reason: 'the orphan is set aside');
+      expect(
+        File('${onDisk.path}.unreadable').existsSync(),
+        isTrue,
+        reason: 'set aside, not deleted: a wrong verdict costs a rename',
+      );
+      await file.write('after');
+      expect(await file.read(), 'after');
+      await file.delete();
+      expect(
+        File('${onDisk.path}.unreadable').existsSync(),
+        isFalse,
+        reason: 'delete removes the side file too',
+      );
+    },
+  );
+
+  testWidgets(
+    'delete removes a file set aside even when nothing was written since',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      final file = await freshStore('aside');
+      await file.write('to be set aside');
+      final onDisk = androidStoreFile(file);
+      await onDisk.writeAsBytes([]);
+      expect(await file.read(), isNull);
+      final aside = File('${onDisk.path}.unreadable');
+      expect(aside.existsSync(), isTrue);
+
+      await file.delete();
+      expect(aside.existsSync(), isFalse);
+    },
+  );
+
+  testWidgets(
+    'a file too short to hold a tag reads as nothing, and the store works again',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      // What a power loss leaves after a rename that landed before its data,
+      // or a write torn before writes went through a partial file. Neither
+      // heal path on the PR covered it: every read threw.
+      final file = await freshStore('short');
+      await file.write('intact');
+      final onDisk = androidStoreFile(file);
+      await onDisk.writeAsBytes([]);
+
+      expect(await file.read(), isNull);
+      expect(onDisk.existsSync(), isFalse);
+      await file.write('again');
+      expect(await file.read(), 'again');
+    },
+  );
+
+  testWidgets(
+    'a file that does not decrypt reads as nothing, and the store works again',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      final file = await freshStore('torn');
+      await file.write('intact');
+      final onDisk = androidStoreFile(file);
+      final bytes = await onDisk.readAsBytes();
+      bytes[bytes.length - 1] ^= 0xff; // the GCM tag no longer matches
+      await onDisk.writeAsBytes(bytes);
+
+      expect(await file.read(), isNull);
+      await file.write('again');
+      expect(await file.read(), 'again');
+      expect(
+        File('${onDisk.path}.partial').existsSync(),
+        isFalse,
+        reason: 'a write leaves no partial file behind',
+      );
+    },
+  );
+
   testWidgets('reading a store that was never written returns null', (
     tester,
   ) async {
