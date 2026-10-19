@@ -169,6 +169,16 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             }
 
+            // A failure on a store that never authenticates is not an
+            // authentication error. While these ran inline, a throw reached the
+            // catch at the bottom of onMethodCall and was reported as
+            // "Unexpected Error"; keep that code now that they run on the
+            // worker, so a caller's `on PlatformException` sees what it always
+            // did rather than an AuthException from a store with no prompt.
+            val resultUnexpected: (Throwable) -> Unit = { e ->
+                result.error("Unexpected Error", e.message, e.toCompleteString())
+            }
+
             @UiThread
             fun BiometricStorageFile.withAuth(
                 mode: CipherMode,
@@ -181,7 +191,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     // the main thread is the one that hands Flutter its vsync.
                     // On a StrongBox device each costs ~35 ms, and an app that
                     // reads a few items at once loses whole frames to it.
-                    worker(resultError) { cb(null) }
+                    workerOrElse(resultUnexpected) { cb(null) }
                     return
                 }
 
@@ -260,27 +270,32 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 )
 
                 "read" -> withStorage {
-                    if (exists()) {
+                    // The pre-check is for the authenticated path, where it
+                    // keeps an absent file from raising a prompt. Without
+                    // authentication the whole read happens on the worker,
+                    // exists() included: deciding "no file" here would answer
+                    // from the main thread's view while a write may still sit
+                    // queued ahead of this read, and readFile answers null for
+                    // an absent file on its own.
+                    if (options.authenticationRequired && !exists()) {
+                        result.success(null)
+                    } else {
                         withAuth(CipherMode.Decrypt) {
                             val ret = readFile(
                                 it,
                             )
                             ui(resultError) { result.success(ret) }
                         }
-                    } else {
-                        result.success(null)
                     }
                 }
 
                 "delete" -> withStorage {
-                    if (exists()) {
-                        // deleteFile removes the key from the keystore too.
-                        worker(resultError) {
-                            val deleted = deleteFile()
-                            ui(resultError) { result.success(deleted) }
-                        }
-                    } else {
-                        result.success(false)
+                    // deleteFile removes the key from the keystore too. exists()
+                    // is asked on the worker so a delete queued behind a write
+                    // sees the file that write produced.
+                    workerOrElse(resultUnexpected) {
+                        val deleted = exists() && deleteFile()
+                        ui(resultError) { result.success(deleted) }
                     }
                 }
 
@@ -321,25 +336,36 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         }
     }
 
-    private inline fun worker(
-        @UiThread crossinline onError: ErrorCallback,
+    /**
+     * Runs [cb] on the worker executor. A throw is logged and handed to
+     * [onThrow] on the main thread, so the pending result is answered exactly
+     * once whichever way the callback ends.
+     */
+    private inline fun workerOrElse(
+        @UiThread crossinline onThrow: (Throwable) -> Unit,
         @WorkerThread crossinline cb: () -> Unit
     ) = executor.submit {
         try {
             cb()
         } catch (e: Throwable) {
             logger.error(e) { "Error while calling worker callback. This must not happen." }
-            handler.post {
-                onError(
-                    AuthenticationErrorInfo(
-                        AuthenticationError.Unknown,
-                        "Unexpected authentication error. ${e.localizedMessage}",
-                        e
-                    )
-                )
-            }
+            handler.post { onThrow(e) }
         }
     }
+
+    /** [workerOrElse] for the authenticated path, where a throw is an authentication error. */
+    private inline fun worker(
+        @UiThread crossinline onError: ErrorCallback,
+        @WorkerThread crossinline cb: () -> Unit
+    ) = workerOrElse({ e ->
+        onError(
+            AuthenticationErrorInfo(
+                AuthenticationError.Unknown,
+                "Unexpected authentication error. ${e.localizedMessage}",
+                e
+            )
+        )
+    }, cb)
 
     private fun canAuthenticate(initOptions: InitOptions): CanAuthenticateResponse {
         if (!initOptions.authenticationRequired) {
