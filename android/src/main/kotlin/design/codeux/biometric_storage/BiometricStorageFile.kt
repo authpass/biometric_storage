@@ -6,6 +6,7 @@ import android.os.Build
 import android.security.keystore.KeyProperties
 import java.io.File
 import java.io.IOException
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import kotlin.time.Duration
 
@@ -83,6 +84,15 @@ class BiometricStorageFile(
 
     fun cipherForEncrypt() = cryptographyManager.getInitializedCipherForEncryption(masterKeyName)
     fun cipherForDecrypt(): Cipher? {
+        if (fileV2.exists() && !cryptographyManager.hasKey(masterKeyName)) {
+            // The file outlived its key — restored from a backup onto another
+            // device, which carries files and never keystore keys, or after
+            // the key was removed. Nothing can ever decrypt it, and asking for
+            // a cipher would mint a fresh key that fails every read from then
+            // on. Treat it as absent, so the next write starts clean.
+            logger.warn { "$fileV2 has no key in the keystore; deleting it." }
+            fileV2.delete()
+        }
         if (fileV2.exists()) {
             return cryptographyManager.getInitializedCipherForDecryption(masterKeyName, fileV2)
         }
@@ -98,7 +108,14 @@ class BiometricStorageFile(
         val useCipher = cipher ?: cipherForEncrypt()
         try {
             val encrypted = cryptographyManager.encryptData(content, useCipher)
-            fileV2.writeBytes(encrypted.encryptedPayload)
+            // Beside the file, then renamed over it: a process killed mid-write
+            // leaves the old file or the new one, never half of either.
+            val partial = File(fileV2.parentFile, "${fileV2.name}.partial")
+            partial.writeBytes(encrypted.encryptedPayload)
+            if (!partial.renameTo(fileV2)) {
+                partial.delete()
+                throw IOException("Could not move $partial over $fileV2")
+            }
             logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
 
             return
@@ -118,8 +135,16 @@ class BiometricStorageFile(
                 val bytes = fileV2.readBytes()
                 logger.debug { "read ${bytes.size}" }
                 cryptographyManager.decryptData(bytes, useCipher)
+            } catch (ex: AEADBadTagException) {
+                // The key is there but the file was not written with it: a
+                // key minted over a restored file by an earlier version, or a
+                // file torn by a write before writes were atomic. It fails the
+                // same way on every read, so it is gone; say so once.
+                logger.warn(ex) { "$fileV2 does not decrypt with its key; deleting it." }
+                fileV2.delete()
+                null
             } catch (ex: IOException) {
-                logger.error(ex) { "Error while writing encrypted file $fileV2" }
+                logger.error(ex) { "Error while reading encrypted file $fileV2" }
                 null
             }
         }

@@ -140,6 +140,13 @@ class CryptographyManagerImpl(
         return Cipher.getInstance(transformation)
     }
 
+    /** Whether the keystore holds the key for [keyName], without creating it. */
+    fun hasKey(keyName: String): Boolean {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+        keyStore.load(null) // Keystore must be loaded before it can be accessed
+        return keyStore.containsAlias(KEY_PREFIX + keyName)
+    }
+
     fun deleteKey(keyName: String) {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null) // Keystore must be loaded before it can be accessed

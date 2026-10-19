@@ -1,3 +1,11 @@
+## 6.0.0-dev.7
+
+* android: a stored file that can no longer be decrypted — its keystore key
+  is gone, as after a backup restored onto another device, or the file is
+  corrupt — reads as absent and is removed, instead of failing every read.
+* android: writes replace the file atomically, so an interrupted write cannot
+  leave a corrupt file.
+
 ## 6.0.0-dev.6
 
 * android: storage with `authenticationRequired: false` reads, writes and
