@@ -282,14 +282,18 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 )
 
                 "read" -> withStorage {
-                    // The pre-check is for the authenticated path, where it
-                    // keeps an absent file from raising a prompt. Without
-                    // authentication the whole read happens on the worker,
-                    // exists() included: deciding "no file" here would answer
-                    // from the main thread's view while a write may still sit
-                    // queued ahead of this read, and readFile answers null for
-                    // an absent file on its own.
-                    if (options.authenticationRequired && !exists()) {
+                    // The pre-check is for the CryptoObject path, where it
+                    // keeps an absent file from raising a prompt. Everywhere
+                    // else the read happens on the worker, exists() included:
+                    // deciding "no file" here would answer from the main
+                    // thread's view while a write may still sit queued ahead
+                    // of this read. readFile answers null for an absent file
+                    // without touching the keystore, so the validity-window
+                    // probe raises no prompt for one either.
+                    if (options.authenticationRequired &&
+                        options.androidAuthenticationValidityDuration == null &&
+                        !exists()
+                    ) {
                         result.success(null)
                     } else {
                         withAuth(CipherMode.Decrypt) {
@@ -312,8 +316,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }
 
                 "write" -> withStorage {
+                    // Read on the main thread, so a missing argument reaches
+                    // the catch below as MissingArgument, before any prompt.
+                    val content = requiredArgument<String>(PARAM_WRITE_CONTENT)
                     withAuth(CipherMode.Encrypt) {
-                        writeFile(it, requiredArgument(PARAM_WRITE_CONTENT))
+                        writeFile(it, content)
                         ui(resultError) { result.success(true) }
                     }
                 }
