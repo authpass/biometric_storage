@@ -1,22 +1,10 @@
 ## 6.0.0-dev.6
 
-* android: storage opened with `authenticationRequired: false` no longer reads,
-  writes or deletes on the main thread. Every operation there makes several
-  keystore round trips — the key, the cipher, the decrypt or encrypt — and
-  each one blocked the thread that runs it. On Android that is the thread
-  which hands Flutter its vsync, so an app reading a few items at once lost
-  whole frames: a trace on a Galaxy S24 Ultra, where the keys sit in
-  StrongBox, measured about 35 ms per call and the main thread blocked for
-  882 ms of one second. The work now runs on the plugin's worker thread, as
-  the authenticated path already did, and the result is delivered on the main
-  thread as before. `delete`, which removes the key from the keystore too,
-  moved with it.
-* android: a store with `androidAuthenticationValidityDuration` set no longer
-  reads or writes on the main thread while its validity window is open. It
-  found out whether the window was still open by trying the operation, and
-  that try carried the whole read or write with it. A store without a
-  validity window still prepares its cipher on the main thread before the
-  prompt.
+* android: storage with `authenticationRequired: false` reads, writes and
+  deletes on the plugin's worker thread instead of the main thread, where its
+  keystore calls dropped Flutter frames.
+* android: a store with `androidAuthenticationValidityDuration` also reads and
+  writes on the worker thread while its validity window is open.
 
 ## 6.0.0-dev.5
 
