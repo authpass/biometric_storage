@@ -175,7 +175,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 @WorkerThread cb: BiometricStorageFile.(cipher: Cipher?) -> Unit
             ) {
                 if (!options.authenticationRequired) {
-                    return cb(null)
+                    // Off the main thread, like the authenticated path: every
+                    // keystore round trip here — a cipher, a key lookup, the
+                    // decrypt — blocks whatever thread runs it, and on Android
+                    // the main thread is the one that hands Flutter its vsync.
+                    // On a StrongBox device each costs ~35 ms, and an app that
+                    // reads a few items at once loses whole frames to it.
+                    worker(resultError) { cb(null) }
+                    return
                 }
 
                 fun cipherForMode() = when (mode) {
@@ -267,7 +274,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
                 "delete" -> withStorage {
                     if (exists()) {
-                        result.success(deleteFile())
+                        // deleteFile removes the key from the keystore too.
+                        worker(resultError) {
+                            val deleted = deleteFile()
+                            ui(resultError) { result.success(deleted) }
+                        }
                     } else {
                         result.success(false)
                     }
