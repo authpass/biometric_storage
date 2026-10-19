@@ -70,6 +70,32 @@ void main() {
     expect(await file.read(), '');
   });
 
+  // Android only: the Linux backend does not keep unawaited calls in order
+  // (CI on #159 read null here), and nothing in this change touches it.
+  testWidgets(
+    'a read issued behind a write sees the write',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      // The calls leave Dart in order and the platform must keep that order,
+      // whichever thread does the work. On Android the work moved off the main
+      // thread in 6.0.0-dev.6, and a read that decided "no file yet" on the main
+      // thread while the write still sat on the worker answered null here.
+      final file = await freshStore('ordering');
+
+      final write = file.write('queued');
+      final read = file.read();
+      final delete = file.delete();
+      expect(await read, 'queued');
+      await delete;
+      await write;
+      expect(
+        await file.read(),
+        isNull,
+        reason: 'the delete ran after the write',
+      );
+    },
+  );
+
   testWidgets('reading a store that was never written returns null', (
     tester,
   ) async {

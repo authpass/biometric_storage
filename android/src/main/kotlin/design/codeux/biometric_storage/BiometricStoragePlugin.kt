@@ -169,13 +169,30 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             }
 
+            // A failure on a store that never authenticates is not an
+            // authentication error. While these ran inline, a throw reached the
+            // catch at the bottom of onMethodCall and was reported as
+            // "Unexpected Error"; keep that code now that they run on the
+            // worker, so a caller's `on PlatformException` sees what it always
+            // did rather than an AuthException from a store with no prompt.
+            val resultUnexpected: (Throwable) -> Unit = { e ->
+                result.error("Unexpected Error", e.message, e.toCompleteString())
+            }
+
             @UiThread
             fun BiometricStorageFile.withAuth(
                 mode: CipherMode,
                 @WorkerThread cb: BiometricStorageFile.(cipher: Cipher?) -> Unit
             ) {
                 if (!options.authenticationRequired) {
-                    return cb(null)
+                    // Off the main thread, like the authenticated path: every
+                    // keystore round trip here — a cipher, a key lookup, the
+                    // decrypt — blocks whatever thread runs it, and on Android
+                    // the main thread is the one that hands Flutter its vsync.
+                    // On a StrongBox device each costs ~35 ms, and an app that
+                    // reads a few items at once loses whole frames to it.
+                    workerOrElse(resultUnexpected) { cb(null) }
+                    return
                 }
 
                 fun cipherForMode() = when (mode) {
@@ -196,13 +213,25 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }
 
                 if (cipher == null) {
-                    // if we have no cipher, just try the callback and see if the
-                    // user requires authentication.
-                    try {
-                        return cb(null)
-                    } catch (e: UserNotAuthenticatedException) {
-                        logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                    // No CryptoObject to bind a prompt to, so the only way to
+                    // learn whether the key's validity window is still open is
+                    // to try: cipher.init throws UserNotAuthenticatedException
+                    // once it has closed. That try is a keystore round trip
+                    // like every other and runs on the worker; the prompt it
+                    // may lead to is posted back to the main thread.
+                    workerOrElse(resultUnexpected) {
+                        try {
+                            cb(null)
+                        } catch (e: UserNotAuthenticatedException) {
+                            logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                            ui(resultError) {
+                                authenticate(null, getAndroidPromptInfo(), options, {
+                                    cb(null)
+                                }, onError = resultError)
+                            }
+                        }
                     }
+                    return
                 }
 
                 val promptInfo = getAndroidPromptInfo()
@@ -253,29 +282,45 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 )
 
                 "read" -> withStorage {
-                    if (exists()) {
+                    // The pre-check is for the CryptoObject path, where it
+                    // keeps an absent file from raising a prompt. Everywhere
+                    // else the read happens on the worker, exists() included:
+                    // deciding "no file" here would answer from the main
+                    // thread's view while a write may still sit queued ahead
+                    // of this read. readFile answers null for an absent file
+                    // without touching the keystore, so the validity-window
+                    // probe raises no prompt for one either.
+                    if (options.authenticationRequired &&
+                        options.androidAuthenticationValidityDuration == null &&
+                        !exists()
+                    ) {
+                        result.success(null)
+                    } else {
                         withAuth(CipherMode.Decrypt) {
                             val ret = readFile(
                                 it,
                             )
                             ui(resultError) { result.success(ret) }
                         }
-                    } else {
-                        result.success(null)
                     }
                 }
 
                 "delete" -> withStorage {
-                    if (exists()) {
-                        result.success(deleteFile())
-                    } else {
-                        result.success(false)
+                    // deleteFile removes the key from the keystore too. exists()
+                    // is asked on the worker so a delete queued behind a write
+                    // sees the file that write produced.
+                    workerOrElse(resultUnexpected) {
+                        val deleted = exists() && deleteFile()
+                        ui(resultError) { result.success(deleted) }
                     }
                 }
 
                 "write" -> withStorage {
+                    // Read on the main thread, so a missing argument reaches
+                    // the catch below as MissingArgument, before any prompt.
+                    val content = requiredArgument<String>(PARAM_WRITE_CONTENT)
                     withAuth(CipherMode.Encrypt) {
-                        writeFile(it, requiredArgument(PARAM_WRITE_CONTENT))
+                        writeFile(it, content)
                         ui(resultError) { result.success(true) }
                     }
                 }
@@ -310,25 +355,36 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         }
     }
 
-    private inline fun worker(
-        @UiThread crossinline onError: ErrorCallback,
+    /**
+     * Runs [cb] on the worker executor. A throw is logged and handed to
+     * [onThrow] on the main thread, so the pending result is answered exactly
+     * once whichever way the callback ends.
+     */
+    private inline fun workerOrElse(
+        @UiThread crossinline onThrow: (Throwable) -> Unit,
         @WorkerThread crossinline cb: () -> Unit
     ) = executor.submit {
         try {
             cb()
         } catch (e: Throwable) {
             logger.error(e) { "Error while calling worker callback. This must not happen." }
-            handler.post {
-                onError(
-                    AuthenticationErrorInfo(
-                        AuthenticationError.Unknown,
-                        "Unexpected authentication error. ${e.localizedMessage}",
-                        e
-                    )
-                )
-            }
+            handler.post { onThrow(e) }
         }
     }
+
+    /** [workerOrElse] for the authenticated path, where a throw is an authentication error. */
+    private inline fun worker(
+        @UiThread crossinline onError: ErrorCallback,
+        @WorkerThread crossinline cb: () -> Unit
+    ) = workerOrElse({ e ->
+        onError(
+            AuthenticationErrorInfo(
+                AuthenticationError.Unknown,
+                "Unexpected authentication error. ${e.localizedMessage}",
+                e
+            )
+        )
+    }, cb)
 
     private fun canAuthenticate(initOptions: InitOptions): CanAuthenticateResponse {
         if (!initOptions.authenticationRequired) {

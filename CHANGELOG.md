@@ -1,3 +1,11 @@
+## 6.0.0-dev.6
+
+* android: storage with `authenticationRequired: false` reads, writes and
+  deletes on the plugin's worker thread instead of the main thread, where its
+  keystore calls dropped Flutter frames.
+* android: a store with `androidAuthenticationValidityDuration` also reads and
+  writes on the worker thread while its validity window is open.
+
 ## 6.0.0-dev.5
 
 * android: fix `minifyReleaseWithR8` failing in every app that ships a release
