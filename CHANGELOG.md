@@ -2,9 +2,10 @@
 
 * android: a stored file that can no longer be decrypted — its keystore key
   is gone, as after a backup restored onto another device, or the file is
-  corrupt — reads as absent and is removed, instead of failing every read.
-* android: writes replace the file atomically, so an interrupted write cannot
-  leave a corrupt file.
+  corrupt or empty — reads as absent and is moved aside to `.unreadable`,
+  instead of failing every read. Reading never creates a key.
+* android: writes are synced and renamed into place, so a killed process or a
+  power loss cannot leave a corrupt file.
 
 ## 6.0.0-dev.6
 

@@ -21,6 +21,7 @@ package design.codeux.biometric_storage
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.io.File
+import java.io.IOException
 import java.nio.charset.Charset
 import java.security.KeyStore
 import java.security.KeyStoreException
@@ -40,11 +41,13 @@ interface CryptographyManager {
     fun getInitializedCipherForEncryption(keyName: String): Cipher
 
     /**
-     * This method first gets or generates an instance of SecretKey and then initializes the Cipher
-     * with the key. The secret key uses [DECRYPT_MODE][Cipher.DECRYPT_MODE] is used.
+     * A [Cipher] in [DECRYPT_MODE][Cipher.DECRYPT_MODE] for the existing key, or null when
+     * the keystore positively reports that there is no such key. Decryption never creates a
+     * key: a key minted here could not decrypt anything, and would make the file fail the
+     * tag check for good. A keystore that could not answer throws, as it always did.
      */
-    fun getInitializedCipherForDecryption(keyName: String, initializationVector: ByteArray): Cipher
-    fun getInitializedCipherForDecryption(keyName: String, encryptedDataFile: File): Cipher
+    fun getInitializedCipherForDecryption(keyName: String, initializationVector: ByteArray): Cipher?
+    fun getInitializedCipherForDecryption(keyName: String, encryptedDataFile: File): Cipher?
 
     /**
      * The Cipher created with [getInitializedCipherForEncryption] is used here
@@ -97,19 +100,21 @@ class CryptographyManagerImpl(
     override fun getInitializedCipherForDecryption(
         keyName: String,
         initializationVector: ByteArray
-    ): Cipher {
+    ): Cipher? {
+        val secretKey = getSecretKey(keyName) ?: return null
         val cipher = getCipher()
-        val secretKey = getOrCreateSecretKey(keyName)
         cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(TAG_SIZE_IN_BYTES * 8, initializationVector))
         return cipher
     }
     override fun getInitializedCipherForDecryption(
         keyName: String,
         encryptedDataFile: File,
-    ): Cipher {
+    ): Cipher? {
         val iv = ByteArray(IV_SIZE_IN_BYTES)
-        val count = encryptedDataFile.inputStream().read(iv)
-        assert(count == IV_SIZE_IN_BYTES)
+        val count = encryptedDataFile.inputStream().use { it.read(iv) }
+        if (count != IV_SIZE_IN_BYTES) {
+            throw IOException("$encryptedDataFile is too short to hold an IV ($count bytes)")
+        }
         return getInitializedCipherForDecryption(keyName, iv)
     }
 
@@ -140,11 +145,20 @@ class CryptographyManagerImpl(
         return Cipher.getInstance(transformation)
     }
 
-    /** Whether the keystore holds the key for [keyName], without creating it. */
-    fun hasKey(keyName: String): Boolean {
+    /**
+     * The key for [keyName], or null when the keystore positively reports that it does not
+     * exist. Deliberately [KeyStore.getKey] and not [KeyStore.containsAlias]: on Android 12+
+     * `containsAlias` answers false for *every* keystore failure except "not found" — the
+     * daemon restarting, a locked user, a busy backend — while `getKey` throws for those and
+     * returns null only for KEY_NOT_FOUND. A caller that removes data on a null here must
+     * not be able to do so on a hiccup. (Below Android 12 both go through a binder `exist`
+     * call that answers false on a lost connection; nothing on the API surface can tell the
+     * two apart there, which is why the file is set aside rather than deleted.)
+     */
+    private fun getSecretKey(keyName: String): SecretKey? {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
         keyStore.load(null) // Keystore must be loaded before it can be accessed
-        return keyStore.containsAlias(KEY_PREFIX + keyName)
+        return keyStore.getKey(KEY_PREFIX + keyName, null) as SecretKey?
     }
 
     fun deleteKey(keyName: String) {
@@ -158,15 +172,11 @@ class CryptographyManagerImpl(
     }
 
     private fun getOrCreateSecretKey(keyName: String): SecretKey {
-        val realKeyName = KEY_PREFIX + keyName
-        // If Secretkey was previously created for that keyName, then grab and return it.
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-        keyStore.load(null) // Keystore must be loaded before it can be accessed
-        keyStore.getKey(realKeyName, null)?.let { return it as SecretKey }
+        getSecretKey(keyName)?.let { return it }
 
         // if you reach here, then a new SecretKey must be generated for that keyName
         val paramsBuilder = KeyGenParameterSpec.Builder(
-            realKeyName,
+            KEY_PREFIX + keyName,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
         paramsBuilder.apply {

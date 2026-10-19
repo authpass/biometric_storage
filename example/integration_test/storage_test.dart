@@ -118,9 +118,39 @@ void main() {
       await onDisk.writeAsBytes(bytes);
 
       expect(await file.read(), isNull);
-      expect(onDisk.existsSync(), isFalse, reason: 'the orphan is removed');
+      expect(onDisk.existsSync(), isFalse, reason: 'the orphan is set aside');
+      expect(
+        File('${onDisk.path}.unreadable').existsSync(),
+        isTrue,
+        reason: 'set aside, not deleted: a wrong verdict costs a rename',
+      );
       await file.write('after');
       expect(await file.read(), 'after');
+      await file.delete();
+      expect(
+        File('${onDisk.path}.unreadable').existsSync(),
+        isFalse,
+        reason: 'delete removes the side file too',
+      );
+    },
+  );
+
+  testWidgets(
+    'a file too short to hold a tag reads as nothing, and the store works again',
+    skip: !Platform.isAndroid,
+    (tester) async {
+      // What a power loss leaves after a rename that landed before its data,
+      // or a write torn before writes went through a partial file. Neither
+      // heal path on the PR covered it: every read threw.
+      final file = await freshStore('short');
+      await file.write('intact');
+      final onDisk = androidStoreFile(file);
+      await onDisk.writeAsBytes([]);
+
+      expect(await file.read(), isNull);
+      expect(onDisk.existsSync(), isFalse);
+      await file.write('again');
+      expect(await file.read(), 'again');
     },
   );
 
