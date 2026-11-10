@@ -49,7 +49,7 @@ const _canAuthenticateMapping = {
 /// New members may be added in a minor release, so a `switch` over this should
 /// carry a `default` rather than being exhaustive. Several platform conditions
 /// still arrive as [unknown] — Android reports every `BiometricPrompt` error
-/// beyond cancel and timeout that way, lockout included — and narrowing them is
+/// beyond cancel, timeout and the two lockouts that way — and narrowing them is
 /// only a minor-version change while this contract holds.
 enum AuthExceptionCode {
   /// User taps the cancel/negative button or presses `back`.
@@ -62,12 +62,83 @@ enum AuthExceptionCode {
   unknown,
   timeout,
   linuxAppArmorDenied,
+
+  /// Too many failed attempts, and biometry is locked until it recovers on
+  /// its own. Retrying shortly is the correct response; nothing is lost.
+  ///
+  /// Android only, from `BiometricPrompt.ERROR_LOCKOUT`. iOS and macOS never
+  /// report this value — see [lockoutPermanent].
+  lockout,
+
+  /// Locked out until the user enters their device credential (PIN, pattern
+  /// or password on Android, the passcode on iOS and macOS). Waiting does not
+  /// clear it. Nothing is lost: the data is readable again once the user has
+  /// entered their credential.
+  ///
+  /// On Android this follows continued failures after [lockout]. iOS and macOS
+  /// have no separate temporary state — `LAError.biometryLockout` always wants
+  /// the passcode — so they report this value for every biometric lockout, and
+  /// only for a store with `darwinBiometricOnly: true`. Without that flag the
+  /// item's access control is `.userPresence`, which falls back to the passcode
+  /// by itself, so a biometric lockout is not an error the caller ever sees.
+  lockoutPermanent,
+
+  /// The key backing this storage was destroyed because the device's enrolled
+  /// biometrics changed since it was created — a fingerprint or face added or
+  /// removed. **The stored value is gone**, and the plugin has already removed
+  /// the unreadable remains, so the next write starts clean.
+  ///
+  /// Android only, and certain when reported: `KeyPermanentlyInvalidatedException`
+  /// is a documented, unambiguous signal from the Keystore. It reaches a caller
+  /// from `read()`; `write()` recovers from it silently, since the value it is
+  /// about to store replaces the one that was lost anyway.
+  ///
+  /// It is certain only for a store that authenticates per use — one left with
+  /// `androidAuthenticationValidityDuration` unset. A store with a validity
+  /// duration holds a key bound to the device credential as well, which an
+  /// enrollment change does not invalidate, so the condition is not expected
+  /// there; were the Keystore to raise it anyway, it would arrive as a
+  /// `PlatformException` rather than as this code.
+  ///
+  /// iOS and macOS have no equivalent signal and never report this value. The
+  /// Keychain collapses an item whose access control can no longer be satisfied
+  /// into the same `errSecAuthFailed` it uses for an ordinary failed attempt,
+  /// which arrives as [authFailed].
+  keyInvalidated,
+
+  /// Authentication failed, and the platform did not say why. The value is
+  /// most likely still there and readable after a successful authentication,
+  /// so **do not delete the store in response to this**.
+  ///
+  /// iOS and macOS only, from the Keychain's `errSecAuthFailed` once
+  /// [lockoutPermanent] has been ruled out. That one status covers every
+  /// outcome Apple does not distinguish, and the observed causes are a mix of
+  /// the harmless and the terminal:
+  ///
+  /// * the user failed or abandoned the biometric check
+  ///   (https://github.com/authpass/biometric_storage/issues/80),
+  /// * biometry is unusable on the device — no enrollment, a sensor the system
+  ///   will not use (https://github.com/authpass/biometric_storage/issues/101),
+  /// * the item's access control can genuinely never be satisfied again,
+  ///   because enrolled biometrics changed under `darwinBiometricOnly: true`
+  ///   (https://github.com/authpass/biometric_storage/issues/128) — the
+  ///   [keyInvalidated] case, which the platform does not let the plugin
+  ///   identify.
+  ///
+  /// Prompting the user to try again is the one response that is right for all
+  /// of them. Treat the value as lost only after a deliberate, successful
+  /// re-authentication has failed to produce it.
+  authFailed,
 }
 
 const _authErrorCodeMapping = {
   'AuthError:UserCanceled': AuthExceptionCode.userCanceled,
   'AuthError:Canceled': AuthExceptionCode.canceled,
   'AuthError:Timeout': AuthExceptionCode.timeout,
+  'AuthError:Lockout': AuthExceptionCode.lockout,
+  'AuthError:LockoutPermanent': AuthExceptionCode.lockoutPermanent,
+  'AuthError:KeyInvalidated': AuthExceptionCode.keyInvalidated,
+  'AuthError:AuthFailed': AuthExceptionCode.authFailed,
 };
 
 /// Why a [BiometricStorageException] was raised.

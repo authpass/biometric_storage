@@ -1,3 +1,57 @@
+## 6.0.0-dev.8
+
+Four conditions a caller has to tell apart, and until now could not. Thanks
+@olehmarch-bro for the implementation (#158).
+
+* `AuthExceptionCode.lockout` and `.lockoutPermanent`. A biometric lockout is
+  recoverable — by waiting, or by entering the device credential — but Android
+  reported both `ERROR_LOCKOUT` and `ERROR_LOCKOUT_PERMANENT` as
+  `AuthExceptionCode.unknown`, which is the code an app has no response to but
+  "something went wrong". This is the split 6.0.0-dev.4 promised when it
+  documented `AuthExceptionCode` as an open enum.
+* iOS/macOS report a biometric lockout as `.lockoutPermanent` too. The Keychain
+  gives no status of its own for it, so the plugin asks LocalAuthentication
+  (`canEvaluatePolicy`, synchronous and without UI) once a call has failed, and
+  then also sees a lockout that the failing attempt is what caused. Apple has a
+  single lockout state and it never clears by waiting, so it maps to the
+  permanent member; a store with `darwinBiometricOnly: false` never reports it,
+  since its items stay reachable through the passcode.
+* **Breaking**: android reports `AuthExceptionCode.keyInvalidated` from `read()`
+  when enrolled biometrics changed and took the store's key with them.
+  Previously the plugin deleted the dead key and file and read on, returning
+  `null` — the same answer as an empty store, so an app could not tell a secret
+  the user never set from one the OS had just destroyed. Those two want
+  different handling, and the second is the one worth telling the user about.
+  A caller that treats `null` as "nothing stored" now has an exception to catch
+  on that path. It arrives once per invalidation: the dead key and file are
+  removed before it is raised, so the read after it returns `null` like any
+  other read of an empty store.
+
+  `write()` is unchanged and still recovers silently: a write has lost nothing
+  it was not about to replace, and failing it would hand every caller an error
+  whose only sensible recovery is to write the same content again.
+
+  Certain when reported, and only reported where it is certain. Android raises
+  `KeyPermanentlyInvalidatedException`, which is unambiguous, for a store that
+  authenticates per use. A store with `androidAuthenticationValidityDuration`
+  holds a key bound to the device credential as well, which an enrollment
+  change does not invalidate.
+* **Breaking**: iOS/macOS translate the Keychain's `errSecAuthFailed` into
+  `AuthException(AuthExceptionCode.authFailed)` instead of leaving it as
+  `PlatformException(SecurityError, …)`. This is what #128 asked for: matching
+  the English in `-25293: The user name or passphrase you entered is not
+  correct` was the only way to recognise a failed authentication. Catch
+  `AuthException` where you caught a `PlatformException` for it.
+
+  `authFailed`, deliberately, and not `keyInvalidated`. The honest answer on
+  this platform is that the plugin does not know which it has: Apple reports a
+  user who looked away (#80), a device whose sensor it will not use (#101), and
+  an access control that can never be satisfied again (#128) as the same
+  `errSecAuthFailed`. Reporting all of it as invalidation would tell an app its
+  data was gone every time a prompt was failed — and an app that believes it
+  deletes a secret it could still have read. Ask the user to authenticate
+  again; that answer is right for all three.
+
 ## 6.0.0-dev.7
 
 * android: a stored file that can no longer be decrypted — its keystore key

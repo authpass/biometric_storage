@@ -3,6 +3,8 @@
 // what makes `flutter test` on macOS or Linux compile the win32 bindings. A
 // breaking change in package:win32 shows up as a failing test run rather than
 // as a broken iOS build in somebody else's app.
+import 'dart:io' show Platform;
+
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,6 +137,107 @@ void main() {
       expect(e.toString(), contains('boom'));
     });
   });
+
+  group('AuthError translation', () {
+    /// A handler that lets `init` succeed and fails `read` with [code], the way
+    /// the native platforms report an authentication error. `_transformErrors`
+    /// turns an `AuthError:`-prefixed code into an [AuthException]; the mapping
+    /// it looks the suffix up in is the only thing standing between a native
+    /// code and [AuthExceptionCode.unknown], and a mismatch there is silent —
+    /// hence a case per code rather than one for the mechanism.
+    Future<BiometricStorageFile> storageFailingReadWith(String code) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (methodCall) async {
+            if (methodCall.method == 'init') {
+              return true;
+            }
+            if (methodCall.method == 'read') {
+              throw PlatformException(code: code, message: 'nope');
+            }
+            throw PlatformException(code: 'NotImplemented');
+          });
+      return BiometricStorage().getStorage('x');
+    }
+
+    Future<void> expectReadCode(
+      String nativeCode,
+      AuthExceptionCode expected,
+    ) async {
+      final storage = await storageFailingReadWith(nativeCode);
+      await expectLater(
+        storage.read(),
+        throwsA(isA<AuthException>().having((e) => e.code, 'code', expected)),
+      );
+    }
+
+    test('Lockout becomes lockout', () async {
+      await expectReadCode('AuthError:Lockout', AuthExceptionCode.lockout);
+    });
+
+    test('LockoutPermanent becomes lockoutPermanent', () async {
+      await expectReadCode(
+        'AuthError:LockoutPermanent',
+        AuthExceptionCode.lockoutPermanent,
+      );
+    });
+
+    test('KeyInvalidated becomes keyInvalidated', () async {
+      await expectReadCode(
+        'AuthError:KeyInvalidated',
+        AuthExceptionCode.keyInvalidated,
+      );
+    });
+
+    test('AuthFailed becomes authFailed', () async {
+      await expectReadCode(
+        'AuthError:AuthFailed',
+        AuthExceptionCode.authFailed,
+      );
+    });
+
+    test('an AuthError this version does not know becomes unknown', () async {
+      // The fallback that makes every case above load-bearing: a native code
+      // the mapping has no key for degrades quietly instead of failing, so a
+      // typo on either side of the boundary looks exactly like a platform
+      // condition nobody has classified yet.
+      await expectReadCode(
+        'AuthError:SomethingAddedLater',
+        AuthExceptionCode.unknown,
+      );
+    });
+
+    test('a non-AuthError platform failure is left alone', () async {
+      // The prefix is the whole trigger: a keychain or credential-store
+      // failure has to stay a PlatformException, which is the boundary
+      // 6.0.0-dev.4 documented.
+      final storage = await storageFailingReadWith('SecurityError');
+      await expectLater(
+        storage.read(),
+        throwsA(
+          isA<PlatformException>().having(
+            (e) => e.code,
+            'code',
+            'SecurityError',
+          ),
+        ),
+      );
+    });
+    // Not on a Windows host. These drive MethodChannelBiometricStorage, whose
+    // read/write/delete build their arguments through
+    // `_promptInfoForCurrentPlatform` — and that throws
+    // `StateError('Unsupported Platform windows')` by design, because Windows
+    // has no method channel implementation: the registrant installs
+    // Win32BiometricStoragePlugin instead, so this class is unreachable there.
+    // A `flutter test` binary has no registrant, which is the only reason the
+    // calls get that far at all. Skipping loses no coverage of the translation
+    // itself, which is host-independent Dart asserted on every other job; what
+    // the Windows job is here for is the win32 bindings, and
+    // `biometric_storage_win32_test.dart` exercises those against the real
+    // credential store.
+    //
+    // `getStorage` alone stays portable, which is why the AlreadyInitialized
+    // group above needs no such guard.
+  }, skip: Platform.isWindows ? 'no method channel on windows' : false);
 
   group('StorageFileInitOptions', () {
     test('omits the keychain access group by default', () {

@@ -318,7 +318,16 @@ class BiometricStorageFile {
   }
   
   func read(_ result: @escaping StorageCallback, _ promptInfo: IOSPromptInfo) {
-
+    // No lockout check before the query, deliberately. Asking
+    // canEvaluatePolicy up front would answer about a *fresh* context, while
+    // the query below may carry one that has already authenticated — see
+    // `context`, which keeps one alive for
+    // darwinTouchIDAuthenticationForceReuseContextDuration. A read inside that
+    // window succeeds without biometry, so a pre-flight check would refuse a
+    // read that works. It would also turn a read of a name that was never
+    // written into an error rather than the nil that means "nothing stored".
+    // The check in handleOSStatusError sees the lockout either way, and only
+    // once the attempt has actually failed.
     guard var query = baseQuery(result) else {
       return;
     }
@@ -408,11 +417,87 @@ class BiometricStorageFile {
     switch status {
     case errSecUserCanceled:
       code = "AuthError:UserCanceled"
+    case errSecAuthFailed:
+      // One status, many causes. The Keychain does not distinguish "biometry
+      // is locked out" from "the user failed the check" from "this item's
+      // access control can never be satisfied again", because we let
+      // SecItemCopyMatching drive LocalAuthentication internally rather than
+      // calling LAContext.evaluatePolicy ourselves and reading its LAError.
+      //
+      // isBiometryLockedOut() recovers the one distinction that is worth a
+      // different response from the caller, and it asks LocalAuthentication
+      // rather than guessing from the status. Everything else stays together
+      // under AuthFailed: the right answer to all of it is to authenticate
+      // again, and the plugin cannot tell which of them it is holding.
+      //
+      // Note what this deliberately does NOT claim. A reader familiar with
+      // issue #128 will expect invalidation — enrolled biometrics changed, so
+      // a `.biometryCurrentSet` item is unreadable forever — to be reported as
+      // such, the way Android reports KeyPermanentlyInvalidatedException. It
+      // cannot be: it arrives here as the same errSecAuthFailed as a user who
+      // simply looked away (#80) or a device whose sensor the system will not
+      // use (#101), and in those two the value is intact. Calling all three
+      // "invalidated" would tell an app its data is gone whenever a prompt was
+      // failed, and an app that acts on that deletes a readable secret.
+      //
+      // Restricting the branch to errSecAuthFailed assumes a locked-out read
+      // never surfaces under some other status. That rests on observed
+      // behaviour of SecItemCopyMatching with kSecUseAuthenticationContext,
+      // not on a document enumerating what a locked-out read may return. The
+      // cost of being wrong is only a lockout reported as AuthFailed, which
+      // asks the user to try again — not a claim about their data.
+      code = isBiometryLockedOut() ? "AuthError:LockoutPermanent" : "AuthError:AuthFailed"
     default:
       code = "SecurityError"
     }
     
     result(storageError(code, "Error while \(message): \(status): \(errorMessage ?? "Unknown")", nil))
   }
-  
+
+  /// Whether biometry is locked out right now, asked of LocalAuthentication
+  /// through `canEvaluatePolicy` — synchronous, no UI, and documented to
+  /// report `.biometryLockout`. The alternative is to infer it from the
+  /// Keychain's `OSStatus`, which cannot be done: Apple guarantees only that
+  /// `errSecAuthFailed` means *some* authentication failure.
+  ///
+  /// Called after a failed attempt rather than before one, from
+  /// `handleOSStatusError`, so it also sees a lockout that the failing attempt
+  /// is what caused.
+  ///
+  /// iOS and macOS have a single biometric lockout state. Where Android splits
+  /// ERROR_LOCKOUT from ERROR_LOCKOUT_PERMANENT, `biometryLockout` clears only
+  /// when the user enters their passcode and never by waiting, so it is
+  /// reported as "AuthError:LockoutPermanent": the recovery matches Android's
+  /// permanent case.
+  ///
+  /// Answers false for a store this cannot speak for, rather than guessing:
+  ///
+  /// * one that does not authenticate at all, and
+  /// * one with `darwinBiometricOnly: false`, whose items carry a
+  ///   `.userPresence` access control. The policy that matches it,
+  ///   `.deviceOwnerAuthentication`, is satisfiable whenever a passcode is set,
+  ///   so `canEvaluatePolicy` would never report a lockout for it — correctly,
+  ///   since such an item stays reachable through the passcode while biometry
+  ///   is locked. An `errSecAuthFailed` there is an ordinary failure and is
+  ///   reported as one.
+  private func isBiometryLockedOut() -> Bool {
+    guard initOptions.authenticationRequired, initOptions.darwinBiometricOnly else {
+      return false
+    }
+    var error: NSError?
+    // A fresh, throwaway context: reusing `self.context` here would touch the
+    // authentication state kept alive for
+    // darwinTouchIDAuthenticationForceReuseContextDuration, which this probe
+    // has no business touching.
+    let probeContext = LAContext()
+    if probeContext.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+      return false
+    }
+    guard let laError = error else {
+      return false
+    }
+    // Not every refusal is a lockout — no enrollment and no hardware land here
+    // too, and neither says anything about this failure.
+    return LAError(_nsError: laError).code == .biometryLockout
+  }
 }

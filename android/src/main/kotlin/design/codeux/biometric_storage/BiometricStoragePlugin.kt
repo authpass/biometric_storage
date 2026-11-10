@@ -58,6 +58,28 @@ enum class AuthenticationError(vararg val code: Int) {
     Canceled(BiometricPrompt.ERROR_CANCELED),
     Timeout(BiometricPrompt.ERROR_TIMEOUT),
     UserCanceled(BiometricPrompt.ERROR_USER_CANCELED, BiometricPrompt.ERROR_NEGATIVE_BUTTON),
+
+    /**
+     * Too many failed attempts; biometry recovers on its own after a short
+     * wait whose length Android does not specify.
+     */
+    Lockout(BiometricPrompt.ERROR_LOCKOUT),
+
+    /** Lockout after continued failures. Only clears via device credential entry. */
+    LockoutPermanent(BiometricPrompt.ERROR_LOCKOUT_PERMANENT),
+
+    /**
+     * The Keystore key backing this storage can no longer be used because the
+     * device's enrolled biometrics changed since it was created.
+     *
+     * Not a [BiometricPrompt] error code — the sentinel keeps it out of
+     * [forCode]'s reach, which only ever sees codes androidx hands over, all
+     * of them non-negative. It is reported from a caught
+     * [KeyPermanentlyInvalidatedException] before any prompt is shown, and
+     * only for a read: a write recreates the key and carries on, having lost
+     * nothing it was not replacing.
+     */
+    KeyInvalidated(-3),
     Unknown(-1),
 
     /** Authentication valid, but unknown */
@@ -205,11 +227,39 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 } else try {
                     cipherForMode()
                 } catch (e: KeyPermanentlyInvalidatedException) {
-                    // TODO should we communicate this to the caller?
-                    logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
+                    // Enrolled biometrics changed, so the key this store was
+                    // written under is gone and the file under it can never be
+                    // decrypted again. Clear both; a new key is minted on the
+                    // next write.
+                    logger.warn(e) { "Key was invalidated. removing previous storage." }
                     deleteFile()
-                    // if deleting fails, simply throw the second time around.
-                    cipherForMode()
+                    when (mode) {
+                        // A read has lost something, and silence here was the
+                        // old behaviour's real cost: the caller saw the null
+                        // that also means "nothing stored" and could not tell
+                        // an empty store from one the OS had just emptied.
+                        // That distinction decides whether an app asks the user
+                        // to set their secret up again or reports a bug.
+                        CipherMode.Decrypt -> {
+                            resultError(
+                                AuthenticationErrorInfo(
+                                    AuthenticationError.KeyInvalidated,
+                                    "Key was invalidated",
+                                    e
+                                )
+                            )
+                            return
+                        }
+                        // A write has lost nothing it was not about to replace.
+                        // Failing it would make every caller handle an error
+                        // whose only sane recovery is to write again, with the
+                        // same content, against the fresh key — so do that here
+                        // and let the write succeed. Minting the key is what
+                        // cipherForEncrypt does, and the file is already gone,
+                        // so there is nothing left to be invalidated: a second
+                        // throw would be a real failure and propagates.
+                        CipherMode.Encrypt -> cipherForMode()
+                    }
                 }
 
                 if (cipher == null) {
