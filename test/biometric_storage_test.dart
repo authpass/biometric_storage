@@ -3,6 +3,8 @@
 // what makes `flutter test` on macOS or Linux compile the win32 bindings. A
 // breaking change in package:win32 shows up as a failing test run rather than
 // as a broken iOS build in somebody else's app.
+import 'dart:io' show Platform;
+
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -220,7 +222,22 @@ void main() {
         ),
       );
     });
-  });
+    // Not on a Windows host. These drive MethodChannelBiometricStorage, whose
+    // read/write/delete build their arguments through
+    // `_promptInfoForCurrentPlatform` — and that throws
+    // `StateError('Unsupported Platform windows')` by design, because Windows
+    // has no method channel implementation: the registrant installs
+    // Win32BiometricStoragePlugin instead, so this class is unreachable there.
+    // A `flutter test` binary has no registrant, which is the only reason the
+    // calls get that far at all. Skipping loses no coverage of the translation
+    // itself, which is host-independent Dart asserted on every other job; what
+    // the Windows job is here for is the win32 bindings, and
+    // `biometric_storage_win32_test.dart` exercises those against the real
+    // credential store.
+    //
+    // `getStorage` alone stays portable, which is why the AlreadyInitialized
+    // group above needs no such guard.
+  }, skip: Platform.isWindows ? 'no method channel on windows' : false);
 
   group('StorageFileInitOptions', () {
     test('omits the keychain access group by default', () {
