@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:biometric_storage/biometric_storage.dart';
+import 'package:biometric_storage_example/envelope_example.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -360,5 +362,107 @@ void main() {
     expect(() => file.delete(), throwsStateError);
     // Not dispose itself, which stays idempotent.
     expect(await file.dispose(), isFalse);
+  });
+
+  group('the envelope pattern', () {
+    /// Exercises `EnvelopeStore` from `lib/envelope_example.dart` against the
+    /// real backends. This is the README's recommended answer to #129, #108
+    /// and #112, so it should be a thing that runs rather than a snippet
+    /// nobody compiled.
+    ///
+    /// The gate is unauthenticated here, for the reason the file header gives:
+    /// no CI runner can produce a biometric gesture. So what these prove is
+    /// the composition and the cryptography — two stores, a sealed token, a
+    /// key that round-trips, rotation that touches only the token store. What
+    /// they cannot prove is the prompt itself: that a per-use gate raises one
+    /// on every read is the keystore's and the keychain's behavior, and only a
+    /// device run shows it.
+    EnvelopeStore freshEnvelope(String label) {
+      final suffix = '${label}_${DateTime.now().microsecondsSinceEpoch}';
+      final store = EnvelopeStore(
+        gateName: 'integration_gate_$suffix',
+        tokenName: 'integration_token_$suffix',
+        gateOptions: StorageFileInitOptions(authenticationRequired: false),
+      );
+      addTearDown(store.reset);
+      return store;
+    }
+
+    testWidgets('a secret enrolled under the gate reads back', (tester) async {
+      final store = freshEnvelope('roundtrip');
+      await store.enroll('refresh-token-1');
+      store.lock();
+
+      expect(await store.login(), 'refresh-token-1');
+    });
+
+    testWidgets('the token store holds ciphertext, not the secret', (
+      tester,
+    ) async {
+      // The point of the pattern: that store has no authentication at all, so
+      // if it held the plaintext the whole arrangement would be pointless.
+      final store = freshEnvelope('sealed');
+      await store.enroll('refresh-token-1');
+
+      final raw = await (await BiometricStorage().getStorage(
+        store.tokenName,
+        options: StorageFileInitOptions(authenticationRequired: false),
+      )).read();
+
+      expect(raw, isNotNull);
+      // Decoded, not as stored. Asking whether the base64 *text* contains the
+      // secret would pass for a `seal` that merely base64-encoded it, since
+      // base64 hides a literal substring on its own — the assertion has to see
+      // the bytes to mean anything.
+      final bytes = utf8.decode(base64Decode(raw!), allowMalformed: true);
+      expect(bytes, isNot(contains('refresh-token-1')));
+    });
+
+    testWidgets('rotation needs no gate read', (tester) async {
+      final store = freshEnvelope('rotate');
+      await store.enroll('refresh-token-1');
+      // Deliberately no login() in between: rotate uses the key enroll left
+      // in memory, which is what makes it prompt-free in a real app.
+      await store.rotate('refresh-token-2');
+      store.lock();
+
+      expect(await store.login(), 'refresh-token-2');
+    });
+
+    testWidgets('rotation refuses without a key in memory', (tester) async {
+      final store = freshEnvelope('locked');
+      await store.enroll('refresh-token-1');
+      store.lock();
+
+      expect(() => store.rotate('refresh-token-2'), throwsStateError);
+    });
+
+    testWidgets('a fresh nonce per seal, so two writes differ', (tester) async {
+      // Guards the one mistake that would quietly break AES-GCM here. Same
+      // key, same plaintext, different ciphertext.
+      final store = freshEnvelope('nonce');
+      await store.enroll('refresh-token-1');
+
+      Future<String?> rawToken() async => (await BiometricStorage().getStorage(
+        store.tokenName,
+        options: StorageFileInitOptions(authenticationRequired: false),
+      )).read();
+
+      final first = await rawToken();
+      await store.rotate('refresh-token-1');
+      final second = await rawToken();
+
+      expect(first, isNotNull);
+      expect(second, isNot(first));
+    });
+
+    testWidgets('reset leaves nothing behind', (tester) async {
+      final store = freshEnvelope('reset');
+      await store.enroll('refresh-token-1');
+      await store.reset();
+
+      expect(await store.login(), isNull);
+      expect(store.dataKey, isNull);
+    });
   });
 }

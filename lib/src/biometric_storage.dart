@@ -697,12 +697,31 @@ class BiometricStorageFile {
   /// Forgets this storage's initialization, **without touching its content**.
   ///
   /// [BiometricStorage.getStorage] resolves the options for a name once and
-  /// then ignores them, so a store initialized with, say, a five second
-  /// `authenticationValidityDurationSeconds` keeps it for the lifetime of the
-  /// process however it is fetched again. Disposing is what makes the next
-  /// `getStorage` apply a fresh [StorageFileInitOptions] — reconfiguring, not
-  /// erasing. Use [delete] to remove the content, or call it first if you want
-  /// both.
+  /// then ignores them, so a store keeps the options it was initialized with
+  /// for the lifetime of the process however it is fetched again. Disposing is
+  /// what makes the next `getStorage` apply a fresh
+  /// [StorageFileInitOptions] — reconfiguring, not erasing. Use [delete] to
+  /// remove the content, or call it first if you want both.
+  ///
+  /// **On Android this does not change an existing store's authentication.**
+  /// A keystore key's authentication parameters are fixed when the key is
+  /// created, and nothing recreates a key that already exists, so
+  /// [androidAuthenticationValidityDuration] in the options the next
+  /// `getStorage` receives has no effect on a store that has already been
+  /// written. Worse, changing it between a value and `null` leaves that store
+  /// unusable — every read and write fails, because the plugin then takes the
+  /// path the key was not minted for. Call [delete] before disposing if you
+  /// need to change it, accepting that the content goes with it.
+  ///
+  /// The options that *do* take effect on a fresh initialization everywhere
+  /// are the darwin ones: disposing drops the cached `LAContext`, so a
+  /// [darwinTouchIDAuthenticationForceReuseContextDuration] in progress ends
+  /// and the next read authenticates again.
+  ///
+  /// If what you want is an authentication the OS cannot carry over from a
+  /// previous one, do not reach for a validity duration at all — see the
+  /// envelope pattern in the README, and
+  /// https://github.com/authpass/biometric_storage/issues/129.
   ///
   /// Returns `true` when there was an initialization to forget, and `false`
   /// when there was not, so calling it twice is safe.

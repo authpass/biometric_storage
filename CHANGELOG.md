@@ -1,3 +1,43 @@
+## 6.0.0-dev.10
+
+* Document what `dispose()` does **not** reconfigure. 6.0.0-dev.9 offered
+  "changing an authentication validity duration" as its motivating example, and
+  on Android that is the one case it cannot do: a keystore key's authentication
+  parameters are fixed when the key is created, and nothing recreates a key
+  that already exists, so `androidAuthenticationValidityDuration` in the
+  options a later `getStorage` receives has no effect on a store that has
+  already been written. Changing it between a value and `null` is worse than
+  ineffective — it leaves that store failing every read and write, because the
+  plugin then takes the path the key was not minted for. `delete()` before
+  disposing is the only way to change it, and the content goes with it.
+
+  No behaviour changed in this release; dev.9 behaved this way too, and said
+  otherwise. On iOS and macOS `dispose()` does reconfigure, including ending a
+  `darwinTouchIDAuthenticationForceReuseContextDuration` in progress.
+
+  Found by reading the code rather than by a run, which also means the failure
+  above is not yet reproduced on a device. Whether the plugin should detect the
+  mismatch at `init` — comparing
+  `KeyInfo.getUserAuthenticationValidityDurationSeconds()` against the options
+  it was handed — and raise a named error instead of `Unexpected Error` is a
+  separate change, and wants that reproduction first.
+* README: the **envelope pattern**, for an authentication the OS cannot carry
+  over from a previous one. A validity window cannot be closed early — Android
+  exposes no way to revoke an authentication, and a device unlock renews the
+  window — so the answer is not to open one: a per-use store holds a random
+  data key, and a second store with `authenticationRequired: false` holds the
+  secret encrypted under it. Every login is then a keystore- or
+  keychain-enforced prompt with no window, while rotating the secret needs only
+  the key already in memory and raises no prompt at all. This is the standing
+  answer to #129, #108 and #112.
+
+  `example/lib/envelope_example.dart` implements it, and the integration suite
+  exercises it against the real backends, so it is code that runs rather than a
+  snippet. Note what that run does not cover: the gate is unauthenticated under
+  test, because no CI runner can perform a biometric gesture, so the prompt
+  itself is still the platform's behaviour rather than something this
+  repository proves.
+
 ## 6.0.0-dev.9
 
 * `BiometricStorageFile.dispose()` forgets a store's initialization without

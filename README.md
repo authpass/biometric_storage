@@ -203,3 +203,79 @@ does **not** bring CocoaPods back — no `Podfile` is generated.
 > ```
 
 See also the API documentation: https://pub.dev/documentation/biometric_storage/latest/biometric_storage/BiometricStorageFile-class.html#instance-methods
+
+### What an authentication validity duration really means
+
+`androidAuthenticationValidityDuration` opens a window during which the
+keystore will use the key without another prompt. Three things about that
+window are easy to get wrong, and all three are the platform's doing rather
+than this plugin's:
+
+* **It belongs to the user's last device authentication, not to your app.** Any
+  unlock of the device renews it. A window you set to ten minutes can be
+  renewed by the user unlocking their phone for something else entirely.
+* **It cannot be closed early.** Android exposes no way to revoke an
+  authentication. Nothing in this package — not `dispose()`, not a repeat
+  `getStorage` — shortens a window that is already open.
+* **It is fixed when the key is created.** A keystore key's authentication
+  parameters are set at creation and nothing recreates a key that already
+  exists, so passing a different duration later has no effect on a store that
+  has been written. See `dispose()`'s documentation for what happens if you
+  change it between a value and `null`.
+
+So if what you need is an authentication that cannot be inherited from an
+earlier one, do not set a duration. Use the pattern below.
+
+### The envelope pattern
+
+For: a prompt on every login, *and* the ability to rewrite the secret without
+one. This is the standing answer to
+[#129](https://github.com/authpass/biometric_storage/issues/129),
+[#108](https://github.com/authpass/biometric_storage/issues/108) and
+[#112](https://github.com/authpass/biometric_storage/issues/112), which all
+arrive at a long validity duration and then run into the three points above.
+
+Keep **two** stores instead of one:
+
+* a **gate** that authenticates per use — `authenticationRequired: true`, no
+  validity duration, no darwin reuse duration — holding a random data key;
+* a **token** store with `authenticationRequired: false`, holding your secret
+  encrypted by your app under that data key.
+
+```dart
+// Login: one prompt, for the gate.
+final key = base64Decode((await gate.read())!);
+final secret = await decrypt(await token.read(), key);   // your AEAD
+
+// Rotate: no prompt at all — the key is already in memory.
+await token.write(await encrypt(newSecret, key));
+
+// Log out: forget the key. The next login must authenticate.
+key.fillRange(0, key.length, 0);
+```
+
+What each half gives you, stated per platform rather than blended:
+
+* **Android:** every gate read is a `BiometricPrompt` bound to a `CryptoObject`
+  over a per-use key. The keystore enforces it, there is no window to leak, and
+  a device unlock does not help an attacker.
+* **iOS and macOS:** every gate read is a keychain access-control evaluation
+  with a fresh `LAContext`.
+* **The token store** is plain ciphertext on disk. Its confidentiality comes
+  from the data key in the gate, so use an *authenticated* cipher (AES-GCM,
+  ChaCha20-Poly1305) — the file is deliberately unprotected, and a
+  non-authenticated cipher would leave it malleable.
+
+Costs, honestly: your app owns one piece of cryptography, and the data key sits
+in memory for the length of a session — which is where the plaintext secret
+already sat. Migrating from a single store means reading the old secret,
+writing both new stores, and only then deleting the old one, in that order, so
+that a crash part-way leaves the old store intact.
+
+A working implementation is in
+[`example/lib/envelope_example.dart`](example/lib/envelope_example.dart), and
+the integration suite exercises it against the real keystore, keychain and
+libsecret. Note what that does not cover: under test the gate is
+unauthenticated, because no CI runner can perform a biometric gesture, so the
+prompt itself is the platform's behaviour rather than something this repository
+proves.

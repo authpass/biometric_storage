@@ -9,6 +9,7 @@ environment:
 dependencies:
   biometric_storage:
     path: ../
+  cryptography: ^2.9.0
   flutter:
     sdk: flutter
   logging: ^1.2.0
