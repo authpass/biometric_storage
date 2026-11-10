@@ -119,6 +119,56 @@ void main() {
     });
   });
 
+  group(
+    'dispose',
+    () {
+      /// Records what reaches the native side, and replies with [reply].
+      List<MethodCall> mockDispose(Object? reply) {
+        final calls = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (methodCall) async {
+              calls.add(methodCall);
+              if (methodCall.method == 'init') {
+                return true;
+              }
+              if (methodCall.method == 'dispose') {
+                return reply;
+              }
+              throw PlatformException(code: 'NotImplemented');
+            });
+        return calls;
+      }
+
+      test(
+        'reaches the platform as a dispose call carrying the name',
+        () async {
+          final calls = mockDispose(true);
+
+          final file = await BiometricStorage().getStorage('x');
+          expect(await file.dispose(), isTrue);
+
+          final dispose = calls.singleWhere((c) => c.method == 'dispose');
+          expect((dispose.arguments as Map)['name'], 'x');
+        },
+      );
+
+      // Deliberately no test that a null channel reply is reported as
+      // `false`. It would be vacuous: no deployable combination replies null —
+      // the handlers that predate 6.0.0-dev.9 answer true, or throw, or are
+      // missing entirely, which surfaces as MissingPluginException — and the
+      // `?? false` such a test would claim to guard is already enforced by the
+      // compiler, since invokeMethod<bool> is typed Future<bool?> and the
+      // method returns Future<bool>.
+    },
+    skip: Platform.isWindows
+        ? 'MethodChannelBiometricStorage is unreachable on Windows: the plugin '
+              'registrant installs Win32BiometricStoragePlugin, and the channel '
+              'implementation of dispose asks _promptInfoForCurrentPlatform for '
+              'a prompt it has no case for. biometric_storage_win32_test.dart '
+              'covers dispose on this host.'
+        : null,
+  );
+
   group('BiometricStorageException', () {
     test('defaults to unknown, so the positional constructor still works', () {
       final e = BiometricStorageException('boom');

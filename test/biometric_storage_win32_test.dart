@@ -109,6 +109,54 @@ void main() {
     );
   });
 
+  test('dispose forgets the name, so forceInit accepts it again', () async {
+    final name = 'test_dispose_${DateTime.now().microsecondsSinceEpoch}';
+
+    final file = await plugin.getStorage(name);
+    expect(await file.dispose(), isTrue, reason: 'there was one to forget');
+
+    // Only reachable if dispose really removed the entry. Note the asymmetry
+    // this pins: `_initialized` is keyed by the prefixed name, which is what
+    // dispose is handed, while getStorage is given the bare one. Tracking the
+    // bare form would leave dispose unable to find anything.
+    await plugin.getStorage(name, forceInit: true);
+
+    expect(await file.dispose(), isTrue, reason: 'the second init, forgotten');
+    expect(await file.dispose(), isFalse, reason: 'nothing left to forget');
+  });
+
+  test('dispose leaves the stored credential alone', () async {
+    final name = 'test_dispose_keeps_${DateTime.now().microsecondsSinceEpoch}';
+    final file = await plugin.getStorage(name);
+    // Cleaning up through `file` would throw: disposing it makes the handle
+    // spent, which is the guard the next test pins.
+    addTearDown(() async => (await plugin.getStorage(name)).delete());
+
+    await file.write('survives');
+    expect(await file.dispose(), isTrue);
+
+    final reopened = await plugin.getStorage(name);
+    expect(await reopened.read(), 'survives');
+  });
+
+  test('a disposed file refuses to be used again', () async {
+    // Uniform by construction rather than by backend: Android and darwin fail
+    // these against their registry, while win32, web and Linux would happily
+    // keep going from the name alone. Enforcing it in Dart is what stops the
+    // same mistake from throwing for some users and silently working for
+    // others.
+    final name = 'test_dispose_spent_${DateTime.now().microsecondsSinceEpoch}';
+    final file = await plugin.getStorage(name);
+
+    expect(await file.dispose(), isTrue);
+
+    expect(() => file.read(), throwsStateError);
+    expect(() => file.write('x'), throwsStateError);
+    expect(() => file.delete(), throwsStateError);
+    // Not dispose itself: disposing twice stays legal.
+    expect(await file.dispose(), isFalse);
+  });
+
   test('reading an unknown name returns null rather than throwing', () async {
     final file = await plugin.getStorage(
       'test_absent_${DateTime.now().microsecondsSinceEpoch}',

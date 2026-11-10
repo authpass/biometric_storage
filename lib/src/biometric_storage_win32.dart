@@ -41,15 +41,19 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     bool forceInit = false,
     PromptInfo promptInfo = PromptInfo.defaultValues,
   }) async {
+    // Keyed by the prefixed name, which is what every other method on this
+    // class is handed — BiometricStorageFile carries the prefixed form, so
+    // tracking the bare one here would leave dispose() unable to find it.
+    final prefixedName = namePrefix + name;
     // forceInit was accepted and dropped here, so the documented "will throw if
     // the store was already created in this runtime" held on Android alone.
-    if (!_initialized.add(name) && forceInit) {
+    if (!_initialized.add(prefixedName) && forceInit) {
       throw BiometricStorageException(
         "A storage file with the name '$name' was already initialized.",
         code: BiometricStorageExceptionCode.alreadyInitialized,
       );
     }
-    return BiometricStorageFile(this, namePrefix + name, promptInfo);
+    return BiometricStorageFile(this, prefixedName, promptInfo);
   }
 
   @override
@@ -145,6 +149,13 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       }
     });
   }
+
+  @override
+  Future<bool> dispose(String name, PromptInfo promptInfo) async =>
+      // [name] arrives prefixed, matching what getStorage recorded. There is
+      // no native handle to release — the stored credential is deliberately
+      // left alone — so forgetting the name is the whole of it.
+      _initialized.remove(name);
 
   void _logFailure(String action, String name, WIN32_ERROR error) {
     if (error == ERROR_NOT_FOUND) {

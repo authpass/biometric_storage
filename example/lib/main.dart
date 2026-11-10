@@ -320,6 +320,23 @@ class StorageActions extends StatelessWidget {
             _logger.info('Deleted.');
           },
         ),
+        ElevatedButton(
+          child: const Text('dispose'),
+          onPressed: () async {
+            _logger.fine('disposing ${storageFile.name}...');
+            final disposed = await storageFile.dispose();
+            // The content survives; what is gone is the initialization, so
+            // the next getStorage for this name applies fresh options. This
+            // handle is spent — read, write and delete through it throw from
+            // here on, so the buttons beside this one will fail until the app
+            // fetches the storage again.
+            _logger.info(
+              disposed
+                  ? 'Disposed. Init it again to change its options.'
+                  : 'Nothing to dispose; it was not initialized.',
+            );
+          },
+        ),
       ],
     );
   }
