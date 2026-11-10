@@ -152,13 +152,13 @@ void main() {
         },
       );
 
-      // There was a second test here asserting that a null channel reply is
-      // reported as `false`. It was vacuous: no deployable combination replies
-      // null — the pre-6.0.0-dev.5 handlers answer true, or throw, or are
+      // Deliberately no test that a null channel reply is reported as
+      // `false`. It would be vacuous: no deployable combination replies null —
+      // the handlers that predate 6.0.0-dev.9 answer true, or throw, or are
       // missing entirely, which surfaces as MissingPluginException — and the
-      // `?? false` it claimed to guard is already enforced by the compiler,
-      // since invokeMethod<bool> is typed Future<bool?> and the method returns
-      // Future<bool>.
+      // `?? false` such a test would claim to guard is already enforced by the
+      // compiler, since invokeMethod<bool> is typed Future<bool?> and the
+      // method returns Future<bool>.
     },
     skip: Platform.isWindows
         ? 'MethodChannelBiometricStorage is unreachable on Windows: the plugin '

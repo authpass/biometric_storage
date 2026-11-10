@@ -582,9 +582,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   @override
   Future<bool> dispose(String name, PromptInfo promptInfo) async {
     // The type argument is explicit because the `Future<bool>` return type
-    // otherwise infers it as non-nullable, and the channel reply is
-    // `bool?` — an older plugin build that predates this method replies null
-    // rather than a bool.
+    // would otherwise infer it as non-nullable, while `invokeMethod<bool>` is
+    // typed `Future<bool?>` whatever the handler on the other side replies.
+    // The `?? false` below is what reconciles the two; no deployable handler
+    // actually answers null.
     final disposed = await _transformErrors<bool?>(
       _channel.invokeMethod<bool>('dispose', <String, dynamic>{
         'name': name,
