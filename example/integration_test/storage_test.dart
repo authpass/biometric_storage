@@ -170,6 +170,32 @@ void main() {
     },
   );
 
+  testWidgets('delete is safe on a store with nothing stored', (tester) async {
+    // `delete` no longer guards the removal on a file existing, because a key
+    // can outlive one — `cipherForEncrypt` mints it before the prompt, so a
+    // cancelled first write leaves a key alone. That makes the keystore
+    // removal run for a store that may have no key either, which has to be
+    // harmless, and twice over.
+    //
+    // What this does not reach is the leak that motivated the change: it needs
+    // a write cancelled at a biometric prompt, which no runner can do. So this
+    // covers the new unconditional path's safety, not the case it fixes.
+    final name = disposableName('delete_empty');
+    final file = await storage.getStorage(name, options: options);
+
+    // No assertion on a return value: `BiometricStorageFile.delete()` is
+    // `Future<void>`, so the "was something deleted" answer the native side
+    // computes never reaches a caller through this API.
+    await file.delete();
+    await file.delete();
+    // Still usable afterwards, which is the part that would break if removing
+    // an absent key threw.
+    await file.write('after');
+    expect(await file.read(), 'after');
+    await file.delete();
+    expect(await file.read(), isNull);
+  });
+
   testWidgets(
     'a file too short to hold a tag reads as nothing, and the store works again',
     skip: !Platform.isAndroid,
@@ -388,6 +414,27 @@ void main() {
       return store;
     }
 
+    /// Either half of an [EnvelopeStore], reached around it rather than
+    /// through it. Several of these tests have to assert about what is on disk,
+    /// and asking the store itself would be asking the code under test.
+    Future<BiometricStorageFile> gateOf(EnvelopeStore store) =>
+        BiometricStorage().getStorage(
+          store.gateName,
+          options: StorageFileInitOptions(authenticationRequired: false),
+        );
+
+    Future<BiometricStorageFile> tokenOf(EnvelopeStore store) =>
+        BiometricStorage().getStorage(
+          store.tokenName,
+          options: StorageFileInitOptions(authenticationRequired: false),
+        );
+
+    Future<String?> rawGate(EnvelopeStore store) async =>
+        (await gateOf(store)).read();
+
+    Future<String?> rawToken(EnvelopeStore store) async =>
+        (await tokenOf(store)).read();
+
     testWidgets('a secret enrolled under the gate reads back', (tester) async {
       final store = freshEnvelope('roundtrip');
       await store.enroll('refresh-token-1');
@@ -404,10 +451,7 @@ void main() {
       final store = freshEnvelope('sealed');
       await store.enroll('refresh-token-1');
 
-      final raw = await (await BiometricStorage().getStorage(
-        store.tokenName,
-        options: StorageFileInitOptions(authenticationRequired: false),
-      )).read();
+      final raw = await rawToken(store);
 
       expect(raw, isNotNull);
       // Decoded, not as stored. Asking whether the base64 *text* contains the
@@ -418,15 +462,20 @@ void main() {
       expect(bytes, isNot(contains('refresh-token-1')));
     });
 
-    testWidgets('rotation needs no gate read', (tester) async {
+    testWidgets('rotation does not read the gate', (tester) async {
+      // The gate is *deleted* before rotating, which is what makes the
+      // property reachable: asserting only that the new value reads back
+      // would pass against a rotate that re-read the gate, since nothing
+      // here would notice. With no gate to read, a rotate that reaches for
+      // one fails instead.
       final store = freshEnvelope('rotate');
       await store.enroll('refresh-token-1');
-      // Deliberately no login() in between: rotate uses the key enroll left
-      // in memory, which is what makes it prompt-free in a real app.
-      await store.rotate('refresh-token-2');
-      store.lock();
+      final before = await rawToken(store);
 
-      expect(await store.login(), 'refresh-token-2');
+      await (await gateOf(store)).delete();
+      await store.rotate('refresh-token-2');
+
+      expect(await rawToken(store), isNot(before));
     });
 
     testWidgets('rotation refuses without a key in memory', (tester) async {
@@ -434,7 +483,33 @@ void main() {
       await store.enroll('refresh-token-1');
       store.lock();
 
-      expect(() => store.rotate('refresh-token-2'), throwsStateError);
+      // awaited: rotate is async, and an un-awaited matcher on a future is a
+      // bet on the framework noticing the rejection for us.
+      await expectLater(
+        () => store.rotate('refresh-token-2'),
+        throwsStateError,
+      );
+    });
+
+    testWidgets('a tampered token is refused, not returned', (tester) async {
+      // The README's one cryptographic instruction is to use an authenticated
+      // cipher. Without this test the whole group passes against AES-CTR, so
+      // this is the test that holds that sentence up: flip one byte of the
+      // ciphertext and the MAC check has to reject it.
+      final store = freshEnvelope('tamper');
+      await store.enroll('refresh-token-1');
+
+      final sealed = base64Decode((await rawToken(store))!);
+      // Past the 12-byte nonce, so it is the ciphertext that changes.
+      sealed[20] ^= 0xff;
+      await (await tokenOf(store)).write(base64Encode(sealed));
+      store.lock();
+
+      // Null rather than a throw: login treats a token it cannot open as
+      // nothing stored, so the app re-enrolls rather than crashing. What
+      // matters is that the tampered bytes are never returned as a secret.
+      expect(await store.login(), isNull);
+      expect(store.isUnlocked, isFalse);
     });
 
     testWidgets('a fresh nonce per seal, so two writes differ', (tester) async {
@@ -443,14 +518,9 @@ void main() {
       final store = freshEnvelope('nonce');
       await store.enroll('refresh-token-1');
 
-      Future<String?> rawToken() async => (await BiometricStorage().getStorage(
-        store.tokenName,
-        options: StorageFileInitOptions(authenticationRequired: false),
-      )).read();
-
-      final first = await rawToken();
+      final first = await rawToken(store);
       await store.rotate('refresh-token-1');
-      final second = await rawToken();
+      final second = await rawToken(store);
 
       expect(first, isNotNull);
       expect(second, isNot(first));
@@ -461,8 +531,12 @@ void main() {
       await store.enroll('refresh-token-1');
       await store.reset();
 
-      expect(await store.login(), isNull);
-      expect(store.dataKey, isNull);
+      // Both stores are asked directly. Going through login() would pass
+      // against a reset that deleted only the gate, because login() answers
+      // null as soon as the gate is empty and never looks at the token.
+      expect(await rawGate(store), isNull);
+      expect(await rawToken(store), isNull);
+      expect(store.isUnlocked, isFalse);
     });
   });
 }

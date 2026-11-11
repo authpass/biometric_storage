@@ -211,9 +211,10 @@ keystore will use the key without another prompt. Three things about that
 window are easy to get wrong, and all three are the platform's doing rather
 than this plugin's:
 
-* **It belongs to the user's last device authentication, not to your app.** Any
-  unlock of the device renews it. A window you set to ten minutes can be
-  renewed by the user unlocking their phone for something else entirely.
+* **It belongs to the user's last device authentication, not to your app.** An
+  unlock by PIN, pattern, password or a strong biometric renews it. A window
+  you set to ten minutes can be renewed by the user unlocking their phone for
+  something else entirely.
 * **It cannot be closed early.** Android exposes no way to revoke an
   authentication. Nothing in this package — not `dispose()`, not a repeat
   `getStorage` — shortens a window that is already open.
@@ -235,6 +236,13 @@ one. This is the standing answer to
 [#112](https://github.com/authpass/biometric_storage/issues/112), which all
 arrive at a long validity duration and then run into the three points above.
 
+**Android and iOS/macOS only.** The guarantee below is the OS enforcing an
+access control, so it is worth exactly what the platform provides: on Linux
+there is no biometric support, and on web both stores are unencrypted
+`localStorage`, which puts the data key next to the ciphertext it protects and
+raises no prompt at all. Branch on the platform rather than shipping this as
+your only path.
+
 Keep **two** stores instead of one:
 
 * a **gate** that authenticates per use — `authenticationRequired: true`, no
@@ -251,6 +259,9 @@ final secret = await decrypt(await token.read(), key);   // your AEAD
 await token.write(await encrypt(newSecret, key));
 
 // Log out: forget the key. The next login must authenticate.
+// Zeroing needs a modifiable list: `base64Decode` gives one, but a key taken
+// straight from a crypto library's own byte holder may refuse writes. And it
+// only covers this copy — the key also arrived as an immutable base64 String.
 key.fillRange(0, key.length, 0);
 ```
 
@@ -264,18 +275,39 @@ What each half gives you, stated per platform rather than blended:
 * **The token store** is plain ciphertext on disk. Its confidentiality comes
   from the data key in the gate, so use an *authenticated* cipher (AES-GCM,
   ChaCha20-Poly1305) — the file is deliberately unprotected, and a
-  non-authenticated cipher would leave it malleable.
+  non-authenticated cipher would let anything that can write there change your
+  plaintext by changing the ciphertext. Authentication *detects* that; it does
+  not prevent the write, and it does not stop an **older** sealed value being
+  put back, which was sealed by the same key. If a rollback matters to you, put
+  a counter or a timestamp inside the plaintext.
 
-Costs, honestly: your app owns one piece of cryptography, and the data key sits
-in memory for the length of a session — which is where the plaintext secret
+### What it costs
+
+**A biometric enrollment change destroys the secret.** This is the one to weigh
+before adopting the pattern. The gate key is biometric-only, Android
+invalidates such keys when a fingerprint or face is added or removed, and the
+plugin then deletes the key and raises `AuthExceptionCode.keyInvalidated`. The
+sealed token is left undecryptable.
+
+That is a failure the setup you are migrating *from* mostly does not have: a
+store with a validity duration allows the device credential as well, and keys
+like that survive an enrollment change. So the pattern trades a window you
+cannot close for a secret you can lose. For a refresh token that is a good
+trade — the user logs in again and you re-enroll. **For a secret that cannot be
+regenerated, it is the wrong pattern** unless you keep a recovery path outside
+it.
+
+The rest: your app owns one piece of cryptography, and the data key sits in
+memory for the length of a session — which is where the plaintext secret
 already sat. Migrating from a single store means reading the old secret,
 writing both new stores, and only then deleting the old one, in that order, so
 that a crash part-way leaves the old store intact.
 
 A working implementation is in
 [`example/lib/envelope_example.dart`](example/lib/envelope_example.dart), and
-the integration suite exercises it against the real keystore, keychain and
-libsecret. Note what that does not cover: under test the gate is
-unauthenticated, because no CI runner can perform a biometric gesture, so the
-prompt itself is the platform's behaviour rather than something this repository
-proves.
+the integration suite exercises it against the real keychain on macOS and real
+libsecret on Linux in CI. Two things that does not cover. Nothing runs it
+against the Android keystore yet. And under test the gate is unauthenticated,
+because no CI runner can perform a biometric gesture — so the prompt itself,
+which is the whole point, is the platform's behavior rather than something this
+repository proves.

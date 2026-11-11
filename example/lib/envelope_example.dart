@@ -28,13 +28,33 @@
 // that is already in memory, so it raises no prompt — which is the whole of
 // what #108 and #112 were asking for.
 //
-// What this costs. The app owns one piece of cryptography (below), and the
-// data key sits in the Dart heap for the duration of a session — which is
-// where the plaintext secret already sat in every design these issues
-// describe. The simpler variant, putting the secret straight into the per-use
-// store, needs no crypto here but brings back a prompt on every rotation.
+// What this costs, and the first one is the one that decides whether you
+// should use this at all:
+//
+//   * **A biometric enrollment change destroys the secret.** The gate key is
+//     biometric-only, and Android invalidates such keys when a fingerprint or
+//     face is added or removed; the plugin then deletes the key and reports
+//     `AuthExceptionCode.keyInvalidated`. The sealed token is left
+//     undecryptable. Note what that means for anyone arriving from #129 or
+//     #108: a store with a validity duration allows the device credential as
+//     well, and keys like that are *not* invalidated by enrollment — so this
+//     pattern trades a window you cannot close for a secret you can lose. For
+//     a refresh token that is a good trade, because the user can log in again
+//     and you re-enroll. For a secret that cannot be regenerated it is the
+//     wrong pattern, and you should keep a recovery path outside it.
+//   * It is an Android and darwin pattern. On Linux there is no biometric
+//     support, and on web both stores are unencrypted `localStorage`, so the
+//     gate raises no prompt and the data key sits beside the ciphertext it
+//     protects. The pattern gives nothing there.
+//   * The app owns one piece of cryptography (below), and the data key sits in
+//     the Dart heap for the duration of a session — which is where the
+//     plaintext secret already sat in every design these issues describe.
+//
+// The simpler variant, putting the secret straight into the per-use store,
+// needs no crypto here but brings back a prompt on every rotation.
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:cryptography/cryptography.dart';
@@ -43,53 +63,101 @@ import 'package:logging/logging.dart';
 
 final _logger = Logger('envelope_example');
 
-/// AES-GCM over the token, with a fresh nonce per encryption.
+/// AES-GCM over the token, with a fresh nonce per encryption and the store's
+/// name bound in as associated data.
 ///
 /// `package:cryptography` is one choice among several; any authenticated
-/// cipher (AEAD) will do. What matters is that it is authenticated — a plain
-/// stream cipher would leave the token file malleable, and the token store is
-/// deliberately unprotected on disk.
+/// cipher (AEAD) will do. What matters is that it is authenticated: the token
+/// store is deliberately unprotected on disk, so a non-authenticated cipher
+/// would let anything that can write there change the plaintext by changing
+/// the ciphertext. Authentication detects that — it does not prevent the
+/// write, and it does not make the file tamper-*proof*. In particular it does
+/// not stop an *old* sealed token being put back, since that one was sealed
+/// by this key too; defending against rollback needs a counter or a timestamp
+/// inside the plaintext.
+///
+/// Without `cryptography_flutter` added as well, this runs as pure Dart on
+/// mobile rather than through the platform's own implementation, so it is not
+/// constant-time. For a locally stored token that does not matter; know it
+/// before reusing the helper for something else.
 class _Envelope {
   static final _algorithm = AesGcm.with256bits();
 
-  static Future<List<int>> newDataKey() async {
+  /// A modifiable copy, deliberately. `extractBytes()` hands back
+  /// `package:cryptography`'s own `SensitiveBytes`, which refuses writes — so
+  /// holding that directly would make zeroing the key later throw rather than
+  /// zero it. `base64Decode`, the other way a key enters this class, already
+  /// returns a modifiable `Uint8List`.
+  static Future<Uint8List> newDataKey() async {
     final key = await _algorithm.newSecretKey();
-    return key.extractBytes();
+    return Uint8List.fromList(await key.extractBytes());
   }
 
   /// Nonce, ciphertext and MAC in one blob, so the caller stores one string.
   /// A new nonce is generated for every call — reusing one under the same key
   /// would be the one mistake in this file that actually breaks AES-GCM.
-  static Future<String> seal(String plainText, List<int> dataKey) async {
+  ///
+  /// [slot] is bound in as associated data rather than encrypted: it is not
+  /// secret, but binding it means a blob sealed for one store cannot be opened
+  /// as another. That costs nothing here, where there is one token, and is
+  /// what keeps two secrets from being swapped if you extend this to several.
+  static Future<String> seal(
+    String plainText,
+    List<int> dataKey,
+    String slot,
+  ) async {
     final box = await _algorithm.encrypt(
       utf8.encode(plainText),
       secretKey: SecretKey(dataKey),
+      aad: utf8.encode(slot),
     );
     return base64Encode(box.concatenation());
   }
 
-  static Future<String> open(String sealed, List<int> dataKey) async {
+  /// Throws [SecretBoxAuthenticationError] when the blob was not sealed by
+  /// this key for this [slot], which covers a tampered file, a stale token
+  /// left behind by an interrupted enrollment, and a mismatched store.
+  static Future<String> open(
+    String sealed,
+    List<int> dataKey,
+    String slot,
+  ) async {
     final box = SecretBox.fromConcatenation(
       base64Decode(sealed),
       nonceLength: _algorithm.nonceLength,
       macLength: _algorithm.macAlgorithm.macLength,
     );
-    final clear = await _algorithm.decrypt(box, secretKey: SecretKey(dataKey));
+    final clear = await _algorithm.decrypt(
+      box,
+      secretKey: SecretKey(dataKey),
+      aad: utf8.encode(slot),
+    );
     return utf8.decode(clear);
   }
 }
 
 /// The two stores and the operations over them.
 ///
-/// Hold one of these for the lifetime of the app. [dataKey] is non-null
-/// exactly while the user is logged in; [lock] drops it.
+/// Hold one of these for the lifetime of the app. [isUnlocked] is true exactly
+/// while the user is logged in; [lock] ends that.
 class EnvelopeStore {
   EnvelopeStore({
     this.gateName = 'envelope_gate',
     this.tokenName = 'envelope_token',
     StorageFileInitOptions? gateOptions,
   }) : gateOptions =
-           gateOptions ?? StorageFileInitOptions(authenticationRequired: true);
+           gateOptions ?? StorageFileInitOptions(authenticationRequired: true) {
+    if (!this.gateOptions.authenticationRequired) {
+      // Says it out loud, because an unauthenticated gate is not a weaker
+      // version of this pattern — it is the pattern switched off, with the
+      // data key sitting unprotected next to the ciphertext it unlocks. The
+      // integration test does exactly this on purpose; nothing else should.
+      _logger.warning(
+        'the gate does not require authentication: no prompt will be raised '
+        'and the envelope protects nothing',
+      );
+    }
+  }
 
   final String gateName;
   final String tokenName;
@@ -112,11 +180,14 @@ class EnvelopeStore {
     authenticationRequired: false,
   );
 
-  List<int>? _dataKey;
+  /// `Uint8List` rather than `List<int>` so that [_wipeKey] can actually
+  /// write to it; see [_Envelope.newDataKey].
+  Uint8List? _dataKey;
 
-  /// Null while locked. Present only between a successful [login] and a
-  /// [lock], a [reset], or the process ending.
-  List<int>? get dataKey => _dataKey;
+  /// Whether a data key is held, which is to say whether the user is logged
+  /// in. The bytes themselves stay private: a getter for them exists only to
+  /// be misused, and the one thing a caller needs is this.
+  bool get isUnlocked => _dataKey != null;
 
   Future<BiometricStorageFile> _gate() =>
       BiometricStorage().getStorage(gateName, options: gateOptions);
@@ -125,21 +196,39 @@ class EnvelopeStore {
       BiometricStorage().getStorage(tokenName, options: _tokenOptions);
 
   /// First run: mint a data key, put it behind the prompt, and seal the secret
-  /// under it. Raises one prompt, for the gate write.
+  /// under it. Raises a prompt for the gate write — though not necessarily on
+  /// a first enrollment on iOS and macOS, where adding a keychain item is not
+  /// the operation that evaluates its access control.
   ///
   /// The order matters on a migration from a single store: read the old secret
   /// first, then write both of these, and only then delete the old store. A
   /// crash anywhere in that sequence then leaves the old store intact.
+  ///
+  /// Re-enrolling over an existing enrollment has a window of its own: the new
+  /// key lands before the new token, so a process that dies in between leaves
+  /// a token sealed under a key that no longer exists. [login] reports that as
+  /// "nothing stored", which is the recoverable answer — the app re-enrolls.
   Future<void> enroll(String secret) async {
     final key = await _Envelope.newDataKey();
     await (await _gate()).write(base64Encode(key));
-    await (await _token()).write(await _Envelope.seal(secret, key));
+    await (await _token()).write(await _Envelope.seal(secret, key, tokenName));
     _dataKey = key;
     _logger.fine('enrolled; data key held in memory');
   }
 
-  /// The login. Raises exactly one prompt — the gate read — and returns the
-  /// secret, or null when nothing is enrolled.
+  /// The login. Raises one prompt — the gate read — and returns the secret, or
+  /// null when there is nothing to return.
+  ///
+  /// Null covers three cases a caller handles the same way, by enrolling
+  /// again: nothing was ever stored, the gate outlived its token, and the
+  /// token cannot be opened by the key the gate holds. The last one is what an
+  /// interrupted re-enrollment leaves behind.
+  ///
+  /// It does **not** cover a gate the OS has destroyed. A biometric
+  /// enrollment change invalidates the gate key, and the plugin then raises
+  /// `AuthException` with `AuthExceptionCode.keyInvalidated` — deliberately
+  /// not caught here, because the secret is gone rather than absent, and an
+  /// app usually wants to say so rather than silently start over.
   Future<String?> login() async {
     final gateValue = await (await _gate()).read();
     if (gateValue == null) {
@@ -147,15 +236,23 @@ class EnvelopeStore {
     }
     final key = base64Decode(gateValue);
     final sealed = await (await _token()).read();
-    _dataKey = key;
     if (sealed == null) {
-      // The gate survived but the token did not. Treat it as "nothing stored"
-      // rather than an error: [rotate] can write a fresh secret under the key
-      // that was just unlocked.
+      // The gate survived but the token did not. Hold the key so [rotate] can
+      // write a fresh secret under the one just unlocked.
+      _dataKey = key;
       _logger.warning('gate holds a key but no sealed token exists');
       return null;
     }
-    return _Envelope.open(sealed, key);
+    try {
+      final secret = await _Envelope.open(sealed, key, tokenName);
+      // Only now: a key that cannot open the token is not a logged-in
+      // session, and leaving it set would let [rotate] write under it.
+      _dataKey = key;
+      return secret;
+    } on SecretBoxAuthenticationError catch (e) {
+      _logger.warning('the stored token does not open with the gate key', e);
+      return null;
+    }
   }
 
   /// Replace the secret with no prompt, using the key [login] left in memory.
@@ -165,15 +262,29 @@ class EnvelopeStore {
     if (key == null) {
       throw StateError('rotate() needs a successful login() first');
     }
-    await (await _token()).write(await _Envelope.seal(secret, key));
+    await (await _token()).write(await _Envelope.seal(secret, key, tokenName));
     _logger.fine('rotated without a prompt');
   }
 
   /// Log out: forget the data key. The next [login] must authenticate again,
   /// and nothing about the device's authentication state can shorten that.
+  ///
+  /// The bytes are overwritten before the reference is dropped, which is worth
+  /// doing and worth not overstating: the same key also reached this process
+  /// as a base64 `String` from the platform channel, and Dart strings are
+  /// immutable, so that copy stays in the heap until it is collected. Treat
+  /// this as tidiness, not as erasure.
   void lock() {
-    _dataKey = null;
+    _wipeKey();
     _logger.fine('locked');
+  }
+
+  void _wipeKey() {
+    final key = _dataKey;
+    if (key != null) {
+      key.fillRange(0, key.length, 0);
+    }
+    _dataKey = null;
   }
 
   /// Remove both stores. The gate goes first: if only one delete succeeds, a
@@ -181,7 +292,7 @@ class EnvelopeStore {
   /// without a token would invite [rotate] to write under a key the user
   /// thinks is gone.
   Future<void> reset() async {
-    _dataKey = null;
+    _wipeKey();
     await (await _gate()).delete();
     await (await _token()).delete();
   }
@@ -223,7 +334,7 @@ class _EnvelopePageState extends State<EnvelopePage> {
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = _store.dataKey != null;
+    final unlocked = _store.isUnlocked;
     return Scaffold(
       appBar: AppBar(title: const Text('Envelope pattern')),
       body: Padding(
@@ -239,9 +350,12 @@ class _EnvelopePageState extends State<EnvelopePage> {
             ElevatedButton(
               onPressed: () => _run('enroll', () async {
                 await _store.enroll(_controller.text);
-                return 'Enrolled. One prompt, for the gate write.';
+                return 'Enrolled. Login is where the prompt is guaranteed.';
               }),
-              child: const Text('Enroll (prompts)'),
+              // Not labeled as prompting: on iOS and macOS a first enrollment
+              // adds the keychain item rather than updating one, and that is
+              // not the operation which evaluates its access control.
+              child: const Text('Enroll'),
             ),
             ElevatedButton(
               onPressed: () => _run('login', () async {

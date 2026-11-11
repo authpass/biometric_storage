@@ -373,7 +373,7 @@ abstract class BiometricStorage extends PlatformInterface {
   static BiometricStorage _instance = MethodChannelBiometricStorage();
 
   /// Platform-specific plugins should set this with their own platform-specific
-  /// class that extends [UrlLauncherPlatform] when they register themselves.
+  /// class that extends [BiometricStorage] when they register themselves.
   static set instance(BiometricStorage instance) {
     PlatformInterface.verifyToken(instance, _token);
     _instance = instance;
@@ -705,18 +705,38 @@ class BiometricStorageFile {
   ///
   /// **On Android this does not change an existing store's authentication.**
   /// A keystore key's authentication parameters are fixed when the key is
-  /// created, and nothing recreates a key that already exists, so
-  /// [androidAuthenticationValidityDuration] in the options the next
-  /// `getStorage` receives has no effect on a store that has already been
-  /// written. Worse, changing it between a value and `null` leaves that store
-  /// unusable — every read and write fails, because the plugin then takes the
-  /// path the key was not minted for. Call [delete] before disposing if you
-  /// need to change it, accepting that the content goes with it.
+  /// created, and nothing recreates a key that already exists, so neither
+  /// [StorageFileInitOptions.androidAuthenticationValidityDuration] nor
+  /// [StorageFileInitOptions.authenticationRequired] in the options the next
+  /// `getStorage` receives has any effect on a store whose key has been
+  /// created. Note that minting the key happens before the prompt, so a first
+  /// write the user cancelled has created one.
   ///
-  /// The options that *do* take effect on a fresh initialization everywhere
-  /// are the darwin ones: disposing drops the cached `LAContext`, so a
-  /// [darwinTouchIDAuthenticationForceReuseContextDuration] in progress ends
-  /// and the next read authenticates again.
+  /// Changing the validity duration between a value and `null` is worse than
+  /// ineffective, because the plugin then takes the path the key was not
+  /// minted for. Going from `null` to a value fails every read and write.
+  /// Going the other way fails whenever the key's window has closed, and
+  /// succeeds while it happens to be open — so the store misbehaves
+  /// intermittently, which is harder to recognize than failing outright.
+  /// Turning [StorageFileInitOptions.authenticationRequired] from `false` to
+  /// `true` is its own version of this: the prompt appears, over a key that
+  /// requires no authentication, and so gates nothing.
+  ///
+  /// Call [delete] before disposing if you need to change any of them,
+  /// accepting that the content goes with it.
+  ///
+  /// On iOS and macOS the two reuse durations do take effect on a fresh
+  /// initialization, because they are only ever in-memory state: disposing
+  /// drops the cached `LAContext`, so a
+  /// [StorageFileInitOptions.darwinTouchIDAuthenticationForceReuseContextDuration]
+  /// in progress ends and the next read authenticates again. The other darwin
+  /// options are not reconfigured either —
+  /// [StorageFileInitOptions.authenticationRequired],
+  /// [StorageFileInitOptions.darwinBiometricOnly] and
+  /// [StorageFileInitOptions.darwinKeychainAccessGroup] all travel in the
+  /// keychain query and form part of an item's identity, so changing one makes
+  /// the existing item unfindable rather than reconfigured: the store reads as
+  /// empty.
   ///
   /// If what you want is an authentication the OS cannot carry over from a
   /// previous one, do not reach for a validity duration at all — see the
