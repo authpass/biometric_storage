@@ -373,7 +373,7 @@ abstract class BiometricStorage extends PlatformInterface {
   static BiometricStorage _instance = MethodChannelBiometricStorage();
 
   /// Platform-specific plugins should set this with their own platform-specific
-  /// class that extends [UrlLauncherPlatform] when they register themselves.
+  /// class that extends [BiometricStorage] when they register themselves.
   static set instance(BiometricStorage instance) {
     PlatformInterface.verifyToken(instance, _token);
     _instance = instance;
@@ -697,12 +697,60 @@ class BiometricStorageFile {
   /// Forgets this storage's initialization, **without touching its content**.
   ///
   /// [BiometricStorage.getStorage] resolves the options for a name once and
-  /// then ignores them, so a store initialized with, say, a five second
-  /// `authenticationValidityDurationSeconds` keeps it for the lifetime of the
-  /// process however it is fetched again. Disposing is what makes the next
-  /// `getStorage` apply a fresh [StorageFileInitOptions] — reconfiguring, not
-  /// erasing. Use [delete] to remove the content, or call it first if you want
-  /// both.
+  /// then ignores them, so a store keeps the options it was initialized with
+  /// for the lifetime of the process however it is fetched again. Disposing is
+  /// what makes the next `getStorage` apply a fresh
+  /// [StorageFileInitOptions] — reconfiguring, not erasing. Use [delete] to
+  /// remove the content, or call it first if you want both.
+  ///
+  /// **On Android this does not change an existing store's authentication.**
+  /// A keystore key's authentication parameters are fixed when the key is
+  /// created, and nothing recreates a key that already exists, so neither
+  /// [StorageFileInitOptions.androidAuthenticationValidityDuration] nor
+  /// [StorageFileInitOptions.authenticationRequired] in the options the next
+  /// `getStorage` receives has any effect on a store whose key has been
+  /// created. Note that minting the key happens before the prompt, so a first
+  /// write the user cancelled has created one.
+  ///
+  /// Changing the validity duration between a value and `null` is worse than
+  /// ineffective, because the plugin then takes the path the key was not
+  /// minted for. Both failing directions raise
+  /// `PlatformException('Unexpected Error')` — observed on an emulator for
+  /// `read`, and following from the same code path for `write`. Going from
+  /// `null` to a value fails outright; going the other way fails once the
+  /// key's window has closed while succeeding whenever it happens to be open,
+  /// so that store misbehaves intermittently, which is harder to recognize
+  /// than failing outright. Neither direction answers `null`, so a stored
+  /// value is reported as unreachable rather than quietly discarded.
+  /// Turning [StorageFileInitOptions.authenticationRequired] from `false` to
+  /// `true` is its own version of this: the prompt appears, over a key that
+  /// requires no authentication, and so gates nothing.
+  ///
+  /// Call [delete] before disposing if you need to change any of them,
+  /// accepting that the content goes with it.
+  ///
+  /// On iOS and macOS the two reuse durations do take effect on a fresh
+  /// initialization, because they are only ever in-memory state: disposing
+  /// drops the cached `LAContext`, so a
+  /// [StorageFileInitOptions.darwinTouchIDAuthenticationForceReuseContextDuration]
+  /// in progress ends and the next read authenticates again.
+  ///
+  /// The other darwin options are not reconfigured either, though they fail
+  /// less tidily. [StorageFileInitOptions.darwinKeychainAccessGroup] is part
+  /// of a keychain item's primary key, so changing it makes the existing item
+  /// unfindable and the store reads as empty.
+  /// [StorageFileInitOptions.authenticationRequired] and
+  /// [StorageFileInitOptions.darwinBiometricOnly] travel in every query too —
+  /// the first also selects the data protection keychain, the second sets the
+  /// access control — so changing either is expected to surface as a failed
+  /// read or write rather than as a reconfiguration. That expectation comes
+  /// from reading the query construction, not from a device run; what is
+  /// certain is that none of the three is reconfigured by disposing.
+  ///
+  /// If what you want is an authentication the OS cannot carry over from a
+  /// previous one, do not reach for a validity duration at all — see the
+  /// envelope pattern in the README, and
+  /// https://github.com/authpass/biometric_storage/issues/129.
   ///
   /// Returns `true` when there was an initialization to forget, and `false`
   /// when there was not, so calling it twice is safe.

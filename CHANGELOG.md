@@ -1,3 +1,97 @@
+## 6.0.0-dev.10
+
+* android: `delete()` now removes the keystore key even when there is nothing
+  stored. It ran `deleteFile()` only for a store that had a file, and the key
+  is minted in `cipherForEncrypt` *before* the prompt — so a first write the
+  user cancelled left a key with no file, which `delete()` then skipped. The
+  key is what carries a store's authentication parameters, and those are fixed
+  at creation, so a key left behind silently kept them in force for every later
+  write. It also made "call `delete()` first" an unreliable remedy for the
+  documentation item below.
+
+  The native reply now answers whether there was a stored value, asked before
+  the removal rather than taken from it, and that is a small change in two
+  cases: a store holding only a set-aside or partial file, and one whose file
+  delete fails, both of which used to report `false` and now report `true`.
+  `BiometricStorageFile.delete()` is `Future<void>`, so no app sees either
+  answer; `MethodChannelBiometricStorage.delete` returns it.
+* Document what `dispose()` does **not** reconfigure. 6.0.0-dev.9 offered
+  "changing an authentication validity duration" as its motivating example, and
+  on Android that is the one case it cannot do: a keystore key's authentication
+  parameters are fixed when the key is created, and nothing recreates a key
+  that already exists, so neither `androidAuthenticationValidityDuration` nor
+  `authenticationRequired` in the options a later `getStorage` receives has any
+  effect on a store whose key has been created — and a cancelled first write
+  has created one.
+
+  Changing the duration between a value and `null` is worse than ineffective,
+  because the plugin then takes the path the key was not minted for. `null` to
+  a value fails every read and write. The other direction fails whenever the
+  window has closed and succeeds while it happens to be open, so the store
+  misbehaves intermittently. Turning `authenticationRequired` from `false` to
+  `true` is its own version: a prompt appears over a key that requires no
+  authentication, and so gates nothing.
+
+  On iOS and macOS only the two reuse durations reconfigure, because they are
+  the only options that are pure in-memory state — disposing drops the cached
+  `LAContext`, ending a `darwinTouchIDAuthenticationForceReuseContextDuration`
+  in progress. `authenticationRequired`, `darwinBiometricOnly` and
+  `darwinKeychainAccessGroup` all travel in the keychain query, so none of them
+  is reconfigured either: changing the access group, which is part of an item's
+  primary key, makes the item unfindable and the store reads as empty, and
+  changing the other two is expected to surface as a failed read or write. dev.9
+  said "a fresh `StorageFileInitOptions`" without any of these qualifications.
+
+  No behavior changed in these paths; dev.9 behaved this way too and said
+  otherwise.
+
+  Reproduced on an emulator rather than argued from the code, by
+  `example/integration_test_manual/android_keystore_test.dart`, which needs an
+  enrolled fingerprint and something answering the prompts and so is skipped
+  off Android. What it exercises is `read()` after a reconfiguration: both
+  failing directions surface as `PlatformException(Unexpected Error)`, and —
+  the outcome that mattered — neither returns `null`. A `null` would have meant
+  `readFile` moved the file aside as unreadable, which is data loss wearing the
+  face of an empty store; it does not. The window-open case returns the value,
+  which is what makes that direction intermittent rather than broken.
+
+  Writes are not covered by that run, and neither is reading the original value
+  back after restoring the original options; both follow from the same code
+  paths, but they follow by reading rather than by observation.
+
+  Whether `init` should detect the mismatch — comparing
+  `KeyInfo.getUserAuthenticationValidityDurationSeconds()` against the options
+  it was handed — and raise a named error instead of `Unexpected Error` is a
+  separate change.
+* README: the **envelope pattern**, for an authentication the OS cannot carry
+  over from a previous one. A validity window cannot be closed early — Android
+  exposes no way to revoke an authentication, and an unlock by PIN, pattern,
+  password or strong biometric renews it — so the answer is not to open one: a
+  per-use store holds a random data key, and a second store with
+  `authenticationRequired: false` holds the secret encrypted under it. Every
+  login is then a keystore- or keychain-enforced prompt with no window, while
+  rotating the secret needs only the key already in memory and raises no prompt
+  at all. This is the standing answer to #129, #108 and #112.
+
+  **It is a trade, not a free win, and the README says so.** The gate key is
+  biometric-only, so a new enrollment — or removing the last one — invalidates it and
+  the sealed secret becomes undecryptable — a failure the windowed store it
+  replaces mostly does not have, since a key that also allows the device
+  credential survives enrollment changes. Fine for a refresh token, wrong for a
+  secret that cannot be regenerated. The pattern is also Android and darwin
+  only: on web both stores are unencrypted `localStorage`, which puts the data
+  key beside the ciphertext it protects.
+
+  `example/lib/envelope_example.dart` implements it, binding the store name in
+  as associated data, and the integration suite exercises it against the real
+  keystore, keychain and libsecret — including that a tampered token is
+  refused, and that a blob sealed for one store will not open as another, which
+  are what hold up the README's instruction to use an authenticated cipher.
+  Only the Linux run is in CI. Not covered at all: under test the gate is
+  unauthenticated, because no CI runner can perform a biometric gesture, so the
+  prompt itself is the platform's behavior rather than something this
+  repository proves.
+
 ## 6.0.0-dev.9
 
 * `BiometricStorageFile.dispose()` forgets a store's initialization without

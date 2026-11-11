@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:logging_appenders/logging_appenders.dart';
 
+import 'envelope_example.dart';
+
 final MemoryAppender logMessages = MemoryAppender();
 
 final _logger = Logger('main');
@@ -176,6 +178,16 @@ class MyAppState extends State<MyApp> {
               },
             ),
             ...?_appArmorButton(),
+            ElevatedButton(
+              child: const Text('Envelope pattern'),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const EnvelopePage(),
+                  ),
+                );
+              },
+            ),
             ...(_authStorage == null
                 ? []
                 : [

@@ -359,15 +359,26 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 }
 
                 "delete" -> withStorage {
-                    // deleteFile removes the key from the keystore too. exists()
-                    // is asked on the worker so a delete queued behind a write
-                    // sees the file that write produced.
-                    // A file set aside as unreadable goes too, even when nothing
-                    // has been written since; the answer is still whether a
-                    // stored value was deleted, which deleteFile reports.
+                    // deleteFile removes the key from the keystore too, and it
+                    // runs whether or not anything is stored. A guard on
+                    // exists() would skip it for a store that has a key and no
+                    // file — cipherForEncrypt mints the key before the prompt,
+                    // so a first write the user cancels leaves exactly that —
+                    // and the key is what carries the authentication parameters
+                    // a caller deletes the store to be rid of. They are fixed
+                    // when the key is created, so a key left behind keeps them
+                    // in force for every later write.
+                    //
+                    // The answer is still whether a stored value was deleted,
+                    // which is asked before the removal rather than taken from
+                    // it. exists() is asked on the worker so a delete queued
+                    // behind a write sees the file that write produced, and a
+                    // file set aside as unreadable counts even when nothing has
+                    // been written since.
                     workerOrElse(resultUnexpected) {
-                        val deleted = (exists() || hasLeftovers()) && deleteFile()
-                        ui(resultError) { result.success(deleted) }
+                        val hadValue = exists() || hasLeftovers()
+                        deleteFile()
+                        ui(resultError) { result.success(hadValue) }
                     }
                 }
 
