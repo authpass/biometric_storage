@@ -43,11 +43,22 @@
   said "a fresh `StorageFileInitOptions`" without any of these qualifications.
 
   No behavior changed in these paths; dev.9 behaved this way too and said
-  otherwise. Found by reading the code, which also means the Android failure is
-  not yet reproduced on a device. Whether `init` should detect the mismatch —
-  comparing `KeyInfo.getUserAuthenticationValidityDurationSeconds()` against
-  the options it was handed — and raise a named error instead of
-  `Unexpected Error` is a separate change, and wants that reproduction first.
+  otherwise.
+
+  Reproduced on an emulator rather than argued from the code, by
+  `example/integration_test/android_keystore_test.dart`, which needs an
+  enrolled fingerprint and something answering the prompts and so is skipped
+  off Android. Both failing directions surface as
+  `PlatformException(Unexpected Error)`, and — the outcome that mattered —
+  neither returns `null`. A `null` would have meant `readFile` moved the file
+  aside as unreadable, which is data loss wearing the face of an empty store;
+  it does not. The window-open case returns the value, which is what makes
+  that direction intermittent rather than broken.
+
+  Whether `init` should detect the mismatch — comparing
+  `KeyInfo.getUserAuthenticationValidityDurationSeconds()` against the options
+  it was handed — and raise a named error instead of `Unexpected Error` is a
+  separate change.
 * README: the **envelope pattern**, for an authentication the OS cannot carry
   over from a previous one. A validity window cannot be closed early — Android
   exposes no way to revoke an authentication, and an unlock by PIN, pattern,
