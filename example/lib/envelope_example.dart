@@ -215,16 +215,21 @@ class EnvelopeStore {
   /// The login. Raises one prompt — the gate read — and returns the secret, or
   /// null when there is nothing to return.
   ///
-  /// Null covers three cases a caller handles the same way, by enrolling
-  /// again: nothing was ever stored, the gate outlived its token, and the
-  /// token cannot be opened by the key the gate holds. The last one is what an
-  /// interrupted re-enrollment leaves behind.
+  /// Null covers every shape of "there is nothing here to give you", which a
+  /// caller handles one way, by enrolling again: nothing was ever stored, the
+  /// gate outlived its token, the gate holds something that is not a key, and
+  /// the token is unopenable — whether it was tampered with, truncated, not a
+  /// sealed blob at all, or sealed under a key an interrupted re-enrollment
+  /// replaced.
   ///
-  /// It does **not** cover a gate the OS has destroyed. A biometric
-  /// enrollment change invalidates the gate key, and the plugin then raises
-  /// `AuthException` with `AuthExceptionCode.keyInvalidated` — deliberately
-  /// not caught here, because the secret is gone rather than absent, and an
-  /// app usually wants to say so rather than silently start over.
+  /// It does **not** cover a gate the OS has destroyed, which on Android
+  /// arrives as `AuthException` with `AuthExceptionCode.keyInvalidated` —
+  /// deliberately not caught here, because the secret is gone rather than
+  /// absent, and an app usually wants to say so rather than silently start
+  /// over. On iOS and macOS no such signal exists: the same loss arrives as
+  /// `AuthExceptionCode.authFailed`, indistinguishable from a failed attempt,
+  /// so it propagates from here too but tells the caller less. The file header
+  /// and the README say what to do about that.
   Future<String?> login() async {
     // Any previous session ends here, before the attempt rather than after it.
     // A failed login that left an earlier key in place would report failure

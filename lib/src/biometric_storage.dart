@@ -715,12 +715,13 @@ class BiometricStorageFile {
   /// Changing the validity duration between a value and `null` is worse than
   /// ineffective, because the plugin then takes the path the key was not
   /// minted for. Both failing directions raise
-  /// `PlatformException('Unexpected Error')`, observed on an emulator rather
-  /// than inferred: going from `null` to a value fails every read and write,
-  /// and going the other way fails once the key's window has closed while
-  /// succeeding whenever it happens to be open — so that store misbehaves
-  /// intermittently, which is harder to recognize than failing outright.
-  /// Neither direction answers `null`, so a value is never silently discarded.
+  /// `PlatformException('Unexpected Error')` — observed on an emulator for
+  /// `read`, and following from the same code path for `write`. Going from
+  /// `null` to a value fails outright; going the other way fails once the
+  /// key's window has closed while succeeding whenever it happens to be open,
+  /// so that store misbehaves intermittently, which is harder to recognize
+  /// than failing outright. Neither direction answers `null`, so a stored
+  /// value is reported as unreachable rather than quietly discarded.
   /// Turning [StorageFileInitOptions.authenticationRequired] from `false` to
   /// `true` is its own version of this: the prompt appears, over a key that
   /// requires no authentication, and so gates nothing.

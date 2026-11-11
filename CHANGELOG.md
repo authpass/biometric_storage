@@ -46,14 +46,18 @@
   otherwise.
 
   Reproduced on an emulator rather than argued from the code, by
-  `example/integration_test/android_keystore_test.dart`, which needs an
+  `example/integration_test_manual/android_keystore_test.dart`, which needs an
   enrolled fingerprint and something answering the prompts and so is skipped
-  off Android. Both failing directions surface as
-  `PlatformException(Unexpected Error)`, and — the outcome that mattered —
-  neither returns `null`. A `null` would have meant `readFile` moved the file
-  aside as unreadable, which is data loss wearing the face of an empty store;
-  it does not. The window-open case returns the value, which is what makes
-  that direction intermittent rather than broken.
+  off Android. What it exercises is `read()` after a reconfiguration: both
+  failing directions surface as `PlatformException(Unexpected Error)`, and —
+  the outcome that mattered — neither returns `null`. A `null` would have meant
+  `readFile` moved the file aside as unreadable, which is data loss wearing the
+  face of an empty store; it does not. The window-open case returns the value,
+  which is what makes that direction intermittent rather than broken.
+
+  Writes are not covered by that run, and neither is reading the original value
+  back after restoring the original options; both follow from the same code
+  paths, but they follow by reading rather than by observation.
 
   Whether `init` should detect the mismatch — comparing
   `KeyInfo.getUserAuthenticationValidityDurationSeconds()` against the options
