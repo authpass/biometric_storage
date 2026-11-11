@@ -729,14 +729,19 @@ class BiometricStorageFile {
   /// initialization, because they are only ever in-memory state: disposing
   /// drops the cached `LAContext`, so a
   /// [StorageFileInitOptions.darwinTouchIDAuthenticationForceReuseContextDuration]
-  /// in progress ends and the next read authenticates again. The other darwin
-  /// options are not reconfigured either —
-  /// [StorageFileInitOptions.authenticationRequired],
-  /// [StorageFileInitOptions.darwinBiometricOnly] and
-  /// [StorageFileInitOptions.darwinKeychainAccessGroup] all travel in the
-  /// keychain query and form part of an item's identity, so changing one makes
-  /// the existing item unfindable rather than reconfigured: the store reads as
-  /// empty.
+  /// in progress ends and the next read authenticates again.
+  ///
+  /// The other darwin options are not reconfigured either, though they fail
+  /// less tidily. [StorageFileInitOptions.darwinKeychainAccessGroup] is part
+  /// of a keychain item's primary key, so changing it makes the existing item
+  /// unfindable and the store reads as empty.
+  /// [StorageFileInitOptions.authenticationRequired] and
+  /// [StorageFileInitOptions.darwinBiometricOnly] travel in every query too —
+  /// the first also selects the data protection keychain, the second sets the
+  /// access control — so changing either is expected to surface as a failed
+  /// read or write rather than as a reconfiguration. That expectation comes
+  /// from reading the query construction, not from a device run; what is
+  /// certain is that none of the three is reconfigured by disposing.
   ///
   /// If what you want is an authentication the OS cannot carry over from a
   /// previous one, do not reach for a validity duration at all — see the

@@ -32,10 +32,14 @@
 // should use this at all:
 //
 //   * **A biometric enrollment change destroys the secret.** The gate key is
-//     biometric-only, and Android invalidates such keys when a fingerprint or
-//     face is added or removed; the plugin then deletes the key and reports
-//     `AuthExceptionCode.keyInvalidated`. The sealed token is left
-//     undecryptable. Note what that means for anyone arriving from #129 or
+//     biometric-only, so both platforms invalidate it when the enrolled set
+//     changes — Android on a new enrollment or the removal of the last
+//     biometric, darwin because the item is held under `.biometryCurrentSet`.
+//     The sealed token is then undecryptable. Only Android says so, reporting
+//     `AuthExceptionCode.keyInvalidated`; on iOS and macOS the keychain cannot
+//     distinguish that from a failed attempt, so it arrives as
+//     `AuthExceptionCode.authFailed` and keeps arriving. See the README for
+//     what to do about that. Note what this means for anyone arriving from #129 or
 //     #108: a store with a validity duration allows the device credential as
 //     well, and keys like that are *not* invalidated by enrollment — so this
 //     pattern trades a window you cannot close for a secret you can lose. For
@@ -54,7 +58,6 @@
 // needs no crypto here but brings back a prompt on every rotation.
 
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:biometric_storage/biometric_storage.dart';
 import 'package:cryptography/cryptography.dart';
@@ -83,14 +86,9 @@ final _logger = Logger('envelope_example');
 class _Envelope {
   static final _algorithm = AesGcm.with256bits();
 
-  /// A modifiable copy, deliberately. `extractBytes()` hands back
-  /// `package:cryptography`'s own `SensitiveBytes`, which refuses writes — so
-  /// holding that directly would make zeroing the key later throw rather than
-  /// zero it. `base64Decode`, the other way a key enters this class, already
-  /// returns a modifiable `Uint8List`.
-  static Future<Uint8List> newDataKey() async {
+  static Future<List<int>> newDataKey() async {
     final key = await _algorithm.newSecretKey();
-    return Uint8List.fromList(await key.extractBytes());
+    return key.extractBytes();
   }
 
   /// Nonce, ciphertext and MAC in one blob, so the caller stores one string.
@@ -180,9 +178,7 @@ class EnvelopeStore {
     authenticationRequired: false,
   );
 
-  /// `Uint8List` rather than `List<int>` so that [_wipeKey] can actually
-  /// write to it; see [_Envelope.newDataKey].
-  Uint8List? _dataKey;
+  List<int>? _dataKey;
 
   /// Whether a data key is held, which is to say whether the user is logged
   /// in. The bytes themselves stay private: a getter for them exists only to
@@ -230,11 +226,23 @@ class EnvelopeStore {
   /// not caught here, because the secret is gone rather than absent, and an
   /// app usually wants to say so rather than silently start over.
   Future<String?> login() async {
+    // Any previous session ends here, before the attempt rather than after it.
+    // A failed login that left an earlier key in place would report failure
+    // while [rotate] still worked.
+    _dataKey = null;
+
     final gateValue = await (await _gate()).read();
     if (gateValue == null) {
       return null;
     }
-    final key = base64Decode(gateValue);
+    final List<int> key;
+    try {
+      key = base64Decode(gateValue);
+    } on FormatException catch (e) {
+      // Whatever is under that name was not written by this class.
+      _logger.warning('the gate does not hold a base64 key', e);
+      return null;
+    }
     final sealed = await (await _token()).read();
     if (sealed == null) {
       // The gate survived but the token did not. Hold the key so [rotate] can
@@ -251,6 +259,16 @@ class EnvelopeStore {
       return secret;
     } on SecretBoxAuthenticationError catch (e) {
       _logger.warning('the stored token does not open with the gate key', e);
+      return null;
+    } on FormatException catch (e) {
+      // Not base64 at all.
+      _logger.warning('the stored token is not a sealed blob', e);
+      return null;
+    } on ArgumentError catch (e) {
+      // Shorter than a nonce and a tag, so `SecretBox.fromConcatenation`
+      // rejects it before any key is involved. Truncation on disk looks like
+      // this.
+      _logger.warning('the stored token is too short to be a sealed blob', e);
       return null;
     }
   }
@@ -269,22 +287,19 @@ class EnvelopeStore {
   /// Log out: forget the data key. The next [login] must authenticate again,
   /// and nothing about the device's authentication state can shorten that.
   ///
-  /// The bytes are overwritten before the reference is dropped, which is worth
-  /// doing and worth not overstating: the same key also reached this process
-  /// as a base64 `String` from the platform channel, and Dart strings are
-  /// immutable, so that copy stays in the heap until it is collected. Treat
-  /// this as tidiness, not as erasure.
+  /// The reference is dropped and the bytes are **not** zeroed, deliberately.
+  /// Zeroing them in place looks like good hygiene and is a trap here: an
+  /// in-flight [rotate] holds the same list across its awaits, so a `lock()`
+  /// at the wrong moment would seal the next secret under a key of zeros and
+  /// write it to the store that has no authentication on it — losing the
+  /// secret and producing a blob anyone can open. Nor would it achieve much:
+  /// the same key reached this process as a base64 `String` from the platform
+  /// channel, and Dart strings are immutable, so that copy stays in the heap
+  /// regardless. Erasing a secret from a managed heap is not something this
+  /// pattern can offer; pretending otherwise is worse than not trying.
   void lock() {
-    _wipeKey();
-    _logger.fine('locked');
-  }
-
-  void _wipeKey() {
-    final key = _dataKey;
-    if (key != null) {
-      key.fillRange(0, key.length, 0);
-    }
     _dataKey = null;
+    _logger.fine('locked');
   }
 
   /// Remove both stores. The gate goes first: if only one delete succeeds, a
@@ -292,7 +307,7 @@ class EnvelopeStore {
   /// without a token would invite [rotate] to write under a key the user
   /// thinks is gone.
   Future<void> reset() async {
-    _wipeKey();
+    _dataKey = null;
     await (await _gate()).delete();
     await (await _token()).delete();
   }

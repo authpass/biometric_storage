@@ -28,7 +28,8 @@ void main() {
   /// if the test fails, so a crashed run cannot poison the next one.
   ///
   /// Deliberately uncaught. Deleting a store that was never written is a
-  /// success on every platform — Android guards on `exists()`, libsecret
+  /// success on every platform — Android removes an absent key and file
+  /// without complaint, libsecret
   /// reports `removed = false` without an error, the keychain maps
   /// `errSecItemNotFound` to `true`, and win32 maps `ERROR_NOT_FOUND` to
   /// `false` — so the only thing a `catch` here could swallow is a store that
@@ -476,6 +477,61 @@ void main() {
       await store.rotate('refresh-token-2');
 
       expect(await rawToken(store), isNot(before));
+    });
+
+    testWidgets('a rotated secret is what the next login returns', (
+      tester,
+    ) async {
+      // The companion to the test above, which deletes the gate and so cannot
+      // log in afterwards. Without this one, a rotate that sealed under the
+      // wrong key, or under the wrong slot, or that simply emptied the token
+      // store, would pass: "the bytes changed" is not "the right bytes".
+      final store = freshEnvelope('rotate_roundtrip');
+      await store.enroll('refresh-token-1');
+      await store.rotate('refresh-token-2');
+      store.lock();
+
+      expect(await store.login(), 'refresh-token-2');
+    });
+
+    testWidgets('a blob sealed for another store does not open', (
+      tester,
+    ) async {
+      // What the associated data buys. Both stores share a gate, so they share
+      // a data key: only the slot bound into the seal distinguishes them.
+      // Remove `aad:` from seal and open and this is the test that notices —
+      // without it, the binding could be deleted and the suite stay green.
+      final suffix = DateTime.now().microsecondsSinceEpoch;
+      final gate = 'integration_gate_shared_$suffix';
+      final unauthenticated = StorageFileInitOptions(
+        authenticationRequired: false,
+      );
+      final a = EnvelopeStore(
+        gateName: gate,
+        tokenName: 'integration_token_a_$suffix',
+        gateOptions: unauthenticated,
+      );
+      final b = EnvelopeStore(
+        gateName: gate,
+        tokenName: 'integration_token_b_$suffix',
+        gateOptions: unauthenticated,
+      );
+      addTearDown(a.reset);
+      addTearDown(b.reset);
+
+      await a.enroll('secret-a');
+      // b enrolls second, so the shared gate ends up holding b's key; a's blob
+      // is then re-sealed under it below, leaving the slot as the only
+      // difference between the two.
+      await b.enroll('secret-b');
+      await b.rotate('secret-a-moved');
+      final bBlob = (await rawToken(b))!;
+
+      // Move b's blob into a's store. Same key, same contents, wrong slot.
+      await (await tokenOf(a)).write(bBlob);
+      a.lock();
+
+      expect(await a.login(), isNull);
     });
 
     testWidgets('rotation refuses without a key in memory', (tester) async {

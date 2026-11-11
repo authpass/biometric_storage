@@ -7,10 +7,14 @@
   key is what carries a store's authentication parameters, and those are fixed
   at creation, so a key left behind silently kept them in force for every later
   write. It also made "call `delete()` first" an unreliable remedy for the
-  documentation item below. The native reply is unchanged — whether a stored
-  value was deleted, now asked before the removal rather than taken from it —
-  and in any case `BiometricStorageFile.delete()` is `Future<void>`, so no
-  caller sees it.
+  documentation item below.
+
+  The native reply now answers whether there was a stored value, asked before
+  the removal rather than taken from it, and that is a small change in two
+  cases: a store holding only a set-aside or partial file, and one whose file
+  delete fails, both of which used to report `false` and now report `true`.
+  `BiometricStorageFile.delete()` is `Future<void>`, so no app sees either
+  answer; `MethodChannelBiometricStorage.delete` returns it.
 * Document what `dispose()` does **not** reconfigure. 6.0.0-dev.9 offered
   "changing an authentication validity duration" as its motivating example, and
   on Android that is the one case it cannot do: a keystore key's authentication
@@ -32,10 +36,11 @@
   the only options that are pure in-memory state — disposing drops the cached
   `LAContext`, ending a `darwinTouchIDAuthenticationForceReuseContextDuration`
   in progress. `authenticationRequired`, `darwinBiometricOnly` and
-  `darwinKeychainAccessGroup` all travel in the keychain query and form part of
-  an item's identity, so changing one makes the existing item unfindable rather
-  than reconfigured: the store reads as empty. dev.9 said "a fresh
-  `StorageFileInitOptions`" without any of these qualifications.
+  `darwinKeychainAccessGroup` all travel in the keychain query, so none of them
+  is reconfigured either: changing the access group, which is part of an item's
+  primary key, makes the item unfindable and the store reads as empty, and
+  changing the other two is expected to surface as a failed read or write. dev.9
+  said "a fresh `StorageFileInitOptions`" without any of these qualifications.
 
   No behavior changed in these paths; dev.9 behaved this way too and said
   otherwise. Found by reading the code, which also means the Android failure is
@@ -54,7 +59,7 @@
   at all. This is the standing answer to #129, #108 and #112.
 
   **It is a trade, not a free win, and the README says so.** The gate key is
-  biometric-only, so a fingerprint or face enrollment change invalidates it and
+  biometric-only, so a new enrollment — or removing the last one — invalidates it and
   the sealed secret becomes undecryptable — a failure the windowed store it
   replaces mostly does not have, since a key that also allows the device
   credential survives enrollment changes. Fine for a refresh token, wrong for a
@@ -63,12 +68,14 @@
   key beside the ciphertext it protects.
 
   `example/lib/envelope_example.dart` implements it, binding the store name in
-  as associated data, and the integration suite exercises it — including that a
-  tampered token is refused, which is what holds up the README's instruction to
-  use an authenticated cipher. Not covered: nothing runs it against the Android
-  keystore yet, and under test the gate is unauthenticated, because no CI
-  runner can perform a biometric gesture. So the prompt itself is the
-  platform's behavior rather than something this repository proves.
+  as associated data, and the integration suite exercises it against the real
+  keystore, keychain and libsecret — including that a tampered token is
+  refused, and that a blob sealed for one store will not open as another, which
+  are what hold up the README's instruction to use an authenticated cipher.
+  Only the Linux run is in CI. Not covered at all: under test the gate is
+  unauthenticated, because no CI runner can perform a biometric gesture, so the
+  prompt itself is the platform's behavior rather than something this
+  repository proves.
 
 ## 6.0.0-dev.9
 

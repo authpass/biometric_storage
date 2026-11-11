@@ -252,17 +252,17 @@ Keep **two** stores instead of one:
 
 ```dart
 // Login: one prompt, for the gate.
-final key = base64Decode((await gate.read())!);
+List<int>? key = base64Decode((await gate.read())!);
 final secret = await decrypt(await token.read(), key);   // your AEAD
 
 // Rotate: no prompt at all — the key is already in memory.
 await token.write(await encrypt(newSecret, key));
 
-// Log out: forget the key. The next login must authenticate.
-// Zeroing needs a modifiable list: `base64Decode` gives one, but a key taken
-// straight from a crypto library's own byte holder may refuse writes. And it
-// only covers this copy — the key also arrived as an immutable base64 String.
-key.fillRange(0, key.length, 0);
+// Log out: drop the key. The next login must authenticate.
+// Not zeroed in place: an in-flight rotate holds the same list, so zeroing it
+// at the wrong moment seals the next secret under a key of zeros. The key also
+// arrived as an immutable base64 String, so there is no erasing it anyway.
+key = null;
 ```
 
 What each half gives you, stated per platform rather than blended:
@@ -284,10 +284,21 @@ What each half gives you, stated per platform rather than blended:
 ### What it costs
 
 **A biometric enrollment change destroys the secret.** This is the one to weigh
-before adopting the pattern. The gate key is biometric-only, Android
-invalidates such keys when a fingerprint or face is added or removed, and the
-plugin then deletes the key and raises `AuthExceptionCode.keyInvalidated`. The
-sealed token is left undecryptable.
+before adopting the pattern. The gate key is biometric-only, and both platforms
+invalidate such a key when the enrolled set changes — on Android when a new
+biometric is enrolled or the last one is removed, on iOS and macOS because the
+item is stored under `.biometryCurrentSet`. The sealed token is then
+undecryptable.
+
+**How you learn of it differs, and only Android tells you plainly.** There the
+plugin deletes the dead key and raises `AuthExceptionCode.keyInvalidated`, so
+you can say "set your secret up again". On iOS and macOS the keychain reports
+an item whose access control can never be satisfied with the same
+`errSecAuthFailed` it uses for a failed attempt, so it arrives as
+`AuthExceptionCode.authFailed` — indistinguishable from the user mistyping, and
+it will keep arriving on every attempt. Plan for that: if a darwin login keeps
+failing after a deliberate, successful re-authentication, treat the secret as
+gone and re-enroll, because no signal is coming.
 
 That is a failure the setup you are migrating *from* mostly does not have: a
 store with a validity duration allows the device credential as well, and keys
@@ -305,9 +316,12 @@ that a crash part-way leaves the old store intact.
 
 A working implementation is in
 [`example/lib/envelope_example.dart`](example/lib/envelope_example.dart), and
-the integration suite exercises it against the real keychain on macOS and real
-libsecret on Linux in CI. Two things that does not cover. Nothing runs it
-against the Android keystore yet. And under test the gate is unauthenticated,
-because no CI runner can perform a biometric gesture — so the prompt itself,
-which is the whole point, is the platform's behavior rather than something this
-repository proves.
+the integration suite exercises it against the real keystore on an Android
+emulator, the real keychain on macOS, and real libsecret on Linux. Only the
+Linux run happens in CI; the other two are local, so a regression on them would
+not fail a build.
+
+What none of it covers is the prompt. Under test the gate is unauthenticated,
+because no CI runner can perform a biometric gesture — so that a per-use gate
+raises a prompt on every read, which is the whole point of the pattern, remains
+the platform's behavior rather than something this repository proves.
