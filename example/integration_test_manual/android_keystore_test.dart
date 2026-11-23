@@ -13,6 +13,20 @@
 //     while true; do adb emu finger touch 1; sleep 1; done
 //     flutter test integration_test_manual/android_keystore_test.dart -d <id>
 //
+// The last group is about a per-use key that also accepts the device
+// credential (`androidBiometricOnly: false` with no validity duration), which
+// needs Android 11 (API 30) or later. Two of its tests come out differently
+// depending on what answers the prompt, so say which with
+// `--dart-define=PROMPT_ANSWER=pin` when the PIN does. To answer with the PIN,
+// remove the enrolled fingerprints (the prompt then opens on the PIN screen)
+// and run this instead of the `finger touch` loop:
+//
+//     while true; do
+//       adb shell dumpsys window | grep -q 'mCurrentFocus.*BiometricPrompt' &&
+//         adb shell input text 1234 && adb shell input keyevent 66
+//       sleep 1
+//     done
+//
 // This directory is deliberately not `integration_test/`, which CI runs whole.
 // `flutter test` relaunches the app once per file, and the second launch fails
 // on desktop with "Unable to start the app on the device" — so a second file
@@ -36,6 +50,13 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   final storage = BiometricStorage();
+
+  /// What answers the prompts during this run: `fingerprint` or `pin`.
+  const promptAnswer = String.fromEnvironment(
+    'PROMPT_ANSWER',
+    defaultValue: 'fingerprint',
+  );
+  const answeredWithPin = promptAnswer == 'pin';
 
   String freshName(String label) =>
       'keystore_${label}_${DateTime.now().microsecondsSinceEpoch}';
@@ -166,5 +187,93 @@ void main() {
       await file.write('secret');
       expect(await file.read(), 'secret');
     }, skip: !Platform.isAndroid);
+  });
+
+  group('a per-use key that also accepts the device credential', () {
+    StorageFileInitOptions perUse({required bool biometricOnly}) =>
+        StorageFileInitOptions(
+          authenticationRequired: true,
+          androidBiometricOnly: biometricOnly,
+        );
+
+    testWidgets('writes and reads, whichever of the two answers', (
+      tester,
+    ) async {
+      // The claim itself. Run it once per answer: with the fingerprint it
+      // shows the key still takes a biometric, with the PIN that it takes the
+      // credential for a CryptoObject operation, which is the part the plugin
+      // used to refuse to try.
+      final name = freshName('credentialPerUse');
+      final file = await storage.getStorage(
+        name,
+        options: perUse(biometricOnly: false),
+      );
+      addTearDown(file.delete);
+
+      expect(
+        await storage.canAuthenticate(options: perUse(biometricOnly: false)),
+        CanAuthenticateResponse.success,
+      );
+      await file.write('secret');
+      final outcome = await outcomeOf(file.read);
+
+      // ignore: avoid_print
+      print('OBSERVED credential per-use ($promptAnswer): $outcome');
+      expect(outcome, 'returned a value');
+    }, skip: !Platform.isAndroid);
+
+    testWidgets('over a key created biometric-only', (tester) async {
+      // A key keeps the authenticators it was created with, like it keeps its
+      // validity duration. The prompt follows the options, though, so it now
+      // offers the credential for a key that will not take it.
+      final name = freshName('biometricOnlyThenCredential');
+
+      final biometricOnly = await storage.getStorage(
+        name,
+        options: perUse(biometricOnly: true),
+      );
+      await biometricOnly.write('secret');
+      expect(await biometricOnly.dispose(), isTrue);
+
+      final withCredential = await storage.getStorage(
+        name,
+        options: perUse(biometricOnly: false),
+      );
+      final outcome = await outcomeOf(withCredential.read);
+      addTearDown(withCredential.delete);
+
+      // ignore: avoid_print
+      print('OBSERVED biometric-only -> credential ($promptAnswer): $outcome');
+      // The fingerprint satisfies the old key. The PIN cannot have written the
+      // biometric-only key in the first place, so that half is only reachable
+      // by a run that switches answers midway, and is skipped here.
+      expect(outcome, 'returned a value');
+    }, skip: !Platform.isAndroid || answeredWithPin);
+
+    testWidgets('biometric-only over a key that accepts the credential', (
+      tester,
+    ) async {
+      // The other direction narrows the prompt to the biometric, which the
+      // key accepts too, so nothing is lost by it.
+      final name = freshName('credentialThenBiometricOnly');
+
+      final withCredential = await storage.getStorage(
+        name,
+        options: perUse(biometricOnly: false),
+      );
+      await withCredential.write('secret');
+      expect(await withCredential.dispose(), isTrue);
+
+      final biometricOnly = await storage.getStorage(
+        name,
+        options: perUse(biometricOnly: true),
+      );
+      final outcome = await outcomeOf(biometricOnly.read);
+      addTearDown(biometricOnly.delete);
+
+      // ignore: avoid_print
+      print('OBSERVED credential -> biometric-only ($promptAnswer): $outcome');
+      expect(outcome, 'returned a value');
+    }, skip: !Platform.isAndroid || answeredWithPin);
   });
 }

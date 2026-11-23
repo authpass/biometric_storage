@@ -1,3 +1,51 @@
+## 6.0.0-dev.11
+
+* android: `androidBiometricOnly: false` no longer needs an
+  `androidAuthenticationValidityDuration`. Without one, the store authenticates
+  on every read and write, and on Android 11 (API 30) and later the prompt
+  accepts the PIN, pattern or password as well as a strong biometric. The
+  combination used to throw `IllegalArgumentException` from `getStorage`.
+
+  That check dates from 3.0.1 and the documentation of
+  `setUserAuthenticationValidityDurationSeconds(-1)`, under which a key that
+  authenticates per use takes a biometric only. API 30 replaced that call with
+  `setUserAuthenticationParameters(timeout, type)`, where a timeout of 0 and
+  `AUTH_DEVICE_CREDENTIAL | AUTH_BIOMETRIC_STRONG` is a per-use key that takes
+  either, and `BiometricPrompt` accepts a `CryptoObject` together with
+  `DEVICE_CREDENTIAL` from the same API level. So the key is still authorized
+  for the one operation the prompt was shown for; there is no window.
+
+  What it is for: a device with a screen lock and no enrolled strong biometric
+  could not use an authenticated store without a validity window, and a window
+  is renewed by any unlock of the device. It is also a per-use store whose key
+  is not tied to the enrolled biometrics.
+
+  Below API 30 nothing changes: the key and the prompt are biometric-only
+  there whatever the option says, as before. `canAuthenticate` now answers for
+  that too. It asked `BiometricManager` for `DEVICE_CREDENTIAL |
+  BIOMETRIC_STRONG` on every API level, a combination that is unsupported
+  below API 30, while the store it was asked about would use a biometric.
+
+  Like the validity duration, the authenticators are fixed when the key is
+  created, and nothing recreates an existing key. Reopening a store created
+  with `androidBiometricOnly: true` as `false` changes the prompt only: it
+  offers the PIN for a key that does not take it, and a read answered that way
+  fails with `AuthExceptionCode.unknown`. The value is not lost, and the
+  fingerprint still reads it. `delete()` first to change the option.
+
+  Observed rather than argued, by the new group in
+  `example/integration_test_manual/android_keystore_test.dart` on an API 34
+  emulator: write and read answered with the PIN on a device with no enrolled
+  fingerprint, the same answered with a fingerprint, and both directions of
+  reopening a store with the other value. The failing read above was produced
+  by hand, a fingerprint for the write and the PIN for the read. In an app
+  using this change, a key created with only a PIN set was still readable
+  after a first fingerprint was enrolled, on that emulator and on a Pixel 4a 5G
+  (Android 14), which is where the claim about enrolled biometrics comes from.
+
+  Not observed: any device below API 30, removing the last enrolled biometric,
+  and other manufacturers' keystores.
+
 ## 6.0.0-dev.10
 
 * android: `delete()` now removes the keystore key even when there is nothing

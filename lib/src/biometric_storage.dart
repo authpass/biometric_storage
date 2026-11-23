@@ -93,12 +93,14 @@ enum AuthExceptionCode {
   /// from `read()`; `write()` recovers from it silently, since the value it is
   /// about to store replaces the one that was lost anyway.
   ///
-  /// It is certain only for a store that authenticates per use — one left with
-  /// `androidAuthenticationValidityDuration` unset. A store with a validity
-  /// duration holds a key bound to the device credential as well, which an
-  /// enrollment change does not invalidate, so the condition is not expected
-  /// there; were the Keystore to raise it anyway, it would arrive as a
-  /// `PlatformException` rather than as this code.
+  /// It is certain only for a store that authenticates per use with a
+  /// biometric alone — one left with `androidAuthenticationValidityDuration`
+  /// unset and `androidBiometricOnly` at `true`. A store with a validity
+  /// duration, or with `androidBiometricOnly: false`, holds a key bound to the
+  /// device credential as well, which an enrollment change does not
+  /// invalidate, so the condition is not expected there; were the Keystore to
+  /// raise it anyway for a store with a validity duration, it would arrive as
+  /// a `PlatformException` rather than as this code.
   ///
   /// iOS and macOS have no equivalent signal and never report this value. The
   /// Keychain collapses an item whose access control can no longer be satisfied
@@ -246,12 +248,23 @@ class StorageFileInitOptions {
 
   /// Only makes difference on Android, where if set true, you can't use
   /// PIN/pattern/password to get the file.
-  /// On Android < 30 this will always be ignored. (always `true`)
+  /// On Android < 30 this will always be ignored (always `true`), by
+  /// `canAuthenticate` too.
   /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-900358154
   ///
-  /// Also: this **must** be `true` if [androidAuthenticationValidityDuration]
-  /// is null.
-  /// https://github.com/authpass/biometric_storage/issues/12#issuecomment-902508609
+  /// With `false` and a null [androidAuthenticationValidityDuration], every
+  /// read and write prompts, and the prompt accepts a strong biometric or the
+  /// PIN/pattern/password. There is no validity window: the key is authorized
+  /// for the one operation the prompt was shown for. A device with a screen
+  /// lock and no enrolled biometric can use such a store, and
+  /// `canAuthenticate` answers `success` for it.
+  ///
+  /// Like the validity duration, this is fixed when the keystore key is
+  /// created. Changing it for a store that already has a key changes the
+  /// prompt and not the key: a store created with `true` and reopened with
+  /// `false` offers the PIN, and a read answered with it fails with
+  /// [AuthExceptionCode.unknown], because the key still takes a biometric
+  /// only. Call `delete()` first to change it.
   final bool androidBiometricOnly;
 
   /// Only for iOS and macOS:
