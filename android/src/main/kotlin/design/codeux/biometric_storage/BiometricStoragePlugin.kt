@@ -459,8 +459,13 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             logger.warn { "called `canAuthenticate` with initOptions.authenticationRequired == false. $initOptions" }
             return CanAuthenticateResponse.Success
         }
+        // Before Android R the device credential can't be combined with a
+        // strong biometric, so the key and the prompt are biometric only there
+        // whatever androidBiometricOnly says. Ask for what will be used.
+        val biometricOnly =
+            initOptions.androidBiometricOnly || Build.VERSION.SDK_INT < Build.VERSION_CODES.R
         val response = biometricManager.canAuthenticate(
-            if (initOptions.androidBiometricOnly) {
+            if (biometricOnly) {
                 BIOMETRIC_STRONG
             } else {
                 DEVICE_CREDENTIAL or BIOMETRIC_STRONG

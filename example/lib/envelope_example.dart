@@ -163,9 +163,9 @@ class EnvelopeStore {
   /// Authenticates on every single use. No validity duration on Android, and
   /// neither darwin reuse duration, so there is no window on any platform.
   ///
-  /// `androidBiometricOnly` stays at its default `true`: a per-use key is
-  /// bound to `AUTH_BIOMETRIC_STRONG`, and the plugin rejects a null validity
-  /// duration combined with device-credential authentication.
+  /// `androidBiometricOnly` stays at its default `true`, which binds the
+  /// per-use key to `AUTH_BIOMETRIC_STRONG` alone. `false` would let the PIN,
+  /// pattern or password open the gate as well on Android 11 and later.
   ///
   /// Injectable for one reason only — the integration test runs this whole
   /// flow with `authenticationRequired: false`, because no CI runner can
